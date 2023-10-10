@@ -1,3 +1,5 @@
+\<^marker>\<open>creator "Henriette Färber, Karlsruhe Institute of Technology (KIT)"\<close>
+
 chapter \<open>Social-Choice Types\<close>
 
 section \<open>Approval Set\<close>

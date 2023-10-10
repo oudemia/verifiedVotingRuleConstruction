@@ -6,12 +6,53 @@
 \<^marker>\<open>contributor "Michael Kirsten, Karlsruhe Institute of Technology (KIT)"\<close>
 \<^marker>\<open>contributor "Stephan Bohr, Karlsruhe Institute of Technology (KIT)"\<close>
 
-section \<open>Preference Profile\<close>
+section \<open>Profile\<close>
 
 theory Profile
-  imports Preference_Relation Ballots
+  imports Preference_Relation Approval_Set
 begin
 
+text \<open>
+  A profile contains one ballot for each voter. This is independent of concrete ballot types.
+ \<close>
+
+(* TODO: import Ballots instead of this*)
+locale preference_based
+begin
+type_synonym 'a Ballot = "'a Preference_Relation"
+type_synonym 'a Profile = "('a Ballot) list"
+type_synonym 'a Election = "'a set \<times> 'a Profile"
+
+fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
+fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
+
+
+definition is_ballot:: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> bool" where
+"is_ballot A b \<equiv> linear_order_on A b"
+
+definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
+"profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
+end
+
+locale approval_based
+begin
+type_synonym 'a Ballot = "'a Approval_Set"
+type_synonym 'a Profile = "('a Ballot) list"
+type_synonym 'a Election = "'a set \<times> 'a Profile"
+
+fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
+fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
+
+definition is_ballot:: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
+"is_ballot A b \<equiv> b \<subseteq> A"
+
+definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
+"profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
+end
+
+(* end TODO*)
+
+subsection \<open>Preference Profiles\<close>
 text \<open>
   Preference profiles denote the decisions made by the individual voters on
   the eligible alternatives. They are represented in the form of one preference
@@ -22,30 +63,6 @@ text \<open>
   received.
 \<close>
 
-subsection \<open>Definition\<close>
-
-text \<open>
-  A profile contains one ballot for each voter.
-\<close>
-
-type_synonym 'a Profile = "('a Preference_Relation) list"
-
-type_synonym 'a Election = "'a set \<times> 'a Profile"
-
-fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
-
-fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
-
-
-subsection \<open>Preference-based Profiles\<close>
-text \<open>
-  A profile on a finite set of alternatives A contains only ballots that are
-  linear orders on A.
-\<close>
-
-definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
-  "profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> linear_order_on A (p!i)"
-
 context preference_based
 begin
 
@@ -54,7 +71,7 @@ lemma profile_set :
     A :: "'a set" and
     p :: "'a Profile"
   shows "profile A p \<equiv> (\<forall> b \<in> (set p). linear_order_on A b)"
-  unfolding profile_def all_set_conv_all_nth
+  unfolding profile_def all_set_conv_all_nth is_ballot_def
   by simp
 
 abbreviation finite_profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
@@ -407,7 +424,7 @@ proof -
   have "\<forall> i::nat. i < length p \<longrightarrow> connex A (p!i)"
     using prof
     unfolding profile_def
-    by (simp add: lin_ord_imp_connex)
+    by (simp add: lin_ord_imp_connex is_ballot_def)
   hence asym: "\<forall> i::nat. i < length p \<longrightarrow>
               \<not> (let r = (p!i) in (b \<preceq>\<^sub>r a)) \<longrightarrow> (let r = (p!i) in (a \<preceq>\<^sub>r b))"
     using a_in_A b_in_A
@@ -415,7 +432,7 @@ proof -
     by metis
   have "\<forall> i::nat. i < length p \<longrightarrow> ((b, a) \<in> (p!i) \<longrightarrow> (a, b) \<notin> (p!i))"
     using antisymD neq lin_imp_antisym prof
-    unfolding profile_def
+    unfolding profile_def is_ballot_def
     by metis
   hence "{i::nat. i < length p \<and> (let r = (p!i) in (b \<preceq>\<^sub>r a))} =
             {i::nat. i < length p} -
@@ -647,7 +664,7 @@ next
     "\<forall> A' p'.
       (profile (A'::'a set) p' \<longrightarrow> (\<forall> n < length p'. linear_order_on A' (p'!n))) \<and>
       ((\<forall> n < length p'. linear_order_on A' (p'!n)) \<longrightarrow> profile A' p')"
-    unfolding profile_def
+    unfolding profile_def is_ballot_def
     by simp
   have limit_prof_simp: "limit_profile A p = map (limit A) p"
     by simp
@@ -740,7 +757,7 @@ next
   with assms
   show "equiv_rel_except_a A (p!i) (p'!i) a"
     using lifted_imp_equiv_rel_except_a trivial_equiv_rel
-    unfolding lifted_def profile_def
+    unfolding lifted_def profile_def is_ballot_def
     by (metis (no_types))
 qed
 
@@ -838,6 +855,21 @@ next
     using lifted_a negl_diff_imp_eq_limit_prof subset lifted_imp_equiv_prof_except_a
     by metis
 qed
+
+end
+
+section \<open>Approval Profile\<close>
+
+context approval_based
+begin
+
+lemma profile_set :
+  fixes
+    A :: "'a set" and
+    p :: "'a Profile"
+  shows "profile A p \<equiv> (\<forall> b \<in> (set p). b \<subseteq> A)"
+  unfolding profile_def all_set_conv_all_nth is_ballot_def
+  by simp
 
 end
 
