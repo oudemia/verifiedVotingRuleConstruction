@@ -9,48 +9,12 @@
 section \<open>Profile\<close>
 
 theory Profile
-  imports Preference_Relation Approval_Set
+  imports Ballots
 begin
 
 text \<open>
   A profile contains one ballot for each voter. This is independent of concrete ballot types.
  \<close>
-
-(* TODO: import Ballots instead of this*)
-locale preference_based
-begin
-type_synonym 'a Ballot = "'a Preference_Relation"
-type_synonym 'a Profile = "('a Ballot) list"
-type_synonym 'a Election = "'a set \<times> 'a Profile"
-
-fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
-fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
-
-
-definition is_ballot:: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> bool" where
-"is_ballot A b \<equiv> linear_order_on A b"
-
-definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
-"profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
-end
-
-locale approval_based
-begin
-type_synonym 'a Ballot = "'a Approval_Set"
-type_synonym 'a Profile = "('a Ballot) list"
-type_synonym 'a Election = "'a set \<times> 'a Profile"
-
-fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
-fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
-
-definition is_ballot:: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
-"is_ballot A b \<equiv> b \<subseteq> A"
-
-definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
-"profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
-end
-
-(* end TODO*)
 
 subsection \<open>Preference Profiles\<close>
 text \<open>
@@ -423,8 +387,8 @@ lemma pref_count:
 proof -
   have "\<forall> i::nat. i < length p \<longrightarrow> connex A (p!i)"
     using prof
-    unfolding profile_def
-    by (simp add: lin_ord_imp_connex is_ballot_def)
+    unfolding profile_def is_ballot_def
+    by (simp add: lin_ord_imp_connex)
   hence asym: "\<forall> i::nat. i < length p \<longrightarrow>
               \<not> (let r = (p!i) in (b \<preceq>\<^sub>r a)) \<longrightarrow> (let r = (p!i) in (a \<preceq>\<^sub>r b))"
     using a_in_A b_in_A

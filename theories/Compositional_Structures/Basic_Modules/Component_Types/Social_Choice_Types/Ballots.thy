@@ -41,8 +41,8 @@ type_synonym 'a Vote = "'a set \<times> 'a Ballot"
 definition is_ballot:: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> bool" where
 "is_ballot A b \<equiv> linear_order_on A b"
 
-definition is_profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
-"is_profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
+definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
+"profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
 
 fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
 fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
@@ -71,10 +71,11 @@ fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd
 definition is_ballot:: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
 "is_ballot A b \<equiv> b \<subseteq> A"
 
-definition is_profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
-"is_profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
+definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
+"profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> is_ballot A (p!i)"
 end
 
 sublocale approval_based \<subseteq> general_election
   done
 
+end
