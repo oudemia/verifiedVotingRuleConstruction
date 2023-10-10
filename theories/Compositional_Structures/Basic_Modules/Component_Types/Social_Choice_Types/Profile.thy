@@ -9,7 +9,7 @@
 section \<open>Preference Profile\<close>
 
 theory Profile
-  imports Preference_Relation
+  imports Preference_Relation Ballots
 begin
 
 text \<open>
@@ -36,6 +36,8 @@ fun alts_\<E> :: "'a Election \<Rightarrow> 'a set" where "alts_\<E> E = fst E"
 
 fun prof_\<E> :: "'a Election \<Rightarrow> 'a Profile" where "prof_\<E> E = snd E"
 
+
+subsection \<open>Preference-based Profiles\<close>
 text \<open>
   A profile on a finite set of alternatives A contains only ballots that are
   linear orders on A.
@@ -43,6 +45,9 @@ text \<open>
 
 definition profile :: "'a set \<Rightarrow> 'a Profile \<Rightarrow> bool" where
   "profile A p \<equiv> \<forall> i::nat. i < length p \<longrightarrow> linear_order_on A (p!i)"
+
+context preference_based
+begin
 
 lemma profile_set :
   fixes
@@ -833,5 +838,7 @@ next
     using lifted_a negl_diff_imp_eq_limit_prof subset lifted_imp_equiv_prof_except_a
     by metis
 qed
+
+end
 
 end
