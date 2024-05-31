@@ -1,6 +1,7 @@
 theory Profile_Interpretations
   imports Profile_Loc
           Approval_Profile
+          Preference_Profile
 begin
 
 text \<open>
@@ -11,29 +12,54 @@ text \<open>
 
 (* setup Locale_Code.open_block *)
 
+subsection \<open>Approval Profiles\<close>
+
 global_interpretation approval_ballot:
-  ballot "well_formed_AV_ballot" "prefers_AV" "wins_AV"
+  ballot "well_formed_AV_ballot" "default_AV_ballot" "prefers_AV" "wins_AV"
 proof (unfold_locales)
   fix
     A :: "'a Approval_Set" and
     a1 :: "'a" and
     a2 :: "'a"
-  assume "prefers_AV A a1 a2"
+  assume "a1 \<noteq> a2 \<and> prefers_AV A a1 a2"
   thus "\<not> wins_AV A a2" by simp
 qed
 
-
 global_interpretation approval_profile:
-  profile "well_formed_AV" "well_formed_bal_AV"
+   profile "well_formed_AV_ballot" "default_AV_ballot" "prefers_AV" "wins_AV" "well_formed_AV_profile" "win_count_AV"
 proof (unfold_locales) 
-  show "\<And> A V p . \<forall> v \<in> V. well_formed_bal_AV A (p v) \<Longrightarrow> well_formed_AV V A p" by simp
+  fix
+    A :: "'a set" and
+    V :: "'v set" and
+    p :: "('v, 'a) Approval_Profile"
+  assume "\<forall> v \<in> V. well_formed_AV_ballot A (p v)"
+  thus " well_formed_AV_profile V A p" by simp
 qed
 
+subsection \<open>Preference Profiles\<close>
 
-text \<open>
-  In a preference-based context, a profile on a finite set of alternatives A contains 
-  only ballots that are linear orders on A.
-\<close>
+global_interpretation preference_ballot:
+  ballot "well_formed_PV_ballot" "default_PV_ballot" "prefers_PV" "wins_PV"
+proof (unfold_locales)
+  fix
+    b :: "'a Preference_Relation" and
+    a1 :: "'a" and
+    a2 :: "'a"
+  assume "a1 \<noteq> a2 \<and> prefers_PV b a1 a2"
+  thus "\<not> wins_PV b a2" by auto
+qed
+
+global_interpretation preference_profile:
+   profile "well_formed_PV_ballot" "default_PV_ballot" "prefers_PV" "wins_PV" "well_formed_PV_profile" "win_count_PV"
+proof (unfold_locales) 
+  fix
+    A :: "'a set" and
+    V :: "'v set" and
+    p :: "('a, 'v) Preference_Profile"
+  assume "\<forall> v \<in> V. well_formed_PV_ballot A (p v)"
+  thus " well_formed_PV_profile V A p" by simp
+qed
+
 (* setup Locale_Code.close_block *)
 
 end

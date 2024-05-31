@@ -24,6 +24,9 @@ fun appr_\<V> :: "'a Vote \<Rightarrow> 'a Approval_Set" where
 fun well_formed_AV_ballot :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
 "well_formed_AV_ballot A b = (b  \<subseteq> A)"
 
+definition default_AV_ballot :: "'a Approval_Set" where
+"default_AV_ballot = {}"
+
 fun prefers_AV :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
 "prefers_AV A a1 a2 = ((a1 \<in> A) \<and> (a2 \<notin> A))"
 
