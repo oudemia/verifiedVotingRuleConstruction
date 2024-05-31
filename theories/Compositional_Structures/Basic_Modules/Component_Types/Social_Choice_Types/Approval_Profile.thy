@@ -21,15 +21,19 @@ fun appr_\<V> :: "'a Vote \<Rightarrow> 'a Approval_Set" where
   "appr_\<V> V = snd V"
 
 
-fun well_formed_AV :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'a) Approval_Profile \<Rightarrow> bool" where
-"well_formed_AV V A p = (\<forall> v \<in> V. (p v) \<subseteq> A)"
+fun well_formed_AV_ballot :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
+"well_formed_AV_ballot A b = (b  \<subseteq> A)"
 
-fun well_formed_bal_AV :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
-"well_formed_bal_AV A b = (b  \<subseteq> A)"
+fun prefers_AV :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"prefers_AV A a1 a2 = ((a1 \<in> A) \<and> (a2 \<notin> A))"
+
+fun wins_AV :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> bool" where
+"wins_AV A a = (a \<in> A)"
+
+fun well_formed_AV_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'a) Approval_Profile \<Rightarrow> bool" where
+"well_formed_AV_profile V A p = (\<forall> v \<in> V. (p v) \<subseteq> A)"
 
 fun win_count_AV :: "'v set \<Rightarrow> ('v, 'a) Approval_Profile \<Rightarrow> 'a \<Rightarrow> enat" where
 "win_count_AV V p a = card {v \<in> V. a \<in> (p v)}"
-
-
 
 end
