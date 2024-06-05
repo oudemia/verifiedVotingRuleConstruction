@@ -1,6 +1,18 @@
 theory Preference_Profile
-  imports Profile_Loc Preference_Relation
+  imports Profile Preference_Relation
 begin
+
+text \<open>
+  Preference profiles denote the decisions made by the individual voters on
+  the eligible alternatives. They are represented in the form of one preference
+  relation (e.g., selected on a ballot) per voter, collectively captured in a
+  mapping of voters onto their respective preference relations.
+  If there are finitely many voters, they can be enumerated and the mapping can
+  be interpreted as a list of preference relations.
+  Unlike the common preference profiles in the social-choice sense, the
+  profiles described here consider only the (sub-)set of alternatives that are
+  received.
+\<close>
 
 subsection \<open>Definition\<close>
 
@@ -10,27 +22,16 @@ text \<open>
 
 type_synonym ('a, 'v) Preference_Profile = "'v \<Rightarrow> ('a Preference_Relation)"
 
-fun well_formed_PV_ballot :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> bool" where
-"well_formed_PV_ballot A b = linear_order_on A b"
+fun ballot_\<P>\<V> :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> bool" where
+"ballot_\<P>\<V> A b = linear_order_on A b"
 
-definition default_PV_ballot :: "'a Preference_Relation" where
-"default_PV_ballot = {}"
+definition default_ballot_\<P>\<V> :: "'a Preference_Relation" where
+"default_ballot_\<P>\<V> = {}"
 
-fun prefers_PV :: "'a Preference_Relation \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
-"prefers_PV b a1 a2 = (a1 \<in> (above b a2))"
+fun prefers_\<P>\<V> :: "'a Preference_Relation \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"prefers_\<P>\<V> b a1 a2 = (a1 \<in> (above b a2))"
 
-fun wins_PV :: "'a Preference_Relation \<Rightarrow> 'a \<Rightarrow> bool" where
-"wins_PV b a = (above b a = {a})"
-
-fun well_formed_PV_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Preference_Profile \<Rightarrow> bool" where
-"well_formed_PV_profile V A p = (\<forall> v \<in> V. linear_order_on A (p v))"
-
-fun win_count_PV :: "'v set \<Rightarrow> ('a, 'v) Preference_Profile \<Rightarrow> 'a \<Rightarrow> enat" where
-  "win_count_PV V p a = (if (finite V)
-    then card {v \<in> V. above (p v) a = {a}} else infinity)"
-
-fun prefer_count_PV :: "'v set \<Rightarrow> ('a, 'v) Preference_Profile \<Rightarrow> 'a \<Rightarrow>'a \<Rightarrow> enat" where
-  "prefer_count_PV V p x y = (if (finite V)
-      then card {v \<in> V. (let r = (p v) in (y \<preceq>\<^sub>r x))} else infinity)"
+fun wins_\<P>\<V> :: "'a Preference_Relation \<Rightarrow> 'a \<Rightarrow> bool" where
+"wins_\<P>\<V> b a = (above b a = {a})"
 
 end

@@ -1,5 +1,5 @@
 theory Approval_Profile
-  imports Profile_Loc
+  imports Profile
 begin
 
 subsection \<open>Definition\<close>
@@ -10,33 +10,18 @@ text \<open>
 
 type_synonym 'a Approval_Set = "'a set"
 
-type_synonym 'a Vote = "'a set \<times> 'a Approval_Set"
-
 type_synonym ('v, 'a) Approval_Profile = "('v, 'a Approval_Set) Profile"
 
-fun alts_\<V> :: "'a Vote \<Rightarrow> 'a set" where
-  "alts_\<V> V = fst V"
+fun ballot_\<A>\<V> :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
+"ballot_\<A>\<V> A b = (b  \<subseteq> A)"
 
-fun appr_\<V> :: "'a Vote \<Rightarrow> 'a Approval_Set" where
-  "appr_\<V> V = snd V"
+definition default_ballot_\<A>\<V> :: "'a Approval_Set" where
+"default_ballot_\<A>\<V> = {}"
 
+fun prefers_\<A>\<V> :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"prefers_\<A>\<V> A a1 a2 = ((a1 \<in> A) \<and> (a2 \<notin> A))"
 
-fun well_formed_AV_ballot :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
-"well_formed_AV_ballot A b = (b  \<subseteq> A)"
-
-definition default_AV_ballot :: "'a Approval_Set" where
-"default_AV_ballot = {}"
-
-fun prefers_AV :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
-"prefers_AV A a1 a2 = ((a1 \<in> A) \<and> (a2 \<notin> A))"
-
-fun wins_AV :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> bool" where
-"wins_AV A a = (a \<in> A)"
-
-fun well_formed_AV_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'a) Approval_Profile \<Rightarrow> bool" where
-"well_formed_AV_profile V A p = (\<forall> v \<in> V. (p v) \<subseteq> A)"
-
-fun win_count_AV :: "'v set \<Rightarrow> ('v, 'a) Approval_Profile \<Rightarrow> 'a \<Rightarrow> enat" where
-"win_count_AV V p a = card {v \<in> V. a \<in> (p v)}"
+fun wins_\<A>\<V> :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> bool" where
+"wins_\<A>\<V> A a = (a \<in> A)"
 
 end

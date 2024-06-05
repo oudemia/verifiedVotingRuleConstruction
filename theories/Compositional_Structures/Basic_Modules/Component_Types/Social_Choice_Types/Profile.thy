@@ -1,98 +1,95 @@
-(*  File:       Profile.thy
-    Copyright   2021  Karlsruhe Institute of Technology (KIT)
-*)
-\<^marker>\<open>creator "Jonas Kraemer, Karlsruhe Institute of Technology (KIT)"\<close>
-\<^marker>\<open>contributor "Karsten Diekhoff, Karlsruhe Institute of Technology (KIT)"\<close>
-\<^marker>\<open>contributor "Michael Kirsten, Karlsruhe Institute of Technology (KIT)"\<close>
-\<^marker>\<open>contributor "Stephan Bohr, Karlsruhe Institute of Technology (KIT)"\<close>
-
-section \<open>Preference Profile\<close>
-
 theory Profile
-  imports Preference_Relation
-          Auxiliary_Lemmas
-          "HOL-Library.Extended_Nat"
-          "HOL-Combinatorics.Permutations"
+  imports 
+     Main
+     Auxiliary_Lemmas
+     "HOL-Library.Extended_Nat"
+     "HOL-Combinatorics.Permutations"
 begin
-
-text \<open>
-  Preference profiles denote the decisions made by the individual voters on
-  the eligible alternatives. They are represented in the form of one preference
-  relation (e.g., selected on a ballot) per voter, collectively captured in a
-  mapping of voters onto their respective preference relations.
-  If there are finitely many voters, they can be enumerated and the mapping can
-  be interpreted as a list of preference relations.
-  Unlike the common preference profiles in the social-choice sense, the
-  profiles described here consider only the (sub-)set of alternatives that are
-  received.
-\<close>
 
 subsection \<open>Definition\<close>
 
 text \<open>
-  A profile contains one ballot for each voter.
+  A ballot contains information about the preferences of a single voter towards electable
+  alternatives.
+\<close>
+
+locale profile =
+  fixes 
+    well_formed_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
+    default_ballot :: "'b" and
+    prefers :: "'b \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" and
+    wins :: "'b \<Rightarrow> 'a \<Rightarrow> bool"
+  assumes winner_top: "\<And> (b::'b) (a1::'a) (a2::'a). (a1 \<noteq> a2 \<and> prefers b a1 a2) \<Longrightarrow> \<not> wins b a2"
+
+text \<open>
+  A profile is a function that assigns a ballot to each voter in the election. 
   An election consists of a set of participating voters,
   a set of eligible alternatives, and a corresponding profile.
 \<close>
 
-type_synonym ('a, 'v) Profile = "'v \<Rightarrow> ('a Preference_Relation)"
+type_synonym ('v, 'b) Profile = "'v \<Rightarrow> 'b"
 
-type_synonym ('a, 'v) Election = "'a set \<times> 'v set \<times> ('a, 'v) Profile"
+type_synonym ('a, 'v, 'b) Election = "'a set \<times> 'v set \<times> ('v, 'b) Profile"
 
-fun alternatives_\<E> :: "('a, 'v) Election \<Rightarrow> 'a set" where
+fun alternatives_\<E> :: "('a, 'v, 'b) Election \<Rightarrow> 'a set" where
   "alternatives_\<E> E = fst E"
 
-fun voters_\<E> :: "('a, 'v) Election \<Rightarrow> 'v set" where
+fun voters_\<E> :: "('a, 'v, 'b) Election \<Rightarrow> 'v set" where
   "voters_\<E> E = fst (snd E)"
 
-fun profile_\<E> :: "('a, 'v) Election \<Rightarrow> ('a, 'v) Profile" where
+fun profile_\<E> :: "('a, 'v, 'b) Election \<Rightarrow> ('v, 'b) Profile" where
   "profile_\<E> E = snd (snd E)"
 
-fun election_equality :: "('a, 'v) Election \<Rightarrow> ('a, 'v) Election \<Rightarrow> bool" where
+fun election_equality :: "('a, 'v, 'b) Election \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> bool" where
   "election_equality (A, V, p) (A', V', p') =
         (A = A' \<and> V = V' \<and> (\<forall> v \<in> V. p v = p' v))"
 
 text \<open>
   A profile on a set of alternatives A and a voter set V consists of ballots
-  that are linear orders on A for all voters in V.
+  that are well formed on A for all voters in V.
   A finite profile is one with finitely many alternatives and voters.
 \<close>
 
-definition profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> bool" where
-  "profile V A p \<equiv> \<forall> v \<in> V. linear_order_on A (p v)"
+context profile 
+begin
 
-abbreviation finite_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> bool" where
-  "finite_profile V A p \<equiv> finite A \<and> finite V \<and> profile V A p"
+definition well_formed_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
+  "well_formed_profile V A p \<equiv> \<forall> v \<in> V. well_formed_ballot A (p v)"
 
-abbreviation finite_election :: "('a,'v) Election \<Rightarrow> bool" where
+abbreviation  finite_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
+  "finite_profile V A p \<equiv> finite A \<and> finite V \<and> well_formed_profile V A p"
+
+abbreviation finite_election :: "('a, 'v, 'b) Election \<Rightarrow> bool" where
   "finite_election E \<equiv> finite_profile (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E)"
 
-definition finite_elections_\<V> :: "('a, 'v) Election set" where
-  "finite_elections_\<V> = {E :: ('a, 'v) Election. finite (voters_\<E> E)}"
+definition finite_elections_\<V> :: "('a, 'v, 'b) Election set" where
+  "finite_elections_\<V> = {E :: ('a, 'v, 'b) Election. finite (voters_\<E> E)}"
 
-definition finite_elections :: "('a, 'v) Election set" where
-  "finite_elections = {E :: ('a, 'v) Election. finite_election E}"
+definition finite_elections :: "('a, 'v, 'b) Election set" where
+  "finite_elections = {E :: ('a, 'v, 'b) Election. finite_election E}"
 
-definition valid_elections :: "('a,'v) Election set" where
-  "valid_elections = {E. profile (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E)}"
+definition valid_elections :: "('a, 'v, 'b) Election set" where
+  "valid_elections = {E. well_formed_profile (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E)}"
 
 \<comment> \<open>This function subsumes elections with fixed alternatives, finite voters, and
     a default value for the profile value on non-voters.\<close>
-fun elections_\<A> :: "'a set \<Rightarrow> ('a, 'v) Election set" where
+fun elections_\<A> :: "'a set \<Rightarrow> ('a, 'v, 'b) Election set" where
   "elections_\<A> A =
         valid_elections
       \<inter> {E. alternatives_\<E> E = A \<and> finite (voters_\<E> E)
-            \<and> (\<forall> v. v \<notin> voters_\<E> E \<longrightarrow> profile_\<E> E v = {})}"
+            \<and> (\<forall> v. v \<notin> voters_\<E> E \<longrightarrow> profile_\<E> E v = default_ballot)}"
 
+            
 \<comment> \<open>Here, we count the occurrences of a ballot in an election,
     i.e., how many voters specifically chose that exact ballot.\<close>
-fun vote_count :: "'a Preference_Relation \<Rightarrow> ('a, 'v) Election \<Rightarrow> nat" where
+fun vote_count :: "'b \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> nat" where
   "vote_count p E = card {v \<in> (voters_\<E> E). (profile_\<E> E) v = p}"
 
+  
 subsection \<open>Vote Count\<close>
 
 lemma vote_count_sum:
-  fixes E :: "('a, 'v) Election"
+  fixes E :: "('a, 'v, 'b) Election"
   assumes
     "finite (voters_\<E> E)" and
     "finite (UNIV::('a \<times> 'a) set)"
@@ -104,7 +101,7 @@ proof (unfold vote_count.simps)
   moreover have
     "disjoint {{v \<in> voters_\<E> E. profile_\<E> E v = p} | p. p \<in> UNIV}"
     unfolding disjoint_def
-    by blast
+    by fastforce
   moreover have partition:
     "voters_\<E> E = \<Union> {{v \<in> voters_\<E> E. profile_\<E> E v = p} | p. p \<in> UNIV}"
     using Union_eq[of "{{v \<in> voters_\<E> E. profile_\<E> E v = p} | p. p \<in> UNIV}"]
@@ -224,28 +221,28 @@ proof (unfold vote_count.simps)
     by simp
 qed
 
+
 subsection \<open>Voter Permutations\<close>
 
 text \<open>
   A common action of interest on elections is renaming the voters,
   e.g., when talking about anonymity.
 \<close>
-
-fun rename :: "('v \<Rightarrow> 'v) \<Rightarrow> ('a, 'v) Election \<Rightarrow> ('a, 'v) Election" where
+fun rename :: "('v \<Rightarrow> 'v) \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> ('a, 'v, 'b) Election" where
   "rename \<pi> (A, V, p) = (A, \<pi> ` V, p \<circ> (the_inv \<pi>))"
 
 lemma rename_sound:
   fixes
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     \<pi> :: "'v \<Rightarrow> 'v"
   assumes
-    prof: "profile V A p" and
+    prof: "well_formed_profile V A p" and
     renamed: "(A, V', q) = rename \<pi> (A, V, p)" and
     bij: "bij \<pi>"
-  shows "profile V' A q"
-proof (unfold profile_def, safe)
+  shows "well_formed_profile V' A q"
+proof (unfold well_formed_profile_def, safe)
   fix v' :: "'v"
   assume "v' \<in> V'"
   moreover have "V' = \<pi> ` V"
@@ -255,17 +252,17 @@ proof (unfold profile_def, safe)
     using UNIV_I bij bij_is_inj bij_is_surj
           f_the_inv_into_f inj_image_mem_iff
     by metis
-  thus "linear_order_on A (q v')"
+  thus "well_formed_ballot A (q v')"
     using renamed bij prof
-    unfolding profile_def
+    unfolding well_formed_profile_def
     by simp
-qed
+  qed
 
 lemma rename_finite:
   fixes
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     \<pi> :: "'v \<Rightarrow> 'v"
   assumes
     "finite_profile V A p" and
@@ -278,7 +275,7 @@ proof (safe)
     using assms
     by simp
 next
-  show "profile V' A q"
+  show "well_formed_profile V' A q"
     using assms rename_sound
     by metis
 qed
@@ -288,7 +285,7 @@ lemma rename_inv:
     \<pi> :: "'v \<Rightarrow> 'v" and
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes "bij \<pi>"
   shows "rename \<pi> (rename (the_inv \<pi>) (A, V, p)) = (A, V, p)"
 proof -
@@ -319,8 +316,8 @@ proof (unfold inj_def split_paired_All rename.simps, safe)
     A' :: "'a set" and
     V :: "'v set" and
     V' :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
+    p' :: "('v, 'b) Profile" and
     v :: "'v"
   assume
     "p \<circ> the_inv \<pi> = p' \<circ> the_inv \<pi>" and
@@ -347,8 +344,8 @@ proof (safe)
     A' :: "'a set" and
     V :: "'v set" and
     V' :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile" and
+    p' :: "('v, 'b) Profile"
   assume valid: "(A, V, p) \<in> valid_elections"
   hence "rename (the_inv \<pi>) (A, V, p) \<in> valid_elections"
     using assms bij_betw_the_inv_into rename_sound
@@ -364,12 +361,12 @@ proof (safe)
     by fastforce
 next
   fix
-    A :: "'b set" and
-    A' :: "'b set" and
+    A :: "'a set" and
+    A' :: "'a set" and
     V :: "'v set" and
     V' :: "'v set" and
-    p :: "('b, 'v) Profile" and
-    p' :: "('b, 'v) Profile"
+    p :: "('v, 'b) Profile" and
+    p' :: "('v, 'b) Profile"
   assume finite: "(A, V, p) \<in> finite_elections"
   hence "rename (the_inv \<pi>) (A, V, p) \<in> finite_elections"
     using assms bij_betw_the_inv_into rename_finite
@@ -384,6 +381,7 @@ next
     unfolding finite_elections_def
     by fastforce
 qed
+    
 
 subsection \<open>List Representation for Ordered Voters\<close>
 
@@ -391,8 +389,8 @@ text \<open>
   A profile on a voter set that has a natural order can be viewed as a list of ballots.
 \<close>
 
-fun to_list :: "'v::linorder set \<Rightarrow> ('a, 'v) Profile
-                  \<Rightarrow> ('a Preference_Relation) list" where
+fun to_list :: "'v::linorder set \<Rightarrow> ('v, 'b) Profile
+                  \<Rightarrow> 'b list" where
   "to_list V p = (if (finite V)
                     then (map p (sorted_list_of_set V))
                     else [])"
@@ -420,7 +418,7 @@ lemma to_list_simp:
   fixes
     i :: "nat" and
     V :: "'v::linorder set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes "i < card V"
   shows "(to_list V p)!i = p ((sorted_list_of_set V)!i)"
 proof -
@@ -436,8 +434,8 @@ qed
 lemma to_list_comp:
   fixes
     V :: "'v::linorder set" and
-    p :: "('a, 'v) Profile" and
-    f :: "'a rel \<Rightarrow> 'a rel"
+    p :: "('v, 'b) Profile" and
+    f :: "'b \<Rightarrow> 'b"
   shows "to_list V (f \<circ> p) = map f (to_list V p)"
   by simp
 
@@ -567,7 +565,7 @@ lemma to_list_permutes_under_bij:
   fixes
     \<pi> :: "'v::linorder \<Rightarrow> 'v" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes "bij \<pi>"
   shows
     "let \<phi> = (\<lambda> i. card {v \<in> \<pi> ` V. v < \<pi> ((sorted_list_of_set V)!i)})
@@ -669,26 +667,27 @@ next
   qed
 qed
 
+
 subsection \<open>Preference Counts and Comparisons\<close>
 
 text \<open>
   The win count for an alternative a with respect to a finite voter set V in a profile p is
-  the amount of ballots from V in p that rank alternative a in first position.
+  the amount of ballots from V in p which a wins. The interpretation of a 'win'
+  depends on the interpretation of the profile locale.
   If the voter set is infinite, counting is not generally possible.
 \<close>
-
-fun win_count :: "'v set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> enat" where
+fun win_count :: "'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> enat" where
   "win_count V p a = (if (finite V)
-    then card {v \<in> V. above (p v) a = {a}} else infinity)"
+    then card {v \<in> V. wins (p v) a} else infinity)"
 
-fun prefer_count :: "'v set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> enat" where
+fun prefer_count :: "'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> enat" where
   "prefer_count V p x y = (if (finite V)
-      then card {v \<in> V. (let r = (p v) in (y \<preceq>\<^sub>r x))} else infinity)"
-
+      then card {v \<in> V. prefers (p v) x y} else infinity)"
+      
 lemma pref_count_voter_set_card:
   fixes
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     a :: "'a" and
     b :: "'a"
   assumes "finite V"
@@ -707,21 +706,23 @@ lemma pref_count_set_compr:
   fixes
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     a :: "'a"
   shows "{prefer_count V p a a' | a'. a' \<in> A - {a}} =
             (prefer_count V p a) ` (A - {a})"
   by blast
 
+(* TODO: adapt to locale-based profiles
+
 lemma pref_count:
   fixes
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     a :: "'a" and
     b :: "'a"
   assumes
-    prof: "profile V A p" and
+    prof: "well_formed_profile V A p" and
     fin: "finite V" and
     a_in_A: "a \<in> A" and
     b_in_A: "b \<in> A" and
@@ -788,9 +789,9 @@ next
   case False
   thus ?thesis
     by simp
-qed
+    qed
 
-lemma empty_prof_imp_zero_pref_count:
+    lemma empty_prof_imp_zero_pref_count:
   fixes
     p :: "('a, 'v) Profile" and
     V :: "'v set" and
@@ -1093,4 +1094,7 @@ next
     by metis
 qed
 
+*)
+
+end
 end
