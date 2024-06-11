@@ -16,7 +16,7 @@ setup Locale_Code.open_block
 subsection \<open>Approval Profiles\<close>
 
 global_interpretation \<A>\<V>_profile:
-  profile "ballot_\<A>\<V>" "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot"
+  ballot "ballot_\<A>\<V>" "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot"
 proof (unfold_locales)
   fix
     A :: "'a Approval_Set" and
@@ -37,7 +37,7 @@ qed
 subsection \<open>Preference Profiles\<close>
 
 global_interpretation \<P>\<V>_profile:
-  profile "ballot_\<P>\<V>" "default_ballot_\<P>\<V>" "prefers_\<P>\<V>" "wins_\<P>\<V>" "limit_\<P>\<V>_ballot"
+  ballot "ballot_\<P>\<V>" "default_ballot_\<P>\<V>" "prefers_\<P>\<V>" "wins_\<P>\<V>" "limit_\<P>\<V>_ballot"
 proof (unfold_locales)
   fix
     b :: "'a Preference_Relation" and

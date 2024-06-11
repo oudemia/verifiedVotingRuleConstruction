@@ -59,6 +59,12 @@ locale result =
   assumes "\<And> (A::('a set)) (r::('r Result)).
     (set_equals_partition (limit_set A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r"
 
+
+locale committee_result = result + 
+  fixes k :: "nat" 
+  assumes "\<And> (A:: ('a set)) (e :: ('a set set)) (d :: ('a set set)) (r :: ('a set set)). 
+    well_formed_result A (e, d, r) \<Longrightarrow>( \<forall> a \<in> e \<union> d \<union> r . card a = k)"
+
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
 \<close>

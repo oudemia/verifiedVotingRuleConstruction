@@ -39,7 +39,7 @@ fun vote_count :: "'b \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> nat" whe
   "vote_count p E = card {v \<in> (voters_\<E> E). (profile_\<E> E) v = p}"
   
 
-locale profile =
+locale ballot =
   fixes 
     well_formed_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
     empty_ballot :: "'b" and
@@ -49,9 +49,6 @@ locale profile =
   assumes 
     winner_top: "\<And> (b::'b) (a1::'a) (a2::'a). (a1 \<noteq> a2 \<and> prefers b a1 a2) \<Longrightarrow> \<not> wins b a2" and
     "\<And> (A :: 'a set) (b :: 'b). well_formed_ballot A b \<Longrightarrow> (limit_ballot A b = b)"
-
-
-context profile 
 begin
 
 text \<open>
