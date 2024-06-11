@@ -10,18 +10,7 @@ subsection \<open>Definition\<close>
 
 text \<open>
   A ballot contains information about the preferences of a single voter towards electable
-  alternatives.
-\<close>
-
-locale profile =
-  fixes 
-    well_formed_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
-    default_ballot :: "'b" and
-    prefers :: "'b \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" and
-    wins :: "'b \<Rightarrow> 'a \<Rightarrow> bool"
-  assumes winner_top: "\<And> (b::'b) (a1::'a) (a2::'a). (a1 \<noteq> a2 \<and> prefers b a1 a2) \<Longrightarrow> \<not> wins b a2"
-
-text \<open>
+  alternatives. 
   A profile is a function that assigns a ballot to each voter in the election. 
   An election consists of a set of participating voters,
   a set of eligible alternatives, and a corresponding profile.
@@ -44,14 +33,32 @@ fun election_equality :: "('a, 'v, 'b) Election \<Rightarrow> ('a, 'v, 'b) Elect
   "election_equality (A, V, p) (A', V', p') =
         (A = A' \<and> V = V' \<and> (\<forall> v \<in> V. p v = p' v))"
 
+\<comment> \<open>Here, we count the occurrences of a ballot in an election,
+    i.e., how many voters specifically chose that exact ballot.\<close>
+fun vote_count :: "'b \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> nat" where
+  "vote_count p E = card {v \<in> (voters_\<E> E). (profile_\<E> E) v = p}"
+  
+
+locale profile =
+  fixes 
+    well_formed_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
+    empty_ballot :: "'b" and
+    prefers :: "'b \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" and
+    wins :: "'b \<Rightarrow> 'a \<Rightarrow> bool" and
+    limit_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> 'b"
+  assumes 
+    winner_top: "\<And> (b::'b) (a1::'a) (a2::'a). (a1 \<noteq> a2 \<and> prefers b a1 a2) \<Longrightarrow> \<not> wins b a2" and
+    "\<And> (A :: 'a set) (b :: 'b). well_formed_ballot A b \<Longrightarrow> (limit_ballot A b = b)"
+
+
+context profile 
+begin
+
 text \<open>
   A profile on a set of alternatives A and a voter set V consists of ballots
   that are well formed on A for all voters in V.
   A finite profile is one with finitely many alternatives and voters.
 \<close>
-
-context profile 
-begin
 
 definition well_formed_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
   "well_formed_profile V A p \<equiv> \<forall> v \<in> V. well_formed_ballot A (p v)"
@@ -77,15 +84,9 @@ fun elections_\<A> :: "'a set \<Rightarrow> ('a, 'v, 'b) Election set" where
   "elections_\<A> A =
         valid_elections
       \<inter> {E. alternatives_\<E> E = A \<and> finite (voters_\<E> E)
-            \<and> (\<forall> v. v \<notin> voters_\<E> E \<longrightarrow> profile_\<E> E v = default_ballot)}"
+            \<and> (\<forall> v. v \<notin> voters_\<E> E \<longrightarrow> profile_\<E> E v = empty_ballot)}"
 
-            
-\<comment> \<open>Here, we count the occurrences of a ballot in an election,
-    i.e., how many voters specifically chose that exact ballot.\<close>
-fun vote_count :: "'b \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> nat" where
-  "vote_count p E = card {v \<in> (voters_\<E> E). (profile_\<E> E) v = p}"
 
-  
 subsection \<open>Vote Count\<close>
 
 lemma vote_count_sum:
@@ -383,6 +384,444 @@ next
 qed
     
 
+subsection \<open>Preference Counts and Comparisons\<close>
+
+text \<open>
+  The win count for an alternative a with respect to a finite voter set V in a profile p is
+  the amount of ballots from V in p which a wins. The interpretation of a 'win'
+  depends on the interpretation of the profile locale.
+  If the voter set is infinite, counting is not generally possible.
+\<close>
+fun win_count :: "'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> enat" where
+  "win_count V p a = (if (finite V)
+    then card {v \<in> V. wins (p v) a} else infinity)"
+
+fun prefer_count :: "'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> enat" where
+  "prefer_count V p x y = (if (finite V)
+      then card {v \<in> V. prefers (p v) x y} else infinity)"
+
+fun preferred_overall :: "'v set \<Rightarrow> 'a \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
+  "preferred_overall V a p b =
+    (prefer_count V p a b > prefer_count V p b a)"
+    
+lemma pref_count_voter_set_card:
+  fixes
+    V :: "'v set" and
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    b :: "'a"
+  assumes "finite V"
+  shows "prefer_count V p a b \<le> card V"
+  using assms
+  by (simp add: card_mono)
+
+lemma set_compr:
+  fixes
+    A :: "'a set" and
+    f :: "'a \<Rightarrow> 'a set"
+  shows "{f x | x. x \<in> A} = f ` A"
+  by blast
+
+lemma pref_count_set_compr:
+  fixes
+    A :: "'a set" and
+    V :: "'v set" and
+    p :: "('v, 'b) Profile" and
+    a :: "'a"
+  shows "{prefer_count V p a a' | a'. a' \<in> A - {a}} =
+            (prefer_count V p a) ` (A - {a})"
+  by blast
+
+(* TODO: adapt to locale-based profiles
+
+lemma pref_count:
+  fixes
+    A :: "'a set" and
+    V :: "'v set" and
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    b :: "'a"
+  assumes
+    prof: "well_formed_profile V A p" and
+    fin: "finite V" and
+    a_in_A: "a \<in> A" and
+    b_in_A: "b \<in> A" and
+    neq: "a \<noteq> b"
+  shows "prefer_count V p a b = card V - (prefer_count V p b a)"
+proof -
+  have "\<forall> v \<in> V. \<not> (let r = (p v) in (b \<preceq>\<^sub>r a)) \<longrightarrow> (let r = (p v) in (a \<preceq>\<^sub>r b))"
+    using a_in_A b_in_A prof lin_ord_imp_connex
+    unfolding profile_def connex_def
+    by metis
+  moreover have "\<forall> v \<in> V. ((b, a) \<in> (p v) \<longrightarrow> (a, b) \<notin> (p v))"
+    using antisymD neq lin_imp_antisym prof
+    unfolding profile_def
+    by metis
+  ultimately have
+    "{v \<in> V. (let r = (p v) in (b \<preceq>\<^sub>r a))} =
+        V - {v \<in> V. (let r = (p v) in (a \<preceq>\<^sub>r b))}"
+    by auto
+  thus ?thesis
+    by (simp add: card_Diff_subset Collect_mono fin)
+qed
+
+lemma pref_count_sym:
+  fixes
+    p :: "('a, 'v) Profile" and
+    V :: "'v set" and
+    a :: "'a" and
+    b :: "'a" and
+    c :: "'a"
+  assumes
+    pref_count_ineq: "prefer_count V p a c \<ge> prefer_count V p c b" and
+    prof: "profile V A p" and
+    a_in_A: "a \<in> A" and
+    b_in_A: "b \<in> A" and
+    c_in_A: "c \<in> A" and
+    a_neq_c: "a \<noteq> c" and
+    c_neq_b: "c \<noteq> b"
+  shows "prefer_count V p b c \<ge> prefer_count V p c a"
+proof (cases "finite V")
+  case True
+  moreover have
+    nat1: "prefer_count V p c a \<in> \<nat>" and
+    nat2: "prefer_count V p b c \<in> \<nat>"
+    unfolding Nats_def
+    using True of_nat_eq_enat
+    by (simp, simp)
+  moreover have smaller: "prefer_count V p c a \<le> card V"
+    using True prof pref_count_voter_set_card
+    by metis
+  moreover have
+    "prefer_count V p a c = card V - (prefer_count V p c a)" and
+    pref_count_b_eq:
+    "prefer_count V p c b = card V - (prefer_count V p b c)"
+    using True pref_count prof c_in_A
+    by (metis (no_types, opaque_lifting) a_in_A a_neq_c,
+        metis (no_types, opaque_lifting) b_in_A c_neq_b)
+  hence "card V - (prefer_count V p b c) + (prefer_count V p c a)
+      \<le> card V - (prefer_count V p c a) + (prefer_count V p c a)"
+    using pref_count_b_eq pref_count_ineq
+    by simp
+  ultimately show ?thesis
+    by simp
+next
+  case False
+  thus ?thesis
+    by simp
+    qed
+
+    lemma empty_prof_imp_zero_pref_count:
+  fixes
+    p :: "('a, 'v) Profile" and
+    V :: "'v set" and
+    a :: "'a" and
+    b :: "'a"
+  assumes "V = {}"
+  shows "prefer_count V p a b = 0"
+  unfolding zero_enat_def
+  using assms
+  by simp
+
+OBSOLETE: preferred_overall
+fun wins :: "'v set \<Rightarrow> 'a \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
+  "wins V a p b =
+    (prefer_count V p a b > prefer_count V p b a)"
+*)
+
+lemma preferred_inf_voters:
+  fixes
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    b :: "'a" and
+    V :: "'v set"
+  assumes "infinite V"
+  shows "\<not> preferred_overall V b p a"
+  using assms
+  by simp
+
+text \<open>
+  Having alternative \<open>a\<close> win against \<open>b\<close> implies that \<open>b\<close> does not win against \<open>a\<close>.
+\<close>
+
+lemma preferred_antisym:
+  fixes
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    b :: "'a" and
+    V :: "'v set"
+  assumes "preferred_overall V a p b" \<comment> \<open>This already implies that \<open>V\<close> is finite.\<close>
+  shows "\<not> preferred_overall V b p a"
+  using assms
+  by simp
+
+lemma preferred_irreflex:
+  fixes
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    V :: "'v set"
+  shows "\<not> preferred_overall V a p a"
+  using preferred_antisym
+  by metis
+
+subsection \<open>Condorcet Winner\<close>
+
+fun condorcet_winner :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
+  "condorcet_winner V A p a =
+      (finite_profile V A p \<and> a \<in> A \<and> (\<forall> x \<in> A - {a}. preferred_overall V a p x))"
+(*
+Could this be defined via
+  "for all b \<noteq> a there is an injective map
+    from ballots where b wins to ballots where a wins"
+instead of prefer_count for infinite voter sets?
+*)
+
+lemma cond_winner_unique_eq:
+  fixes
+    V :: "'v set" and
+    A :: "'a set" and
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    b :: "'a"
+  assumes
+    "condorcet_winner V A p a" and
+    "condorcet_winner V A p b"
+  shows "b = a"
+proof (rule ccontr)
+  assume b_neq_a: "b \<noteq> a"
+  hence "preferred_overall V b p a"
+    using insert_Diff insert_iff assms
+    by simp
+  hence "\<not> preferred_overall V a p b"
+    by (simp add: preferred_antisym)
+  moreover have "preferred_overall V a p b"
+    using Diff_iff b_neq_a singletonD assms
+    by auto
+  ultimately show False
+    by simp
+qed
+
+lemma cond_winner_unique:
+  fixes
+    A :: "'a set" and
+    p :: "('v, 'b) Profile" and
+    a :: "'a"
+  assumes "condorcet_winner V A p a"
+  shows "{a' \<in> A. condorcet_winner V A p a'} = {a}"
+proof (safe)
+  fix a' :: "'a"
+  assume "condorcet_winner V A p a'"
+  thus "a' = a"
+    using assms cond_winner_unique_eq
+    by metis
+next
+  show "a \<in> A"
+    using assms
+    unfolding condorcet_winner.simps
+    by (metis (no_types))
+next
+  show "condorcet_winner V A p a"
+    using assms
+    by presburger
+qed
+
+lemma cond_winner_unique_2:
+  fixes
+    V :: "'v set" and
+    A :: "'a set" and
+    p :: "('v, 'b) Profile" and
+    a :: "'a" and
+    b :: "'a"
+  assumes
+    "condorcet_winner V A p a" and
+    "b \<noteq> a"
+  shows "\<not> condorcet_winner V A p b"
+  using cond_winner_unique_eq assms
+  by metis
+
+subsection \<open>Limited Profile\<close>
+
+text \<open>
+  This function restricts a profile p to a set A of alternatives and
+  a set V of voters s.t. voters outside of V do not have any preferences or
+  do not cast a vote.
+  This keeps all of A's preferences.
+\<close>
+(* TODO: add limit fun to profile locale *)
+
+fun limit_profile :: "'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
+  "limit_profile A p = (\<lambda> v. limit_ballot A (p v))"
+
+lemma limit_prof_trans:
+  fixes
+    A :: "'a set" and
+    B :: "'a set" and
+    C :: "'a set" and
+    p :: "('v, 'b) Profile"
+  assumes
+    "B \<subseteq> A" and
+    "C \<subseteq> B"
+  shows "limit_profile C p = limit_profile C (limit_profile B p)"
+  using assms
+  by auto
+
+lemma limit_profile_sound:
+  fixes
+    A :: "'a set" and
+    B :: "'a set" and
+    V :: "'v set" and
+    p :: "('a, 'v) Profile"
+  assumes
+    "profile V B p" and
+    "A \<subseteq> B"
+  shows "profile V A (limit_profile A p)"
+proof (unfold profile_def)
+  have "\<forall> v \<in> V. linear_order_on A (limit A (p v))"
+    using assms limit_presv_lin_ord
+    unfolding profile_def
+    by metis
+  thus "\<forall> v \<in> V. linear_order_on A ((limit_profile A p) v)"
+    by simp
+qed
+(*
+subsection \<open>Lifting Property\<close>
+
+definition equiv_prof_except_a :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow>
+        ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
+  "equiv_prof_except_a V A p p' a \<equiv>
+    profile V A p \<and> profile V A p' \<and> a \<in> A \<and>
+      (\<forall> v \<in> V. equiv_rel_except_a A (p v) (p' v) a)"
+
+text \<open>
+  An alternative gets lifted from one profile to another iff
+  its ranking increases in at least one ballot, and nothing else changes.
+\<close>
+
+definition lifted :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
+  "lifted V A p p' a \<equiv>
+    finite_profile V A p \<and> finite_profile V A p' \<and> a \<in> A
+      \<and> (\<forall> v \<in> V. \<not> Preference_Relation.lifted A (p v) (p' v) a \<longrightarrow> (p v) = (p' v))
+      \<and> (\<exists> v \<in> V. Preference_Relation.lifted A (p v) (p' v) a)"
+
+lemma lifted_imp_equiv_prof_except_a:
+  fixes
+    A :: "'a set" and
+    V :: "'v set" and
+    p :: "('a, 'v) Profile" and
+    p' :: "('a, 'v) Profile" and
+    a :: "'a"
+  assumes "lifted V A p p' a"
+  shows "equiv_prof_except_a V A p p' a"
+proof (unfold equiv_prof_except_a_def, safe)
+  show
+    "profile V A p" and
+    "profile V A p'" and
+    "a \<in> A"
+    using assms
+    unfolding lifted_def
+    by (metis, metis, metis)
+next
+  fix v :: "'v"
+  assume "v \<in> V"
+  thus "equiv_rel_except_a A (p v) (p' v) a"
+    using assms lifted_imp_equiv_rel_except_a trivial_equiv_rel
+    unfolding lifted_def profile_def
+    by (metis (no_types))
+qed
+
+lemma negl_diff_imp_eq_limit_prof:
+  fixes
+    A :: "'a set" and
+    A' :: "'a set" and
+    V :: "'v set" and
+    p :: "('a, 'v) Profile" and
+    p' :: "('a, 'v) Profile" and
+    a :: "'a"
+  assumes
+    change: "equiv_prof_except_a V A' p q a" and
+    subset: "A \<subseteq> A'" and
+    not_in_A: "a \<notin> A"
+  shows "\<forall> v \<in> V. (limit_profile A p) v = (limit_profile A q) v"
+  \<comment> \<open>With the current definitions of \<open>equiv_prof_except_a\<close> and \<open>limit_prof\<close>, we can
+      only conclude that the limited profiles coincide on the given voter set, since
+      \<open>limit_prof\<close> may change the profiles everywhere, while \<open>equiv_prof_except_a\<close>
+      only makes statements about the voter set.\<close>
+proof (clarify)
+  fix
+    v :: 'v
+  assume "v \<in> V"
+  hence "equiv_rel_except_a A' (p v) (q v) a"
+    using change equiv_prof_except_a_def
+    by metis
+  thus "limit_profile A p v = limit_profile A q v"
+    using subset not_in_A negl_diff_imp_eq_limit
+    by simp
+qed
+
+lemma limit_prof_eq_or_lifted:
+  fixes
+    A :: "'a set" and
+    A' :: "'a set" and
+    V :: "'v set" and
+    p :: "('a, 'v) Profile" and
+    p' :: "('a, 'v) Profile" and
+    a :: "'a"
+  assumes
+    lifted_a: "lifted V A' p p' a" and
+    subset: "A \<subseteq> A'"
+  shows "(\<forall> v \<in> V. limit_profile A p v = limit_profile A p' v)
+        \<or> lifted V A (limit_profile A p) (limit_profile A p') a"
+proof (cases "a \<in> A")
+  case True
+  have "\<forall> v \<in> V. Preference_Relation.lifted A' (p v) (p' v) a \<or> (p v) = (p' v)"
+    using lifted_a
+    unfolding lifted_def
+    by metis
+  hence one:
+    "\<forall> v \<in> V.
+         Preference_Relation.lifted A (limit A (p v)) (limit A (p' v)) a \<or>
+           (limit A (p v)) = (limit A (p' v))"
+    using limit_lifted_imp_eq_or_lifted subset
+    by metis
+  thus ?thesis
+  proof (cases "\<forall> v \<in> V. limit A (p v) = limit A (p' v)")
+    case True
+    thus ?thesis
+      by simp
+  next
+    case False
+    let ?p = "limit_profile A p"
+    let ?q = "limit_profile A p'"
+    have
+      "profile V A ?p" and
+      "profile V A ?q"
+      using lifted_a subset limit_profile_sound
+      unfolding lifted_def
+      by (safe, safe)
+    moreover have
+      "\<exists> v \<in> V. Preference_Relation.lifted A (?p v) (?q v) a"
+      using False one
+      unfolding limit_profile.simps
+      by (metis (no_types, lifting))
+    ultimately have "lifted V A ?p ?q a"
+      using True lifted_a one rev_finite_subset subset
+      unfolding lifted_def limit_profile.simps
+      by (metis (no_types, lifting))
+    thus ?thesis
+      by simp
+  qed
+next
+  case False
+  thus ?thesis
+    using lifted_a negl_diff_imp_eq_limit_prof subset lifted_imp_equiv_prof_except_a
+    by metis
+qed
+
+*)
+
+end
+
+
 subsection \<open>List Representation for Ordered Voters\<close>
 
 text \<open>
@@ -642,11 +1081,11 @@ next
         "map (\<lambda> i. to_list ?img ?q!?c) [0 ..< ?n]!i = to_list ?img ?q!?c"
         using in_bnds
         by simp
-      also have img_list_card_eq_inv_img_list:
+      have img_list_card_eq_inv_img_list:
         "to_list ?img ?q!?c = ?q ((sorted_list_of_set ?img)!?c)"
         using in_bnds to_list_simp in_bnds img_card_eq_V_length card_in_bnds
         by (metis (no_types, lifting))
-      also have img_card_eq_img_list_i:
+      have img_card_eq_img_list_i:
         "(sorted_list_of_set ?img)!?c = \<pi> (sorted_list_of_set V!i)"
         using True elem_of_img sorted_list_of_set_nth_equals_card
         by blast
@@ -667,434 +1106,4 @@ next
   qed
 qed
 
-
-subsection \<open>Preference Counts and Comparisons\<close>
-
-text \<open>
-  The win count for an alternative a with respect to a finite voter set V in a profile p is
-  the amount of ballots from V in p which a wins. The interpretation of a 'win'
-  depends on the interpretation of the profile locale.
-  If the voter set is infinite, counting is not generally possible.
-\<close>
-fun win_count :: "'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> enat" where
-  "win_count V p a = (if (finite V)
-    then card {v \<in> V. wins (p v) a} else infinity)"
-
-fun prefer_count :: "'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> enat" where
-  "prefer_count V p x y = (if (finite V)
-      then card {v \<in> V. prefers (p v) x y} else infinity)"
-      
-lemma pref_count_voter_set_card:
-  fixes
-    V :: "'v set" and
-    p :: "('v, 'b) Profile" and
-    a :: "'a" and
-    b :: "'a"
-  assumes "finite V"
-  shows "prefer_count V p a b \<le> card V"
-  using assms
-  by (simp add: card_mono)
-
-lemma set_compr:
-  fixes
-    A :: "'a set" and
-    f :: "'a \<Rightarrow> 'a set"
-  shows "{f x | x. x \<in> A} = f ` A"
-  by blast
-
-lemma pref_count_set_compr:
-  fixes
-    A :: "'a set" and
-    V :: "'v set" and
-    p :: "('v, 'b) Profile" and
-    a :: "'a"
-  shows "{prefer_count V p a a' | a'. a' \<in> A - {a}} =
-            (prefer_count V p a) ` (A - {a})"
-  by blast
-
-(* TODO: adapt to locale-based profiles
-
-lemma pref_count:
-  fixes
-    A :: "'a set" and
-    V :: "'v set" and
-    p :: "('v, 'b) Profile" and
-    a :: "'a" and
-    b :: "'a"
-  assumes
-    prof: "well_formed_profile V A p" and
-    fin: "finite V" and
-    a_in_A: "a \<in> A" and
-    b_in_A: "b \<in> A" and
-    neq: "a \<noteq> b"
-  shows "prefer_count V p a b = card V - (prefer_count V p b a)"
-proof -
-  have "\<forall> v \<in> V. \<not> (let r = (p v) in (b \<preceq>\<^sub>r a)) \<longrightarrow> (let r = (p v) in (a \<preceq>\<^sub>r b))"
-    using a_in_A b_in_A prof lin_ord_imp_connex
-    unfolding profile_def connex_def
-    by metis
-  moreover have "\<forall> v \<in> V. ((b, a) \<in> (p v) \<longrightarrow> (a, b) \<notin> (p v))"
-    using antisymD neq lin_imp_antisym prof
-    unfolding profile_def
-    by metis
-  ultimately have
-    "{v \<in> V. (let r = (p v) in (b \<preceq>\<^sub>r a))} =
-        V - {v \<in> V. (let r = (p v) in (a \<preceq>\<^sub>r b))}"
-    by auto
-  thus ?thesis
-    by (simp add: card_Diff_subset Collect_mono fin)
-qed
-
-lemma pref_count_sym:
-  fixes
-    p :: "('a, 'v) Profile" and
-    V :: "'v set" and
-    a :: "'a" and
-    b :: "'a" and
-    c :: "'a"
-  assumes
-    pref_count_ineq: "prefer_count V p a c \<ge> prefer_count V p c b" and
-    prof: "profile V A p" and
-    a_in_A: "a \<in> A" and
-    b_in_A: "b \<in> A" and
-    c_in_A: "c \<in> A" and
-    a_neq_c: "a \<noteq> c" and
-    c_neq_b: "c \<noteq> b"
-  shows "prefer_count V p b c \<ge> prefer_count V p c a"
-proof (cases "finite V")
-  case True
-  moreover have
-    nat1: "prefer_count V p c a \<in> \<nat>" and
-    nat2: "prefer_count V p b c \<in> \<nat>"
-    unfolding Nats_def
-    using True of_nat_eq_enat
-    by (simp, simp)
-  moreover have smaller: "prefer_count V p c a \<le> card V"
-    using True prof pref_count_voter_set_card
-    by metis
-  moreover have
-    "prefer_count V p a c = card V - (prefer_count V p c a)" and
-    pref_count_b_eq:
-    "prefer_count V p c b = card V - (prefer_count V p b c)"
-    using True pref_count prof c_in_A
-    by (metis (no_types, opaque_lifting) a_in_A a_neq_c,
-        metis (no_types, opaque_lifting) b_in_A c_neq_b)
-  hence "card V - (prefer_count V p b c) + (prefer_count V p c a)
-      \<le> card V - (prefer_count V p c a) + (prefer_count V p c a)"
-    using pref_count_b_eq pref_count_ineq
-    by simp
-  ultimately show ?thesis
-    by simp
-next
-  case False
-  thus ?thesis
-    by simp
-    qed
-
-    lemma empty_prof_imp_zero_pref_count:
-  fixes
-    p :: "('a, 'v) Profile" and
-    V :: "'v set" and
-    a :: "'a" and
-    b :: "'a"
-  assumes "V = {}"
-  shows "prefer_count V p a b = 0"
-  unfolding zero_enat_def
-  using assms
-  by simp
-
-fun wins :: "'v set \<Rightarrow> 'a \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "wins V a p b =
-    (prefer_count V p a b > prefer_count V p b a)"
-
-lemma wins_inf_voters:
-  fixes
-    p :: "('a, 'v) Profile" and
-    a :: "'a" and
-    b :: "'a" and
-    V :: "'v set"
-  assumes "infinite V"
-  shows "\<not> wins V b p a"
-  using assms
-  by simp
-
-text \<open>
-  Having alternative \<open>a\<close> win against \<open>b\<close> implies that \<open>b\<close> does not win against \<open>a\<close>.
-\<close>
-
-lemma wins_antisym:
-  fixes
-    p :: "('a, 'v) Profile" and
-    a :: "'a" and
-    b :: "'a" and
-    V :: "'v set"
-  assumes "wins V a p b" \<comment> \<open>This already implies that \<open>V\<close> is finite.\<close>
-  shows "\<not> wins V b p a"
-  using assms
-  by simp
-
-lemma wins_irreflex:
-  fixes
-    p :: "('a, 'v) Profile" and
-    a :: "'a" and
-    V :: "'v set"
-  shows "\<not> wins V a p a"
-  using wins_antisym
-  by metis
-
-subsection \<open>Condorcet Winner\<close>
-
-fun condorcet_winner :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "condorcet_winner V A p a =
-      (finite_profile V A p \<and> a \<in> A \<and> (\<forall> x \<in> A - {a}. wins V a p x))"
-(*
-Could this be defined via
-  "for all b \<noteq> a there is an injective map
-    from ballots where b wins to ballots where a wins"
-instead of prefer_count for infinite voter sets?
-*)
-
-lemma cond_winner_unique_eq:
-  fixes
-    V :: "'v set" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a" and
-    b :: "'a"
-  assumes
-    "condorcet_winner V A p a" and
-    "condorcet_winner V A p b"
-  shows "b = a"
-proof (rule ccontr)
-  assume b_neq_a: "b \<noteq> a"
-  hence "wins V b p a"
-    using insert_Diff insert_iff assms
-    by simp
-  hence "\<not> wins V a p b"
-    by (simp add: wins_antisym)
-  moreover have "wins V a p b"
-    using Diff_iff b_neq_a singletonD assms
-    by auto
-  ultimately show False
-    by simp
-qed
-
-lemma cond_winner_unique:
-  fixes
-    A :: "'a set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes "condorcet_winner V A p a"
-  shows "{a' \<in> A. condorcet_winner V A p a'} = {a}"
-proof (safe)
-  fix a' :: "'a"
-  assume "condorcet_winner V A p a'"
-  thus "a' = a"
-    using assms cond_winner_unique_eq
-    by metis
-next
-  show "a \<in> A"
-    using assms
-    unfolding condorcet_winner.simps
-    by (metis (no_types))
-next
-  show "condorcet_winner V A p a"
-    using assms
-    by presburger
-qed
-
-lemma cond_winner_unique_2:
-  fixes
-    V :: "'v set" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a" and
-    b :: "'a"
-  assumes
-    "condorcet_winner V A p a" and
-    "b \<noteq> a"
-  shows "\<not> condorcet_winner V A p b"
-  using cond_winner_unique_eq assms
-  by metis
-
-subsection \<open>Limited Profile\<close>
-
-text \<open>
-  This function restricts a profile p to a set A of alternatives and
-  a set V of voters s.t. voters outside of V do not have any preferences or
-  do not cast a vote.
-  This keeps all of A's preferences.
-\<close>
-
-fun limit_profile :: "'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> ('a, 'v) Profile" where
-  "limit_profile A p = (\<lambda> v. limit A (p v))"
-
-lemma limit_prof_trans:
-  fixes
-    A :: "'a set" and
-    B :: "'a set" and
-    C :: "'a set" and
-    p :: "('a, 'v) Profile"
-  assumes
-    "B \<subseteq> A" and
-    "C \<subseteq> B"
-  shows "limit_profile C p = limit_profile C (limit_profile B p)"
-  using assms
-  by auto
-
-lemma limit_profile_sound:
-  fixes
-    A :: "'a set" and
-    B :: "'a set" and
-    V :: "'v set" and
-    p :: "('a, 'v) Profile"
-  assumes
-    "profile V B p" and
-    "A \<subseteq> B"
-  shows "profile V A (limit_profile A p)"
-proof (unfold profile_def)
-  have "\<forall> v \<in> V. linear_order_on A (limit A (p v))"
-    using assms limit_presv_lin_ord
-    unfolding profile_def
-    by metis
-  thus "\<forall> v \<in> V. linear_order_on A ((limit_profile A p) v)"
-    by simp
-qed
-
-subsection \<open>Lifting Property\<close>
-
-definition equiv_prof_except_a :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow>
-        ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "equiv_prof_except_a V A p p' a \<equiv>
-    profile V A p \<and> profile V A p' \<and> a \<in> A \<and>
-      (\<forall> v \<in> V. equiv_rel_except_a A (p v) (p' v) a)"
-
-text \<open>
-  An alternative gets lifted from one profile to another iff
-  its ranking increases in at least one ballot, and nothing else changes.
-\<close>
-
-definition lifted :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "lifted V A p p' a \<equiv>
-    finite_profile V A p \<and> finite_profile V A p' \<and> a \<in> A
-      \<and> (\<forall> v \<in> V. \<not> Preference_Relation.lifted A (p v) (p' v) a \<longrightarrow> (p v) = (p' v))
-      \<and> (\<exists> v \<in> V. Preference_Relation.lifted A (p v) (p' v) a)"
-
-lemma lifted_imp_equiv_prof_except_a:
-  fixes
-    A :: "'a set" and
-    V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes "lifted V A p p' a"
-  shows "equiv_prof_except_a V A p p' a"
-proof (unfold equiv_prof_except_a_def, safe)
-  show
-    "profile V A p" and
-    "profile V A p'" and
-    "a \<in> A"
-    using assms
-    unfolding lifted_def
-    by (metis, metis, metis)
-next
-  fix v :: "'v"
-  assume "v \<in> V"
-  thus "equiv_rel_except_a A (p v) (p' v) a"
-    using assms lifted_imp_equiv_rel_except_a trivial_equiv_rel
-    unfolding lifted_def profile_def
-    by (metis (no_types))
-qed
-
-lemma negl_diff_imp_eq_limit_prof:
-  fixes
-    A :: "'a set" and
-    A' :: "'a set" and
-    V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes
-    change: "equiv_prof_except_a V A' p q a" and
-    subset: "A \<subseteq> A'" and
-    not_in_A: "a \<notin> A"
-  shows "\<forall> v \<in> V. (limit_profile A p) v = (limit_profile A q) v"
-  \<comment> \<open>With the current definitions of \<open>equiv_prof_except_a\<close> and \<open>limit_prof\<close>, we can
-      only conclude that the limited profiles coincide on the given voter set, since
-      \<open>limit_prof\<close> may change the profiles everywhere, while \<open>equiv_prof_except_a\<close>
-      only makes statements about the voter set.\<close>
-proof (clarify)
-  fix
-    v :: 'v
-  assume "v \<in> V"
-  hence "equiv_rel_except_a A' (p v) (q v) a"
-    using change equiv_prof_except_a_def
-    by metis
-  thus "limit_profile A p v = limit_profile A q v"
-    using subset not_in_A negl_diff_imp_eq_limit
-    by simp
-qed
-
-lemma limit_prof_eq_or_lifted:
-  fixes
-    A :: "'a set" and
-    A' :: "'a set" and
-    V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes
-    lifted_a: "lifted V A' p p' a" and
-    subset: "A \<subseteq> A'"
-  shows "(\<forall> v \<in> V. limit_profile A p v = limit_profile A p' v)
-        \<or> lifted V A (limit_profile A p) (limit_profile A p') a"
-proof (cases "a \<in> A")
-  case True
-  have "\<forall> v \<in> V. Preference_Relation.lifted A' (p v) (p' v) a \<or> (p v) = (p' v)"
-    using lifted_a
-    unfolding lifted_def
-    by metis
-  hence one:
-    "\<forall> v \<in> V.
-         Preference_Relation.lifted A (limit A (p v)) (limit A (p' v)) a \<or>
-           (limit A (p v)) = (limit A (p' v))"
-    using limit_lifted_imp_eq_or_lifted subset
-    by metis
-  thus ?thesis
-  proof (cases "\<forall> v \<in> V. limit A (p v) = limit A (p' v)")
-    case True
-    thus ?thesis
-      by simp
-  next
-    case False
-    let ?p = "limit_profile A p"
-    let ?q = "limit_profile A p'"
-    have
-      "profile V A ?p" and
-      "profile V A ?q"
-      using lifted_a subset limit_profile_sound
-      unfolding lifted_def
-      by (safe, safe)
-    moreover have
-      "\<exists> v \<in> V. Preference_Relation.lifted A (?p v) (?q v) a"
-      using False one
-      unfolding limit_profile.simps
-      by (metis (no_types, lifting))
-    ultimately have "lifted V A ?p ?q a"
-      using True lifted_a one rev_finite_subset subset
-      unfolding lifted_def limit_profile.simps
-      by (metis (no_types, lifting))
-    thus ?thesis
-      by simp
-  qed
-next
-  case False
-  thus ?thesis
-    using lifted_a negl_diff_imp_eq_limit_prof subset lifted_imp_equiv_prof_except_a
-    by metis
-qed
-
-*)
-
-end
 end

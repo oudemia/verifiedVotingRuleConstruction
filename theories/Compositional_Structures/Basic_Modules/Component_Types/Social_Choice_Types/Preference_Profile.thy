@@ -34,4 +34,7 @@ fun prefers_\<P>\<V> :: "'a Preference_Relation \<Rightarrow> 'a \<Rightarrow> '
 fun wins_\<P>\<V> :: "'a Preference_Relation \<Rightarrow> 'a \<Rightarrow> bool" where
 "wins_\<P>\<V> b a = (above b a = {a})"
 
+fun limit_\<P>\<V>_ballot :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> 'a Preference_Relation" where
+"limit_\<P>\<V>_ballot A b = (A \<times> A) \<inter> b"
+
 end

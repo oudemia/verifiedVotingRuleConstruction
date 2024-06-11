@@ -24,4 +24,7 @@ fun prefers_\<A>\<V> :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> 'a \<Rig
 fun wins_\<A>\<V> :: "'a Approval_Set \<Rightarrow> 'a \<Rightarrow> bool" where
 "wins_\<A>\<V> A a = (a \<in> A)"
 
+fun limit_\<A>\<V>_ballot :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
+"limit_\<A>\<V>_ballot A b = A \<inter> b"
+
 end
