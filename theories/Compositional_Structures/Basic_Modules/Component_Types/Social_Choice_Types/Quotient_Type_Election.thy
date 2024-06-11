@@ -33,25 +33,25 @@ proof -
     by (metis, metis, metis)
 qed
 
-quotient_type ('a, 'v) Election\<^sub>\<Q> =
-  "'a set \<times> 'v set \<times> ('a, 'v) Profile" / "election_equality"
+quotient_type ('a, 'v, 'b) Election\<^sub>\<Q> =
+  "'a set \<times> 'v set \<times> ('v, 'b) Profile" / "election_equality"
   unfolding equivp_reflp_symp_transp reflp_def symp_def transp_def
   using election_equality_equiv
   by simp
 
-fun fst\<^sub>\<Q> :: "('a, 'v) Election\<^sub>\<Q> \<Rightarrow> 'a set" where
+fun fst\<^sub>\<Q> :: "('a, 'v, 'b) Election\<^sub>\<Q> \<Rightarrow> 'a set" where
   "fst\<^sub>\<Q> E = Product_Type.fst (rep_Election\<^sub>\<Q> E)"
 
-fun snd\<^sub>\<Q> :: "('a, 'v) Election\<^sub>\<Q> \<Rightarrow> 'v set \<times> ('a, 'v) Profile" where
+fun snd\<^sub>\<Q> :: "('a, 'v, 'b) Election\<^sub>\<Q> \<Rightarrow> 'v set \<times> ('v, 'b) Profile" where
   "snd\<^sub>\<Q> E = Product_Type.snd (rep_Election\<^sub>\<Q> E)"
 
-abbreviation alternatives_\<E>\<^sub>\<Q> :: "('a, 'v) Election\<^sub>\<Q> \<Rightarrow> 'a set" where
+abbreviation alternatives_\<E>\<^sub>\<Q> :: "('a, 'v, 'b) Election\<^sub>\<Q> \<Rightarrow> 'a set" where
   "alternatives_\<E>\<^sub>\<Q> E \<equiv> fst\<^sub>\<Q> E"
 
-abbreviation voters_\<E>\<^sub>\<Q> :: "('a, 'v) Election\<^sub>\<Q> \<Rightarrow> 'v set" where
+abbreviation voters_\<E>\<^sub>\<Q> :: "('a, 'v, 'b) Election\<^sub>\<Q> \<Rightarrow> 'v set" where
   "voters_\<E>\<^sub>\<Q> E \<equiv> Product_Type.fst (snd\<^sub>\<Q> E)"
 
-abbreviation profile_\<E>\<^sub>\<Q> :: "('a, 'v) Election\<^sub>\<Q> \<Rightarrow> ('a, 'v) Profile" where
+abbreviation profile_\<E>\<^sub>\<Q> :: "('a, 'v, 'b) Election\<^sub>\<Q> \<Rightarrow> ('v, 'b) Profile" where
   "profile_\<E>\<^sub>\<Q> E \<equiv> Product_Type.snd (snd\<^sub>\<Q> E)"
 
 end

@@ -10,11 +10,12 @@ theory Voting_Symmetry
           Social_Choice_Result
           Social_Welfare_Result
           Profile
+          Profile_Interpretations
 begin
 
 subsection \<open>Definitions\<close>
 
-fun (in result) closed_election_results :: "('a, 'v) Election rel \<Rightarrow> bool" where
+fun (in result) closed_election_results :: "('a, 'v, 'a Preference_Relation) Election rel \<Rightarrow> bool" where
   "closed_election_results r =
     (\<forall> (e, e') \<in> r.
       limit_set (alternatives_\<E> e) UNIV = limit_set (alternatives_\<E> e') UNIV)"
@@ -27,29 +28,33 @@ subsubsection \<open>Anonymity\<close>
 definition anonymity\<^sub>\<G> :: "('v \<Rightarrow> 'v) monoid" where
   "anonymity\<^sub>\<G> = BijGroup (UNIV::'v set)"
 
-fun \<phi>_anon :: "('a, 'v) Election set \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> (('a, 'v) Election
-                  \<Rightarrow> ('a, 'v) Election)" where
+context profile 
+begin
+
+fun \<phi>_anon :: "('a, 'v, 'b) Election set \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> (('a, 'v, 'b) Election
+                  \<Rightarrow> ('a, 'v, 'b) Election)" where
   "\<phi>_anon \<E> \<pi> = extensional_continuation (rename \<pi>) \<E>"
 
-fun anonymity\<^sub>\<R> :: "('a, 'v) Election set \<Rightarrow> ('a, 'v) Election rel" where
+fun anonymity\<^sub>\<R> :: "('a, 'v, 'b) Election set \<Rightarrow> ('a, 'v, 'b) Election rel" where
   "anonymity\<^sub>\<R> \<E> = action_induced_rel (carrier anonymity\<^sub>\<G>) \<E> (\<phi>_anon \<E>)"
 
+end
 subsubsection \<open>Neutrality\<close>
 
 fun rel_rename :: "('a \<Rightarrow> 'a, 'a Preference_Relation) binary_fun" where
   "rel_rename \<pi> r = {(\<pi> a, \<pi> b) | a b. (a, b) \<in> r}"
 
-fun alternatives_rename :: "('a \<Rightarrow> 'a, ('a, 'v) Election) binary_fun" where
+fun alternatives_rename :: "('a \<Rightarrow> 'a, ('a, 'v, 'a Preference_Relation) Election) binary_fun" where
   "alternatives_rename \<pi> \<E> =
       (\<pi> ` (alternatives_\<E> \<E>), voters_\<E> \<E>, (rel_rename \<pi>) \<circ> (profile_\<E> \<E>))"
 
 definition neutrality\<^sub>\<G> :: "('a \<Rightarrow> 'a) monoid" where
   "neutrality\<^sub>\<G> = BijGroup (UNIV::'a set)"
 
-fun \<phi>_neutr :: "('a, 'v) Election set \<Rightarrow> ('a \<Rightarrow> 'a, ('a, 'v) Election) binary_fun" where
+fun \<phi>_neutr :: "('a, 'v, 'a Preference_Relation) Election set \<Rightarrow> ('a \<Rightarrow> 'a, ('a, 'v, 'a Preference_Relation) Election) binary_fun" where
   "\<phi>_neutr \<E> \<pi> = extensional_continuation (alternatives_rename \<pi>) \<E>"
 
-fun neutrality\<^sub>\<R> :: "('a, 'v) Election set \<Rightarrow> ('a, 'v) Election rel" where
+fun neutrality\<^sub>\<R> :: "('a, 'v, 'a Preference_Relation) Election set \<Rightarrow> ('a, 'v, 'a Preference_Relation) Election rel" where
   "neutrality\<^sub>\<R> \<E> = action_induced_rel (carrier neutrality\<^sub>\<G>) \<E> (\<phi>_neutr \<E>)"
 
 fun \<psi>_neutr\<^sub>\<c> :: "('a \<Rightarrow> 'a, 'a) binary_fun" where
@@ -58,9 +63,9 @@ fun \<psi>_neutr\<^sub>\<c> :: "('a \<Rightarrow> 'a, 'a) binary_fun" where
 fun \<psi>_neutr\<^sub>\<w> :: "('a \<Rightarrow> 'a, 'a rel) binary_fun" where
   "\<psi>_neutr\<^sub>\<w> \<pi> r = rel_rename \<pi> r"
 
-subsubsection \<open>Homogeneity\<close>
+  subsubsection \<open>Homogeneity\<close>
 
-fun homogeneity\<^sub>\<R> :: "('a, 'v) Election set \<Rightarrow> ('a, 'v) Election rel" where
+fun homogeneity\<^sub>\<R> :: "('a, 'v, 'a Preference_Relation) Election set \<Rightarrow> ('a, 'v, 'a Preference_Relation) Election rel" where
   "homogeneity\<^sub>\<R> \<E> =
       {(E, E') \<in> \<E> \<times> \<E>.
           alternatives_\<E> E = alternatives_\<E> E'
@@ -72,7 +77,7 @@ fun copy_list :: "nat \<Rightarrow> 'x list \<Rightarrow> 'x list" where
   "copy_list 0 l = []" |
   "copy_list (Suc n) l = copy_list n l @ l"
 
-fun homogeneity\<^sub>\<R>' :: "('a, 'v::linorder) Election set \<Rightarrow> ('a, 'v) Election rel" where
+fun homogeneity\<^sub>\<R>' :: "('a, 'v::linorder, 'a Preference_Relation) Election set \<Rightarrow> ('a, 'v, 'a Preference_Relation) Election rel" where
   "homogeneity\<^sub>\<R>' \<E> =
       {(E, E') \<in> \<E> \<times> \<E>.
           alternatives_\<E> E = alternatives_\<E> E'
@@ -86,20 +91,20 @@ subsubsection \<open>Reversal Symmetry\<close>
 fun rev_rel :: "'a rel \<Rightarrow> 'a rel" where
   "rev_rel r = {(a, b). (b, a) \<in> r}"
 
-fun rel_app :: "('a rel \<Rightarrow> 'a rel) \<Rightarrow> ('a, 'v) Election \<Rightarrow> ('a, 'v) Election" where
+fun rel_app :: "('a rel \<Rightarrow> 'a rel) \<Rightarrow> ('a, 'v, 'a Preference_Relation) Election \<Rightarrow> ('a, 'v, 'a Preference_Relation) Election" where
   "rel_app f (A, V, p) = (A, V, f \<circ> p)"
 
 definition reversal\<^sub>\<G> :: "('a rel \<Rightarrow> 'a rel) monoid" where
   "reversal\<^sub>\<G> = \<lparr>carrier = {rev_rel, id}, monoid.mult = comp, one = id\<rparr>"
 
-fun \<phi>_rev :: "('a, 'v) Election set
-                \<Rightarrow> ('a rel \<Rightarrow> 'a rel, ('a, 'v) Election) binary_fun" where
+fun \<phi>_rev :: "('a, 'v, 'a Preference_Relation) Election set
+                \<Rightarrow> ('a rel \<Rightarrow> 'a rel, ('a, 'v, 'a Preference_Relation) Election) binary_fun" where
   "\<phi>_rev \<E> \<phi> = extensional_continuation (rel_app \<phi>) \<E>"
 
 fun \<psi>_rev :: "('a rel \<Rightarrow> 'a rel, 'a rel) binary_fun" where
   "\<psi>_rev \<phi> r = \<phi> r"
 
-fun reversal\<^sub>\<R> :: "('a, 'v) Election set \<Rightarrow>  ('a, 'v) Election rel" where
+fun reversal\<^sub>\<R> :: "('a, 'v, 'a Preference_Relation) Election set \<Rightarrow>  ('a, 'v, 'a Preference_Relation) Election rel" where
   "reversal\<^sub>\<R> \<E> = action_induced_rel (carrier reversal\<^sub>\<G>) \<E> (\<phi>_rev \<E>)"
 
 subsection \<open>Auxiliary Lemmas\<close>
@@ -599,9 +604,9 @@ subsection \<open>Anonymity Lemmas\<close>
 
 lemma anon_rel_vote_count:
   fixes
-    \<E> :: "('a, 'v) Election set" and
-    E :: "('a, 'v) Election" and
-    E' :: "('a, 'v) Election"
+    \<E> :: "('a, 'v, 'a Preference_Relation) Election set" and
+    E :: "('a, 'v, 'a Preference_Relation) Election" and
+    E' :: "('a, 'v, 'a Preference_Relation) Election"
   assumes
     "finite (voters_\<E> E)" and
     "(E, E') \<in> anonymity\<^sub>\<R> \<E>"
@@ -672,9 +677,9 @@ qed
 
 lemma vote_count_anon_rel:
   fixes
-    \<E> :: "('a, 'v) Election set" and
-    E :: "('a, 'v) Election" and
-    E' :: "('a, 'v) Election"
+    \<E> :: "('a, 'v, 'a Preference_Relation) Election set" and
+    E :: "('a, 'v, 'a Preference_Relation) Election" and
+    E' :: "('a, 'v, 'a Preference_Relation) Election"
   assumes
     fin_voters_E: "finite (voters_\<E> E)" and
     fin_voters_E': "finite (voters_\<E> E')" and
@@ -840,7 +845,7 @@ lemma rename_comp:
     "bij \<pi>'"
   shows "rename \<pi> \<circ> rename \<pi>' = rename (\<pi> \<circ> \<pi>')"
 proof
-  fix E :: "('a, 'v) Election"
+  fix E :: "('a, 'v, 'a Preference_Relation) Election"
   have "rename \<pi>' E =
       (alternatives_\<E> E, \<pi>' ` (voters_\<E> E), (profile_\<E> E) \<circ> (the_inv \<pi>'))"
     unfolding alternatives_\<E>.simps voters_\<E>.simps profile_\<E>.simps
@@ -1210,7 +1215,7 @@ lemma alternatives_rename_comp:
   shows
     "alternatives_rename \<pi> \<circ> alternatives_rename \<pi>' = alternatives_rename (\<pi> \<circ> \<pi>')"
 proof
-  fix \<E> :: "('a, 'v) Election"
+  fix \<E> :: "('a, 'v, 'a Preference_Relation) Election"
   have "(alternatives_rename \<pi> \<circ> alternatives_rename \<pi>') \<E> =
       (\<pi> ` \<pi>' ` (alternatives_\<E> \<E>), voters_\<E> \<E>,
         (rel_rename \<pi>) \<circ> (rel_rename \<pi>') \<circ> (profile_\<E> \<E>))"
@@ -1232,10 +1237,10 @@ lemma valid_elects_closed:
   fixes
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'a Preference_Relation) Profile" and
     A' :: "'a set" and
     V' :: "'v set" and
-    p' :: "('a, 'v) Profile" and
+    p' :: "('v, 'a Preference_Relation) Profile" and
     \<pi> :: "'a \<Rightarrow> 'a"
   assumes
     bij_\<pi>: "bij \<pi>" and
@@ -1274,8 +1279,8 @@ proof (unfold bij_betw_def, safe, intro inj_onI, clarify)
     A' :: "'a set" and
     V :: "'v set" and
     V' :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile"
+    p :: "('v, 'a Preference_Relation) Profile" and
+    p' :: "('v, 'a Preference_Relation) Profile"
   assume
     renamed: "alternatives_rename \<pi> (A, V, p) = alternatives_rename \<pi> (A', V', p')"
   hence
@@ -1306,8 +1311,8 @@ next
     A' :: "'a set" and
     V :: "'v set" and
     V' :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile"
+    p :: "('v, 'a Preference_Relation) Profile" and
+    p' :: "('v, 'a Preference_Relation) Profile"
   assume renamed: "(A', V', p') = alternatives_rename \<pi> (A, V, p)"
   hence rewr: "V = V' \<and> A' = \<pi> ` A"
     by simp
@@ -1329,7 +1334,7 @@ next
   fix
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'a Preference_Relation) Profile"
   assume valid_elects: "(A, V, p) \<in> valid_elections"
   have rename_inv:
     "alternatives_rename (the_inv \<pi>) (A, V, p) =
@@ -1628,7 +1633,7 @@ proof (unfold rewrite_equivariance voters_\<E>.simps profile_\<E>.simps set_acti
     \<pi> :: "'a \<Rightarrow> 'a" and
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'a Preference_Relation) Profile" and
     r :: "'a rel"
   assume
     carrier_\<pi>: "\<pi> \<in> carrier neutrality\<^sub>\<G>" and
@@ -1665,7 +1670,7 @@ qed
 subsection \<open>Homogeneity Lemmas\<close>
 
 lemma refl_homogeneity\<^sub>\<R>:
-  fixes \<E> :: "('a, 'v) Election set"
+  fixes \<E> :: "('a, 'v, 'a Preference_Relation) Election set"
   assumes "\<E> \<subseteq> finite_elections_\<V>"
   shows "refl_on \<E> (homogeneity\<^sub>\<R> \<E>)"
   using assms
@@ -1868,7 +1873,7 @@ proof (unfold rewrite_equivariance, clarify)
     \<pi> :: "'a rel \<Rightarrow> 'a rel" and
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'a Preference_Relation) Profile"
   assume "\<pi> \<in> carrier reversal\<^sub>\<G>"
   hence cases: "\<pi> \<in> {id, rev_rel}"
     unfolding reversal\<^sub>\<G>_def

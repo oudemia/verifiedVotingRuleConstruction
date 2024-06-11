@@ -54,10 +54,10 @@ text \<open>
 
 locale result =
   fixes
-    well_formed :: "'a set \<Rightarrow> ('r Result) \<Rightarrow> bool" and
+    well_formed_result :: "'a set \<Rightarrow> ('r Result) \<Rightarrow> bool" and
     limit_set :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set"
   assumes "\<And> (A::('a set)) (r::('r Result)).
-    (set_equals_partition (limit_set A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed A r"
+    (set_equals_partition (limit_set A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r"
 
 text \<open>
   These three functions return the elect, reject, or defer set of a result.

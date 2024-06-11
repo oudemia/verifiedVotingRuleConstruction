@@ -23,11 +23,11 @@ text \<open>
 
 locale result_properties = result +
   fixes \<psi>_neutr :: "('a \<Rightarrow> 'a, 'b) binary_fun" and
-        \<E> :: "('a, 'v) Election"
+        \<E> :: "('a, 'v, 'b) Election"
   assumes
     act_neutr: "group_action neutrality\<^sub>\<G> UNIV \<psi>_neutr" and
     well_formed_res_neutr:
-      "is_symmetry (\<lambda> \<E> :: ('a, 'v) Election. limit_set (alternatives_\<E> \<E>) UNIV)
+      "is_symmetry (\<lambda> \<E> :: ('a, 'v, 'b) Election. limit_set (alternatives_\<E> \<E>) UNIV)
                 (action_induced_equivariance (carrier neutrality\<^sub>\<G>)
                     valid_elections (\<phi>_neutr valid_elections) (set_action \<psi>_neutr))"
 

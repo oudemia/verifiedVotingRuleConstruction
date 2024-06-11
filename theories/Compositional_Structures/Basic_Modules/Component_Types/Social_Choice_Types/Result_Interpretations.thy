@@ -40,11 +40,11 @@ proof (unfold_locales, safe)
 qed
 
 text \<open>
-  Results from committee functions, for the purpose of composability and
-  modularity given as three sets of (potentially tied) sets of alternatives or committees.
+  Results from multi-winner functions, for the purpose of composability and
+  modularity given as three sets of (potentially tied) sets of alternatives.
   \<open>[[Not actually used yet.]]\<close>
 \<close>
-global_interpretation committee_result:
+global_interpretation multi_winner_result:
   result "\<lambda> A r. set_equals_partition (Pow A) r \<and> disjoint3 r"
           "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}"
 proof (unfold_locales, safe)
@@ -57,6 +57,39 @@ proof (unfold_locales, safe)
   thus "set_equals_partition (Pow A) (e, r, d)"
     by force
 qed
+    
+text \<open>
+  Results from committee functions, given as three sets of (potentially tied) sets
+ committees. Committees are sets of alternatives with fixed cardinality k.
+\<close>
+
+fun committee_res :: "'a set \<Rightarrow> ('a set Result) \<Rightarrow> nat \<Rightarrow> bool" where
+"committee_res A r k =
+      ( set_equals_partition {A' \<in> Pow(A). card A' = k} r 
+      \<and> disjoint3 r 
+      \<and> card (elect_r r) = k \<and> card (reject_r r) = k \<and> card (defer_r r) = k)"
+
+(*
+fun committee_res :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a set Result) \<Rightarrow> bool" where
+"committee_res k A r =
+      ( set_equals_partition {A' \<in> Pow(A). card A' = k} r 
+      \<and> disjoint3 r 
+      \<and> card (elect_r r) = k \<and> card (reject_r r) = k \<and> card (defer_r r) = k)"
+      
+global_interpretation committee_result:
+  result "(committee_res)" "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}"
+
+proof (unfold_locales, safe)
+  fix
+    A :: "'b set" and
+    e :: "'b set set" and
+    r :: "'b set set" and
+    d :: "'b set set"
+  assume "set_equals_partition {r \<inter> A |r. r \<in> UNIV} (e, r, d)"
+  thus "set_equals_partition {A' \<in> Pow(A). card A' = k} (e, r, d)"
+    by force
+qed
+*)
 
 text \<open>
   Results from social welfare functions (\<open>\<S>\<W>\<F>s\<close>), for the purpose of composability and
