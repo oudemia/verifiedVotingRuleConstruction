@@ -20,16 +20,20 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun elect_module :: "('a, 'v, 'a Result) Electoral_Module" where
-  "elect_module V A p = (A, {}, {})"
+fun (in electoral_structure) elect_module :: "('v, 'b, 'r) Electoral_Module" where
+  "elect_module V R p = (R, {}, {})"
 
 subsection \<open>Soundness\<close>
 
-theorem elect_mod_sound[simp]: "\<S>\<C>\<F>_result.electoral_module elect_module"
-  unfolding \<S>\<C>\<F>_result.electoral_module.simps
+theorem \<P>\<V>_elect_mod_sound[simp]: "\<P>\<V>_\<S>\<C>\<F>.electoral_module \<P>\<V>_\<S>\<C>\<F>.elect_module"
+  unfolding \<P>\<V>_\<S>\<C>\<F>.electoral_module.simps
   by simp
 
-lemma elect_mod_only_voters: "voters_determine_election elect_module"
+theorem \<A>\<V>_elect_mod_sound[simp]: "\<A>\<V>_\<S>\<C>\<F>.electoral_module \<A>\<V>_\<S>\<C>\<F>.elect_module"
+  unfolding \<A>\<V>_\<S>\<C>\<F>.electoral_module.simps
+  by simp
+
+lemma (in electoral_structure) elect_mod_only_voters: "voters_determine_election elect_module"
   unfolding voters_determine_election.simps
   by simp
 

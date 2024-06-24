@@ -20,29 +20,32 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun sequential_composition :: "('a, 'v, 'a Result) Electoral_Module
-                            \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module
-                            \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module" where
-  "sequential_composition m n V A p =
-    (let new_A = defer m V A p;
-        new_p = limit_profile new_A p in (
-                  (elect m V A p) \<union> (elect n V new_A new_p),
-                  (reject m V A p) \<union> (reject n V new_A new_p),
-                  defer n V new_A new_p))"
+context electoral_structure
+begin
 
-abbreviation sequence ::
-  "('a, 'v, 'a Result) Electoral_Module \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module
-    \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module"
+fun (in electoral_structure) sequential_composition :: "('v, 'b, 'r) Electoral_Module
+                            \<Rightarrow> ('v, 'b, 'r) Electoral_Module
+                            \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+  "sequential_composition m n V R p =
+    (let new_R = defer m V R p;
+        new_p = limit_profile (affected_alts new_R) p in (
+                  (elect m V R p) \<union> (elect n V new_R new_p),
+                  (reject m V R p) \<union> (reject n V new_R new_p),
+                  defer n V new_R new_p))"
+
+abbreviation (in electoral_structure) sequence ::
+  "('v, 'b, 'r) Electoral_Module \<Rightarrow> ('v, 'b, 'r) Electoral_Module
+    \<Rightarrow> ('v, 'b, 'r) Electoral_Module"
      (infix "\<triangleright>" 50) where
   "m \<triangleright> n == sequential_composition m n"
 
-fun sequential_composition' :: "('a, 'v, 'a Result) Electoral_Module
-                                  \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module
-                                  \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module" where
-  "sequential_composition' m n V A p =
-    (let (m_e, m_r, m_d) = m V A p; new_A = m_d;
-        new_p = limit_profile new_A p;
-        (n_e, n_r, n_d) = n V new_A new_p in
+fun (in electoral_structure) sequential_composition' :: "( 'v, 'b, 'r) Electoral_Module
+                                  \<Rightarrow> ('v, 'b, 'r) Electoral_Module
+                                  \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+  "sequential_composition' m n V R p =
+    (let (m_e, m_r, m_d) = m V R p; new_R = m_d;
+        new_p = limit_profile (affected_alts new_R) p;
+        (n_e, n_r, n_d) = n V new_R new_p in
             (m_e \<union> n_e, m_r \<union> n_r, n_d))"
 
 lemma voters_determine_seq_comp:
@@ -1794,4 +1797,5 @@ next
   qed
 qed
 
+end
 end

@@ -21,17 +21,17 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun plurality_score :: "('a, 'v) Evaluation_Function" where
-  "plurality_score V x A p = win_count V p x"
+fun plurality_score :: "('a, 'v, 'a Preference_Relation) Evaluation_Function" where
+  "plurality_score V x A p = \<P>\<V>_profile.win_count V p x"
 
-fun plurality :: "('a, 'v, 'a Result) Electoral_Module" where
+fun plurality :: "('v, 'a Preference_Relation, 'a) Electoral_Module" where
   "plurality V A p = max_eliminator plurality_score V A p"
 
-fun plurality' :: "('a, 'v, 'a Result) Electoral_Module" where
+fun plurality' :: "('v, 'a Preference_Relation, 'a) Electoral_Module" where
   "plurality' V A p =
     ({},
-     {a \<in> A. \<exists> x \<in> A. win_count V p x > win_count V p a},
-     {a \<in> A. \<forall> x \<in> A. win_count V p x \<le> win_count V p a})"
+     {a \<in> A. \<exists> x \<in> A. \<P>\<V>_profile.win_count V p x > \<P>\<V>_profile.win_count V p a},
+     {a \<in> A. \<forall> x \<in> A. \<P>\<V>_profile.win_count V p x \<le> \<P>\<V>_profile.win_count V p a})"
 
 lemma enat_leq_enat_set_max:
   fixes

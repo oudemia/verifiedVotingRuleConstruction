@@ -7,7 +7,8 @@
 section \<open>Evaluation Function\<close>
 
 theory Evaluation_Function
-  imports "Social_Choice_Types/Profile"
+imports 
+    "Social_Choice_Types/Profile_Interpretations"
 begin
 
 text \<open>
@@ -18,8 +19,8 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-type_synonym ('a, 'v) Evaluation_Function =
-  "'v set \<Rightarrow> 'a \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> enat"
+type_synonym ('r, 'v, 'b) Evaluation_Function =
+  "'v set \<Rightarrow> 'r \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> enat"
 
 subsection \<open>Property\<close>
 
@@ -28,7 +29,7 @@ text \<open>
   If a Condorcet Winner w exists, w and only w has the highest value.
 \<close>
 
-definition condorcet_rating :: "('a, 'v) Evaluation_Function \<Rightarrow> bool" where
+definition (in ballot) condorcet_rating :: "('a, 'v, 'b) Evaluation_Function \<Rightarrow> bool" where
   "condorcet_rating f \<equiv>
     \<forall> A V p w . condorcet_winner V A p w \<longrightarrow>
       (\<forall> l \<in> A . l \<noteq> w \<longrightarrow> f V l A p < f V w A p)"
@@ -38,7 +39,7 @@ text \<open>
   it is invariant under profile changes that only impact non-voters.
 \<close>
 
-fun voters_determine_evaluation :: "('a, 'v) Evaluation_Function \<Rightarrow> bool" where
+fun voters_determine_evaluation :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> bool" where
   "voters_determine_evaluation f =
     (\<forall> A V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (\<forall> a \<in> A. f V a A p = f V a A p'))"
 

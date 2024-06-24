@@ -24,6 +24,9 @@ fun well_formed_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a Result \<Rightarrow> bo
 fun limit_set_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set" where
   "limit_set_\<S>\<C>\<F> A r = A \<inter> r"
 
+fun affected_alts_\<S>\<C>\<F> :: "'a set  \<Rightarrow> 'a set" where
+  "affected_alts_\<S>\<C>\<F> r = r"
+
 subsection \<open>Auxiliary Lemmas\<close>
 
 lemma result_imp_rej:

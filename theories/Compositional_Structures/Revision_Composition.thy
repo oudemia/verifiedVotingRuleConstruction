@@ -19,20 +19,20 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun revision_composition :: "('a, 'v, 'a Result) Electoral_Module
-        \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module" where
+fun revision_composition :: "('v, 'b, 'r) Electoral_Module
+        \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
   "revision_composition m V A p = ({}, A - elect m V A p, elect m V A p)"
 
-abbreviation rev :: "('a, 'v, 'a Result) Electoral_Module
-        \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module" ("_\<down>" 50) where
+abbreviation rev :: "('v, 'b, 'r) Electoral_Module
+        \<Rightarrow> ('v, 'b, 'r) Electoral_Module" ("_\<down>" 50) where
   "m\<down> == revision_composition m"
 
 subsection \<open>Soundness\<close>
 
-theorem rev_comp_sound[simp]:
-  fixes m :: "('a, 'v, 'a Result) Electoral_Module"
-  assumes "\<S>\<C>\<F>_result.electoral_module m"
-  shows "\<S>\<C>\<F>_result.electoral_module (revision_composition m)"
+theorem (in electoral_structure) rev_comp_sound[simp]:
+  fixes m :: "('v, 'b, 'r) Electoral_Module"
+  assumes "electoral_module m"
+  shows "electoral_module (revision_composition m)"
 proof -
   from assms
   have "\<forall> A V p. profile V A p \<longrightarrow> elect m V A p \<subseteq> A"
@@ -51,7 +51,7 @@ proof -
     by simp
   from unity disjoint
   show ?thesis
-    unfolding \<S>\<C>\<F>_result.electoral_module.simps
+    unfolding electoral_module.simps
     by simp
 qed
 

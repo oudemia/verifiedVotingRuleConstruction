@@ -21,20 +21,20 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun plurality_rule :: "('a, 'v, 'a Result) Electoral_Module" where
-  "plurality_rule V A p = elector plurality V A p"
+fun plurality_rule :: "('v, 'a Preference_Relation, 'a) Electoral_Module" where
+  "plurality_rule V A p = \<P>\<V>_\<S>\<C>\<F>.elector plurality V A p"
 
-fun plurality_rule' :: "('a, 'v, 'a Result) Electoral_Module" where
+fun plurality_rule' :: "('v, 'a Preference_Relation, 'a) Electoral_Module" where
   "plurality_rule' V A p =
-    ({a \<in> A. \<forall> x \<in> A. win_count V p x \<le> win_count V p a},
-     {a \<in> A. \<exists> x \<in> A. win_count V p x > win_count V p a},
+    ({a \<in> A. \<forall> x \<in> A. \<P>\<V>_profile.win_count V p x \<le> \<P>\<V>_profile.win_count V p a},
+     {a \<in> A. \<exists> x \<in> A. \<P>\<V>_profile.win_count V p x > \<P>\<V>_profile.win_count V p a},
      {})"
 
 lemma plurality_revision_equiv:
   fixes
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'a Preference_Relation) Profile"
   shows "plurality' V A p = (plurality_rule'\<down>) V A p"
 proof (unfold plurality'.simps revision_composition.simps, safe)
   fix
@@ -42,18 +42,18 @@ proof (unfold plurality'.simps revision_composition.simps, safe)
     b :: "'a"
   assume
     "b \<in> A" and
-    "win_count V p a < win_count V p b" and
+    "\<P>\<V>_profile.win_count V p a < \<P>\<V>_profile.win_count V p b" and
     "a \<in> elect plurality_rule' V A p"
   thus False
-    by fastforce
+    using Elect_Composition.dcc_imp_cc_elector by blast
 next
   fix a :: "'a"
   assume "a \<notin> elect plurality_rule' V A p"
   moreover from this
-  have "a \<notin> A \<or> (\<exists> x. x \<in> A \<and> \<not> win_count V p x \<le> win_count V p a)"
+  have "a \<notin> A \<or> (\<exists> x. x \<in> A \<and> \<not> \<P>\<V>_profile.win_count V p x \<le> \<P>\<V>_profile.win_count V p a)"
     by force
   moreover assume "a \<in> A"
-  ultimately show "\<exists> x \<in> A. win_count V p a < win_count V p x"
+  ultimately show "\<exists> x \<in> A. \<P>\<V>_profile.win_count V p a < \<P>\<V>_profile.win_count V p x"
     using linorder_le_less_linear
     by metis
 next
@@ -62,7 +62,7 @@ next
     b :: "'a"
   assume
     "a \<in> A" and
-    "\<forall> x \<in> A. win_count V p x \<le> win_count V p a"
+    "\<forall> x \<in> A. \<P>\<V>_profile.win_count V p x \<le> \<P>\<V>_profile.win_count V p a"
   thus "a \<in> elect plurality_rule' V A p"
     by simp
 next
@@ -77,7 +77,7 @@ next
   assume
     "a \<in> elect plurality_rule' V A p" and
     "b \<in> A"
-  thus "win_count V p b \<le> win_count V p a"
+  thus "\<P>\<V>_profile.win_count V p b \<le> \<P>\<V>_profile.win_count V p a"
     by simp
 qed
 

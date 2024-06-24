@@ -28,7 +28,7 @@ subsubsection \<open>Anonymity\<close>
 definition anonymity\<^sub>\<G> :: "('v \<Rightarrow> 'v) monoid" where
   "anonymity\<^sub>\<G> = BijGroup (UNIV::'v set)"
 
-context profile 
+context ballot
 begin
 
 fun \<phi>_anon :: "('a, 'v, 'b) Election set \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> (('a, 'v, 'b) Election

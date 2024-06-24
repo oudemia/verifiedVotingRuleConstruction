@@ -21,18 +21,18 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun defer_module :: "('a, 'v, 'a Result) Electoral_Module" where
-  "defer_module V A p = ({}, {}, A)"
+fun defer_module :: "('a, 'v, 'r) Electoral_Module" where
+  "defer_module V R p = ({}, {}, R)"
 
 subsection \<open>Soundness\<close>
 
-theorem def_mod_sound[simp]: "\<S>\<C>\<F>_result.electoral_module defer_module"
-  unfolding \<S>\<C>\<F>_result.electoral_module.simps
+theorem def_mod_sound[simp]: "\<P>\<V>_\<S>\<C>\<F>.electoral_module defer_module"
+  unfolding \<P>\<V>_\<S>\<C>\<F>.electoral_module.simps
   by simp
 
 subsection \<open>Properties\<close>
 
-theorem def_mod_non_electing: "non_electing defer_module"
+theorem (in electoral_structure) def_mod_non_electing: "non_electing defer_module"
   unfolding non_electing_def
   by simp
 

@@ -22,16 +22,16 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun elector :: "('a, 'v, 'a Result) Electoral_Module
-                  \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module" where
+fun (in electoral_structure) elector :: "('v, 'b, 'r) Electoral_Module
+                  \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
   "elector m = (m \<triangleright> elect_module)"
 
 subsection \<open>Auxiliary Lemmas\<close>
 
-lemma elector_seqcomp_assoc:
+lemma (in electoral_structure) elector_seqcomp_assoc:
   fixes
-    a :: "('a, 'v, 'a Result) Electoral_Module" and
-    b :: "('a, 'v, 'a Result) Electoral_Module"
+    a :: "('v, 'b, 'r) Electoral_Module" and
+    b :: "('v, 'b, 'r) Electoral_Module"
   shows "(a \<triangleright> (elector b)) = (elector (a \<triangleright> b))"
   unfolding elector.simps elect_module.simps sequential_composition.simps
   using boolean_algebra_cancel.sup2 fst_eqD snd_eqD sup_commute
@@ -39,13 +39,22 @@ lemma elector_seqcomp_assoc:
 
 subsection \<open>Soundness\<close>
 
-theorem elector_sound[simp]:
-  fixes m :: "('a, 'v, 'a Result) Electoral_Module"
-  assumes "\<S>\<C>\<F>_result.electoral_module m"
-  shows "\<S>\<C>\<F>_result.electoral_module (elector m)"
+theorem \<P>\<V>_elector_sound[simp]:
+  fixes m :: "('v, 'a Preference_Relation, 'a) Electoral_Module"
+  assumes "\<P>\<V>_\<S>\<C>\<F>.electoral_module m"
+  shows "\<P>\<V>_\<S>\<C>\<F>.electoral_module (elector m)"
   using assms elect_mod_sound seq_comp_sound
   unfolding elector.simps
   by metis
+
+theorem \<A>\<V>_elector_sound[simp]:
+  fixes m :: "('v, 'a Approval_Set, 'a) Electoral_Module"
+  assumes "\<A>\<V>_\<S>\<C>\<F>.electoral_module m"
+  shows "\<A>\<V>_\<S>\<C>\<F>.electoral_module (elector m)"
+  using assms elect_mod_sound seq_comp_sound
+  unfolding elector.simps
+  by metis
+
 
 lemma voters_determine_elector:
   fixes m :: "('a, 'v, 'a Result) Electoral_Module"
