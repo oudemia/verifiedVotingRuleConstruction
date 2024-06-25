@@ -30,5 +30,11 @@ fun  single_winner_AV_rule' :: "('v, 'a Approval_Set,'a) Electoral_Module" where
      {y \<in> A. \<exists> x \<in> A. \<A>\<V>_profile.win_count V p x > \<A>\<V>_profile.win_count V p y},
      {})"
 
+fun (in committee_result) approval_voting_rule :: "('v, 'a Approval_Set,'a Committee) Electoral_Module" where
+  "approval_voting_rule V A p =
+    (let C = { A' \<in> A. card A' = k} in
+    ({x \<in> C. \<forall> y \<in> C. \<A>\<V>_profile.win_count V p y \<le> \<A>\<V>_profile.win_count V p x},
+     {y \<in> C. \<exists> x \<in> C. \<A>\<V>_profile.win_count V p x > \<A>\<V>_profile.win_count V p y},
+     {}))"
 
 end

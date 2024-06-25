@@ -62,41 +62,30 @@ locale result =
     "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_set A r)) \<subseteq> A"
 
 
-type_synonym 'a Committee = "'a set"
-
 (* 
-  TODO: This is a WIP. Fixing the parameter k is not what we want
-  to do in the end, as k is... well, not fixed.
+  TODO: This is a WIP. 
   Idea 1: 
-    Handle committee results as multi-winner results, add
+    Handle committee results as multi-winner results (using the corresponding interpretation), add
     validity checking function that receives parameter k
 *) 
+type_synonym 'a Committee = "'a set"
+
+fun committee :: "'a set \<Rightarrow> 'a Committee \<Rightarrow> nat \<Rightarrow> bool" where
+"committee A C k = ((C \<subseteq> A) \<and> card C = k)"
+
+(* 
+  Idea 2: Formulate a committee_result interpretation
+  
+  BUT: Fixing the parameter k is not what we want to do in the end, as k is... well, not fixed. 
+*)
 locale committee_result = result + 
   fixes k :: "nat" 
   assumes "\<And> (A:: ('a set)) (e :: ('a set set)) (d :: ('a set set)) (r :: ('a set set)). 
     well_formed_result A (e, d, r) \<Longrightarrow>( \<forall> a \<in> e \<union> d \<union> r . card a = k)"
 
-(* Idea 2:    
-text \<open>
-  Results from committee functions, given as three sets of (potentially tied) sets
- committees. Committees are sets of alternatives with fixed cardinality k.
-\<close>
-
-fun committee_res :: "'a set \<Rightarrow> ('a set Result) \<Rightarrow> nat \<Rightarrow> bool" where
-"committee_res A r k =
-      ( set_equals_partition {A' \<in> Pow(A). card A' = k} r 
-      \<and> disjoint3 r 
-      \<and> card (elect_r r) = k \<and> card (reject_r r) = k \<and> card (defer_r r) = k)"
-
-(*
-fun committee_res :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a set Result) \<Rightarrow> bool" where
-"committee_res k A r =
-      ( set_equals_partition {A' \<in> Pow(A). card A' = k} r 
-      \<and> disjoint3 r 
-      \<and> card (elect_r r) = k \<and> card (reject_r r) = k \<and> card (defer_r r) = k)"
-      
+(* Idea 2, continued     
 global_interpretation committee_result:
-  result "(committee_res)" "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}"
+  result "(committee_result)" "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}"
 
 proof (unfold_locales, safe)
   fix
@@ -108,7 +97,6 @@ proof (unfold_locales, safe)
   thus "set_equals_partition {A' \<in> Pow(A). card A' = k} (e, r, d)"
     by force
 qed
-*)
 *)
 
 text \<open>

@@ -25,9 +25,17 @@ global_interpretation \<P>\<V>_\<S>\<C>\<F>:
 fun limit_by_res_\<A>\<V>_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
 "limit_by_res_\<A>\<V>_\<S>\<C>\<F> A b = A \<inter> b"
 
+fun limit_by_committee_\<A>\<V> :: "('a Committee) set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
+"limit_by_committee_\<A>\<V> C b = \<Union>C \<inter> b"
+
 global_interpretation \<A>\<V>_\<S>\<C>\<F>:
   electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" 
      "limit_set_\<S>\<C>\<F>" "affected_alts_\<S>\<C>\<F>" "ballot_\<A>\<V>" "well_formed_\<S>\<C>\<F>" "limit_by_res_\<A>\<V>_\<S>\<C>\<F>"
+  by unfold_locales auto
+
+global_interpretation \<A>\<V>_committee:
+  electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" 
+  "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_by_committee_\<A>\<V>"
   by unfold_locales auto
 
 end
