@@ -7,7 +7,7 @@ chapter \<open>Voting Rules\<close>
 
 section \<open>Approval Voting Rule\<close>
 
-theory Approval_Voting_Rule
+theory Proportional_Approval_Voting_Rule
   imports "Compositional_Structures/Basic_Modules/Approval_Voting_Module"
           "Compositional_Structures/Revision_Composition"
           "Compositional_Structures/Elect_Composition"
@@ -30,13 +30,12 @@ fun single_winner_AV_rule' :: "('v, 'a Approval_Set,'a) Electoral_Module" where
      {y \<in> A. \<exists> x \<in> A. \<A>\<V>_profile.win_count V p x > \<A>\<V>_profile.win_count V p y},
      {})"
 
-(* TODO: Keep Relay_Module? How to compose? *)
-fun (in committee_result) AV_rule :: "('v, 'a, 'a Approval_Set,'a Committee) Relay_Module" where
-    "AV_rule V A p = committee_relay (\<A>\<V>_committee.elector (max_eliminator approval_voting)) V A p"
+fun (in committee_result) approval_voting_rule :: "('v, 'a, 'a Approval_Set,'a Committee) Relay_Module" where
+    "approval_voting_rule V A p = committee_relay (\<A>\<V>_committee.elector max_eliminator approval_voting) V A p"
 
 
-fun (in committee_result) AV_rule' :: "('v, 'a, 'a Approval_Set, 'a Committee) Relay_Module" where
-    "AV_rule' V A p =
+fun (in committee_result) approval_voting_rule' :: "('v, 'a, 'a Approval_Set, 'a Committee) Relay_Module" where
+    "approval_voting_rule' V A p =
       (let C = {S. S \<subseteq> A \<and> (card S) = k} in
     ({c \<in> C. \<forall> d \<in> C. sum (\<lambda> x. \<A>\<V>_profile.win_count V p x) c \<ge> sum (\<lambda>x. \<A>\<V>_profile.win_count V p x) d},
      {c \<in> C. \<exists> d \<in> C. sum (\<lambda> x. \<A>\<V>_profile.win_count V p x) d > sum (\<lambda>x. \<A>\<V>_profile.win_count V p x) c},

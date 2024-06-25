@@ -52,7 +52,7 @@ lemma plurality_mod_elim_equiv:
   assumes
     non_empty_A: "A \<noteq> {}" and
     fin_A: "finite A" and
-    prof: "profile V A p"
+    prof: "\<P>\<V>_profile.well_formed_profile V A p"
   shows "plurality V A p = plurality' V A p"
 proof (unfold plurality.simps plurality'.simps plurality_score.simps, standard)
   have "fst (max_eliminator (\<lambda> V x A p. win_count V p x) V A p) = {}"
