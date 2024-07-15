@@ -9,7 +9,7 @@ section \<open>Evaluation Function\<close>
 theory Evaluation_Function
 imports 
     "Social_Choice_Types/Profile_Interpretations"
-    "HOL-Library.Extended_Real"
+    "HOL-Library.Extended_Nat"
 begin
 
 text \<open>
@@ -21,7 +21,7 @@ text \<open>
 subsection \<open>Definition\<close>
 
 type_synonym ('r, 'v, 'b) Evaluation_Function =
-  "'v set \<Rightarrow> 'r \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ereal"
+  "'v set \<Rightarrow> 'r \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> enat"
 
 subsection \<open>Property\<close>
 
@@ -53,10 +53,10 @@ text \<open>
 
 theorem cond_winner_imp_max_eval_val:
   fixes
-    e :: "('a, 'v) Evaluation_Function" and
+    e :: "('a, 'v, 'b) Evaluation_Function" and
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     a :: "'a"
   assumes
     rating: "condorcet_rating e" and
@@ -101,10 +101,10 @@ text \<open>
 
 theorem non_cond_winner_not_max_eval:
   fixes
-    e :: "('a, 'v) Evaluation_Function" and
+    e :: "('a, 'v, 'b) Evaluation_Function" and
     A :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
+    p :: "('v, 'b) Profile" and
     a :: "'a" and
     b :: "'a"
   assumes

@@ -3,7 +3,7 @@ section \<open>Approval Voting Module\<close>
 theory Approval_Voting_Module
   imports 
       "Component_Types/Elimination_Module"
-      "Component_Types/Relay_Module"
+      "Component_Types/Voting_Rule"
       Thiele_Module
 begin
 
