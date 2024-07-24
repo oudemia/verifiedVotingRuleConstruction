@@ -37,40 +37,15 @@ fun (in committee_result) thiele_family :: "('v, 'a, 'a Approval_Set, 'a Committ
 	elect (thiele_module w) V (thiele_contenders A) (thiele_profile p)"
 
 
-
-
-
-
-
-
-
-
-
-
-type_synonym id_function = "enat \<Rightarrow> ereal"
-
-fun thiele_score :: "id_function \<Rightarrow> ('a Committee, 'v, 'a Approval_Set) Evaluation_Function" where
-  "thiele_score w V C A p = sum (\<lambda> v. w (sum (\<lambda>c. \<A>\<V>_profile.win_count {v} p c) C)) V"
-
-fun (in committee_result) thiele_method :: "id_function \<Rightarrow> ('v, 'a, 'a Approval_Set, 'a Committee) Relay_Module" where
-  "thiele_method w V A p = committee_relay (max_eliminator (thiele_score w)) V A p"
-
-fun (in committee_result) thiele_method' :: "id_function \<Rightarrow> ('v, 'a, 'a Approval_Set, 'a Committee) Relay_Module" where
-    "thiele_method' w V A p =
-      (let C = {S. S \<subseteq> A \<and> (card S) = k} in
-    ({},
-     {c \<in> C. \<forall> d \<in> C. thiele_score w V c C p \<ge> thiele_score w V d C p},
-     {c \<in> C. \<exists> d \<in> C. thiele_score w V c C p < thiele_score w V d C p}))"
-
-
+subsection \<open>Approval Voting\<close>
 
 fun av_score :: "Thiele_Score" where
 "av_score n = n"
 
-fun av_schema :: "('v, 'a Approval_Set) Profile \<Rightarrow> ('v, 'a Committee, ereal) Enhanced_Profile" where
-"av_schema p = thiele_choice_schema av_score p"
+fun (in committee_result) av_rule :: "('v, 'a, 'a Approval_Set, 'a Committee) Voting_Rule" where 
+"av_rule V A p = thiele_family av_score V A p"
 
-fun harmonic :: "nat \<Rightarrow> ereal" where
+fun harmonic :: "nat \<Rightarrow> real" where
 "harmonic n = sum (\<lambda>x. 1/x) {1..n::nat}"
 
 fun pav_score :: "Thiele_Score" where
