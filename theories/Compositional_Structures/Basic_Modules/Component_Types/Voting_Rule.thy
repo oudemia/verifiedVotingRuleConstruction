@@ -4,7 +4,7 @@ theory Voting_Rule
 
 imports
     Electoral_Module
-    Choice_Schema
+    Enhanced_Profile
 begin
 
 text \<open>
@@ -22,5 +22,10 @@ subsection \<open>Definition\<close>
 
 type_synonym ('v, 'a, 'b, 'r) Voting_Rule = "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
 
- 
+type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = 
+	"('i => nat) => ('v, 'a, 'b, 'r) Voting_Rule"
+
+fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
+"voting_rule_family f = True"
+
 end

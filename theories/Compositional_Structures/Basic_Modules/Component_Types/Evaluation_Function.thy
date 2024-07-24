@@ -10,6 +10,8 @@ theory Evaluation_Function
 imports 
     "Social_Choice_Types/Profile_Interpretations"
     "HOL-Library.Extended_Nat"
+    "HOL-Library.Extended_Real"
+    "Enhanced_Profile"
 begin
 
 text \<open>
@@ -22,6 +24,9 @@ subsection \<open>Definition\<close>
 
 type_synonym ('r, 'v, 'b) Evaluation_Function =
   "'v set \<Rightarrow> 'r \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> enat"
+
+type_synonym ('v, 'r, 'i) Evaluation_Function' =
+  "'v set \<Rightarrow> 'r \<Rightarrow> 'r set \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> enat"
 
 subsection \<open>Property\<close>
 

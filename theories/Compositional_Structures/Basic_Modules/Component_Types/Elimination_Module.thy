@@ -7,8 +7,10 @@
 section \<open>Elimination Module\<close>
 
 theory Elimination_Module
-  imports Evaluation_Function
-          Electoral_Module
+  imports 
+      Evaluation_Function
+      Electoral_Module
+      "HOL-Library.Extended_Real"
 begin
 
 text \<open>
@@ -20,35 +22,32 @@ text \<open>
 
 subsection \<open>General Definitions\<close>
 
-type_synonym Threshold_Value = "ereal"
+type_synonym Threshold_Value = "enat"
 
-type_synonym Threshold_Relation = "ereal \<Rightarrow> ereal \<Rightarrow> bool"
+type_synonym Threshold_Relation = "enat \<Rightarrow> enat \<Rightarrow> bool"
 
-type_synonym ('r, 'v, 'b) Electoral_Set = "'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
+type_synonym ('v, 'r, 'i) Electoral_Set = "'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set"
 
-fun elimination_set :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Threshold_Value \<Rightarrow>
-                            Threshold_Relation \<Rightarrow> ('r, 'v, 'b) Electoral_Set" where
+fun elimination_set :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value \<Rightarrow>
+                            Threshold_Relation \<Rightarrow> ('v, 'r, 'i) Electoral_Set" where
  "elimination_set e t r V A p = {a \<in> A . r (e V a A p) t}"
 
 fun average :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> 'v set \<Rightarrow>
   'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> Threshold_Value" where
   "average e V A p = (let sum = (\<Sum> x \<in> A. e V x A p) in
                       (if (sum = infinity) then (infinity)
-                       else ((real_of_ereal sum) div (card A))))"
+                       else ((the_enat sum) div (card A))))"
 
 subsection \<open>Social Choice Definitions\<close>
 
-(* 
-  receives: 
-    function e
-    value t
-    relation r
-    set of voters V
-    "relevant" results R
-    profile p
-  outputs: 
-    result of type 'r Result
-*)
+fun elimination_module' :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value
+                              \<Rightarrow> Threshold_Relation
+                              \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+"elimination_module' e t r V R p =
+      (if (elimination_set e t r V R p) \<noteq> R
+        then ({}, (elimination_set e t r V R p), R - (elimination_set e t r V R p))
+        else ({}, {}, R))"
+
 fun elimination_module :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Threshold_Value
                               \<Rightarrow> Threshold_Relation
                               \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
@@ -59,32 +58,30 @@ fun elimination_module :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Thresh
 
 subsection \<open>Common Social Choice Eliminators\<close>
 
-fun less_eliminator :: "('r, 'v, 'b) Evaluation_Function
-                           \<Rightarrow> Threshold_Value
-                             \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
-  "less_eliminator e t V R p = elimination_module e t (<) V R p"
+fun less_eliminator :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value
+                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+  "less_eliminator e t V R ep = elimination_module' e t (<) V R ep"
 
-fun max_eliminator :: "('r, 'v, 'b) Evaluation_Function
-                          \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
-  "max_eliminator e V R p =
-    less_eliminator e (Max {e V x R p | x. x \<in> R}) V R p"
+fun max_eliminator :: "('v, 'r, 'i) Evaluation_Function'
+                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+  "max_eliminator e V R ep =
+    less_eliminator e (Max {e V x R ep | x. x \<in> R}) V R ep"
 
-fun leq_eliminator :: "('r, 'v, 'b) Evaluation_Function
-                          \<Rightarrow> Threshold_Value
-                            \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
-  "leq_eliminator e t V R p = elimination_module e t (\<le>) V R p"
+fun leq_eliminator :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value
+                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+  "leq_eliminator e t V R p = elimination_module' e t (\<le>) V R p"
 
-fun min_eliminator :: "('r, 'v, 'b) Evaluation_Function
-                           \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+fun min_eliminator ::  "('v, 'r, 'i) Evaluation_Function'
+                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
   "min_eliminator e V R p =
     leq_eliminator e (Min {e V x R p | x. x \<in> R}) V R p"
 
-fun less_average_eliminator :: "('r, 'v, 'b) Evaluation_Function
-                            \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+fun less_average_eliminator ::  "('v, 'r, 'i) Evaluation_Function'
+                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
   "less_average_eliminator e V R p = less_eliminator e (average e V R p) V R p"
 
-fun leq_average_eliminator :: "('r, 'v, 'b) Evaluation_Function
-         \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+fun leq_average_eliminator :: "('v, 'r, 'i) Evaluation_Function'
+                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
   "leq_average_eliminator e V R p = leq_eliminator e (average e V R p) V R p"
 
 subsection \<open>Soundness\<close>

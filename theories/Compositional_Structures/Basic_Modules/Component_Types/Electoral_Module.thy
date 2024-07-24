@@ -9,7 +9,8 @@
 section \<open>Electoral Module\<close>
 
 theory Electoral_Module
-imports 
+  imports 
+  Enhanced_Profile
   "Social_Choice_Types/Property_Interpretations" 
   "Social_Choice_Types/Electoral_Structure"
 begin
@@ -40,9 +41,8 @@ text \<open>
   An electoral module maps an election to a result.
   To enable currying, the Election type is not used here because that would require tuples.
 \<close>
-
-type_synonym ('v, 'b, 'r) Electoral_Module = "'v set \<Rightarrow> 'r set
-                                              \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r Result"
+type_synonym ('v, 'r, 'i) Electoral_Module = 
+	"'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r Result"
 
 fun fun\<^sub>\<E> :: "('v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r)
                   \<Rightarrow> (('a, 'v, 'b) Election \<Rightarrow> 'r)" where
@@ -53,16 +53,16 @@ text \<open>
   function only outputting the elect, reject, or defer set respectively.
 \<close>
 
-abbreviation elect :: "('v, 'b, 'r) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
-        \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set" where
+abbreviation elect :: "('v, 'r, 'i) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+        \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set" where
   "elect m V R p \<equiv> elect_r (m V R p)"
 
-abbreviation reject :: "( 'v, 'b, 'r) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
-        \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set" where
+abbreviation reject :: "('v, 'r, 'i) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+        \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set" where
   "reject m V A p \<equiv> reject_r (m V A p)"
 
-abbreviation "defer" :: "( 'v, 'b, 'r) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
-        \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set" where
+abbreviation "defer" :: "('v, 'r, 'i) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+        \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set" where
   "defer m V A p \<equiv> defer_r (m V A p)"
 
 subsection \<open>Auxiliary Definitions\<close>
