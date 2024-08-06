@@ -30,7 +30,24 @@ proof (unfold_locales)
     b :: "'a Approval_Set"
     assume "ballot_\<A>\<V> A b"
     hence "(b  \<subseteq> A)" by simp
-  thus "limit_\<A>\<V>_ballot A b = b" by (simp add: Int_commute inf.order_iff)
+    thus "limit_\<A>\<V>_ballot A b = b" by (simp add: Int_commute inf.order_iff)
+  next
+    fix
+      A :: "'a set" and
+      B ::"'a set" and
+      b :: "'a Approval_Set"
+    assume "A \<subseteq> B"
+    thus " limit_\<A>\<V>_ballot A b = limit_\<A>\<V>_ballot A (limit_\<A>\<V>_ballot B b)" by auto
+  next
+    fix
+      A :: "'a set" and
+      B ::"'a set" and
+      b :: "'a Approval_Set"
+    assume 
+      assm: "ballot_\<A>\<V> B b \<and> A \<subseteq> B"
+    hence ballot: "ballot_\<A>\<V> B b" by simp
+    moreover have  sub: " A \<subseteq> B" using assm by simp
+    thus "ballot_\<A>\<V> A (limit_\<A>\<V>_ballot A b)" by simp
 qed
   
 
@@ -52,7 +69,25 @@ proof (unfold_locales)
     assume "ballot_\<P>\<V> A b"
     hence "linear_order_on A b" by simp
     hence "b \<subseteq> A \<times> A" by (simp add: order_on_defs refl_on_def)
-  thus "limit_\<P>\<V>_ballot A b = b" by auto
+    thus "limit_\<P>\<V>_ballot A b = b" by auto
+  next
+    fix
+      A :: "'a set" and
+      B ::"'a set" and
+      b :: "'a Preference_Relation"
+    assume "A \<subseteq> B"
+    thus " limit_\<P>\<V>_ballot A b = limit_\<P>\<V>_ballot A (limit_\<P>\<V>_ballot B b)" by auto
+  next
+    fix
+      A :: "'a set" and
+      B ::"'a set" and
+      b :: "'a Preference_Relation"
+    assume 
+      assm: "ballot_\<P>\<V> B b \<and> A \<subseteq> B"
+    hence ballot: "ballot_\<P>\<V> B b" by simp
+    moreover have  sub: " A \<subseteq> B" using assm by simp
+    have "linear_order_on B b" using ballot by simp
+    thus "ballot_\<P>\<V> A (limit_\<P>\<V>_ballot A b)" using sub limit_presv_lin_ord by auto
 qed
 
 setup Locale_Code.close_block
