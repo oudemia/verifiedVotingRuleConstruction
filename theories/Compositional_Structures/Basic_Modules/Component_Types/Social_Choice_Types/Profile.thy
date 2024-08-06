@@ -47,8 +47,14 @@ locale ballot =
     wins :: "'b \<Rightarrow> 'a \<Rightarrow> bool" and
     limit_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> 'b"
   assumes 
-    winner_top: "\<And> (b::'b) (a1::'a) (a2::'a). (a1 \<noteq> a2 \<and> prefers b a1 a2) \<Longrightarrow> \<not> wins b a2" and
-    "\<And> (A :: 'a set) (b :: 'b). well_formed_ballot A b \<Longrightarrow> (limit_ballot A b = b)"
+    winner_top: "\<And> (b::'b) (a1::'a) (a2::'a). 
+      (a1 \<noteq> a2 \<and> prefers b a1 a2) \<Longrightarrow> \<not> wins b a2" and
+    only_known_alts: "\<And> (A :: 'a set) (b :: 'b). 
+      well_formed_ballot A b \<Longrightarrow> (limit_ballot A b = b)" and
+    limit_trans: "\<And> (A::'a set) (B::'a set) (b::'b). 
+      (A \<subseteq> B) \<Longrightarrow> limit_ballot A b = limit_ballot A (limit_ballot B b)" and
+    limit_sound: "\<And> (A::'a set) (B::'a set) (b::'b).
+      well_formed_ballot B b \<and> A \<subseteq> B \<Longrightarrow> well_formed_ballot A (limit_ballot A b)"
 begin
 
 text \<open>
@@ -58,7 +64,7 @@ text \<open>
 \<close>
 
 definition well_formed_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
-  "well_formed_profile V A p \<equiv> \<forall> v \<in> V. well_formed_ballot A (p v)"
+  "well_formed_profile V A p \<equiv> (\<forall> v \<in> V. well_formed_ballot A (p v))"
 
 abbreviation  finite_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
   "finite_profile V A p \<equiv> finite A \<and> finite V \<and> well_formed_profile V A p"
@@ -74,6 +80,10 @@ definition finite_elections :: "('a, 'v, 'b) Election set" where
 
 definition valid_elections :: "('a, 'v, 'b) Election set" where
   "valid_elections = {E. well_formed_profile (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E)}"
+
+
+fun limit_profile :: "'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
+  "limit_profile A p = (\<lambda> v. limit_ballot A (p v))"
 
 \<comment> \<open>This function subsumes elections with fixed alternatives, finite voters, and
     a default value for the profile value on non-voters.\<close>
@@ -429,7 +439,8 @@ lemma pref_count_set_compr:
             (prefer_count V p a) ` (A - {a})"
   by blast
 
-(* TODO: adapt to locale-based profiles
+(* TODO: the following two lemmata are only true for preference-based profiles in this form.
+Adapt or move to PV-specific interpretations
 
 lemma pref_count:
   fixes
@@ -566,12 +577,6 @@ subsection \<open>Condorcet Winner\<close>
 fun condorcet_winner :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
   "condorcet_winner V A p a =
       (finite_profile V A p \<and> a \<in> A \<and> (\<forall> x \<in> A - {a}. preferred_overall V a p x))"
-(*
-Could this be defined via
-  "for all b \<noteq> a there is an injective map
-    from ballots where b wins to ballots where a wins"
-instead of prefer_count for infinite voter sets?
-*)
 
 lemma cond_winner_unique_eq:
   fixes
@@ -644,10 +649,6 @@ text \<open>
   do not cast a vote.
   This keeps all of A's preferences.
 \<close>
-(* TODO: add limit fun to profile locale *)
-
-fun limit_profile :: "'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
-  "limit_profile A p = (\<lambda> v. limit_ballot A (p v))"
 
 lemma limit_prof_trans:
   fixes
@@ -660,33 +661,37 @@ lemma limit_prof_trans:
     "C \<subseteq> B"
   shows "limit_profile C p = limit_profile C (limit_profile B p)"
   using assms
-  by auto
+  by (metis limit_profile.simps limit_trans)
+
 
 lemma limit_profile_sound:
   fixes
     A :: "'a set" and
     B :: "'a set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "profile V B p" and
+    "well_formed_profile V B p" and
     "A \<subseteq> B"
-  shows "profile V A (limit_profile A p)"
-proof (unfold profile_def)
-  have "\<forall> v \<in> V. linear_order_on A (limit A (p v))"
-    using assms limit_presv_lin_ord
-    unfolding profile_def
-    by metis
-  thus "\<forall> v \<in> V. linear_order_on A ((limit_profile A p) v)"
+  shows "well_formed_profile V A (limit_profile A p)"
+proof -
+  have "\<forall> v \<in> V. well_formed_ballot A (limit_ballot A (p v))"
+    using assms limit_sound well_formed_profile_def by meson
+  hence "\<forall> v \<in> V. well_formed_ballot A ((limit_profile A p) v)"
     by simp
+  thus "well_formed_profile V A (limit_profile A p)" 
+    using well_formed_profile_def by blast
 qed
-(*
+
 subsection \<open>Lifting Property\<close>
 
-definition equiv_prof_except_a :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow>
-        ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
+(* TODO: the following two lemmata are only true for preference-based profiles in this form.
+Adapt or move to PV-specific interpretations
+
+definition equiv_prof_except_a :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow>
+        ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
   "equiv_prof_except_a V A p p' a \<equiv>
-    profile V A p \<and> profile V A p' \<and> a \<in> A \<and>
+    well_formed_profile V A p \<and> well_formed_profile V A p' \<and> a \<in> A \<and>
       (\<forall> v \<in> V. equiv_rel_except_a A (p v) (p' v) a)"
 
 text \<open>
