@@ -27,4 +27,7 @@ fun limit_set_\<S>\<W>\<F> ::
   "'a set \<Rightarrow> ('a Preference_Relation) set \<Rightarrow> ('a Preference_Relation) set" where
   "limit_set_\<S>\<W>\<F> A res = {limit A r | r. r \<in> res \<and> linear_order_on A (limit A r)}"
 
+fun affected_alts_\<S>\<W>\<F> :: "('a Preference_Relation) set \<Rightarrow> 'a set" where
+  "affected_alts_\<S>\<W>\<F> res =  \<Union> ((\<lambda>r. {a. \<exists> b. (a, b) \<in> r \<or> (b, a) \<in> r}) `res)"
+
 end

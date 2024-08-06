@@ -41,9 +41,9 @@ next
   fix
     A :: "'a set" and
     a :: "'a" and
-    r :: "'a set"
+    R :: "'a set"
   assume
-    "a \<in> affected_alts_\<S>\<C>\<F> (limit_set_\<S>\<C>\<F> A r)" 
+    "a \<in> affected_alts_\<S>\<C>\<F> (limit_set_\<S>\<C>\<F> A R)" 
   thus "a \<in> A"
     by simp
 qed
@@ -73,7 +73,7 @@ text \<open>
   \<^file>\<open>Social_Welfare_Result.thy\<close> for details.
 \<close>
 global_interpretation \<S>\<W>\<F>_result:
-  result "well_formed_\<S>\<W>\<F>" "limit_set_\<S>\<W>\<F>"
+  result "well_formed_\<S>\<W>\<F>" "limit_set_\<S>\<W>\<F>" "affected_alts_\<S>\<W>\<F>"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -101,6 +101,78 @@ proof (unfold_locales, safe)
   qed
   ultimately show "well_formed_\<S>\<W>\<F> A (e, r, d)"
     by simp
+next
+  fix
+    A :: "'a set" and
+    a :: "'a" and
+    R :: "('a Preference_Relation) set"
+  assume
+    "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A R)" 
+  thus "a \<in> A"
+  by auto
+qed
+
+
+text \<open>
+  Results in a committee voting context depend on the concrete value of the parameter k.
+  This means that interpretation is not possible in the general, but depends on the 
+  condition of k having a specific value. This can be done with the sublocale command. 
+\<close>
+
+sublocale committee_result \<subseteq> 
+result "well_formed_committee_result" "limit_set_committee" "affected_alts_committee"
+proof (unfold_locales, safe)
+  fix
+    A :: "'a set" and
+    e :: "'a Committee set" and
+    r :: "'a Committee set" and
+    d :: "'a Committee set"
+  assume partition: "set_equals_partition (limit_set_committee A UNIV) (e, r, d)" and
+    disjoint: "disjoint3 (e, r, d)"
+  moreover have comm_eq: "committees A = limit_set_committee A UNIV"
+  proof (unfold_locales, cases)
+    assume no_committees: "committees A = {}"
+    have "k \<ge> 1" using k_positive by simp
+    moreover have "\<forall> C \<subseteq> A. card C \<noteq> k" using no_committees by auto
+    moreover have le_k: "\<forall> C \<subseteq> A. card C < k" by (meson calculation(2) not_less obtain_subset_with_card_n subset_iff)
+    have "A \<subseteq> A" by simp
+    hence A_le_k: "card A < k" using le_k by simp
+    hence "\<forall> C::('a Committee). card (C \<inter> A) < k" using le_k by simp
+    hence "limit_set_committee A UNIV = {}" using calculation(2) by auto
+    thus "committees A = limit_set_committee A UNIV" using no_committees by auto
+  next
+    assume "committees A \<noteq> {}"
+    show "committees A = limit_set_committee A UNIV"
+    proof
+      show "committees A \<subseteq> limit_set_committee A UNIV"
+        proof
+          fix C :: "'a Committee"
+          assume comm_C: "C \<in> committees A"
+          hence card_k: "card C = k"  by auto
+          moreover have "C = A \<inter> C" using comm_C by auto
+          hence "\<exists>R \<in> UNIV. C = A \<inter> R"  by auto
+          thus "C \<in> limit_set_committee A UNIV" using card_k by simp
+        qed
+    next
+      show "(limit_set_committee A UNIV) \<subseteq> committees A"
+      proof
+        fix C :: "'a Committee"
+        assume limit_C: "C \<in> limit_set_committee A UNIV"
+        hence card_k: "card C = k"  by auto
+        moreover have "\<exists>R \<in> UNIV. C = A \<inter> R" using limit_C by auto
+        hence "C \<subseteq> A" by auto
+        thus "C \<in> committees A" using card_k by simp
+      qed
+    qed
+  qed
+  thus "well_formed_committee_result A (e, r, d)" using partition disjoint by auto
+next
+ fix
+    A :: "'a set" and
+    R :: "'a Committee set" and
+    a :: "'a"
+  assume affected: "a \<in> affected_alts_committee (limit_set_committee A R)"
+  thus "a \<in> A" by auto
 qed
 
 setup Locale_Code.close_block

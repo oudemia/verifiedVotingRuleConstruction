@@ -61,44 +61,6 @@ locale result =
     (set_equals_partition (limit_set A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
     "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_set A r)) \<subseteq> A"
 
-
-(* 
-  TODO: This is a WIP. 
-  Idea 1: 
-    Handle committee results as multi-winner results (using the corresponding interpretation), add
-    validity checking function that receives parameter k
-*) 
-type_synonym 'a Committee = "'a set"
-
-fun committee :: "'a set \<Rightarrow> 'a Committee \<Rightarrow> nat \<Rightarrow> bool" where
-"committee A C k = ((C \<subseteq> A) \<and> card C = k)"
-
-(* 
-  Idea 2: Formulate a committee_result interpretation
-  
-  BUT: Fixing the parameter k is not what we want to do in the end, as k is... well, not fixed. 
-*)
-locale committee_result = result + 
-  fixes k :: "nat" 
-  assumes "\<And> (A:: ('a set)) (e :: ('a set set)) (d :: ('a set set)) (r :: ('a set set)). 
-    well_formed_result A (e, d, r) \<Longrightarrow>( \<forall> a \<in> e \<union> d \<union> r . card a = k)"
-
-(* Idea 2, continued     
-global_interpretation committee_result:
-  result "(committee_result)" "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}"
-
-proof (unfold_locales, safe)
-  fix
-    A :: "'b set" and
-    e :: "'b set set" and
-    r :: "'b set set" and
-    d :: "'b set set"
-  assume "set_equals_partition {r \<inter> A |r. r \<in> UNIV} (e, r, d)"
-  thus "set_equals_partition {A' \<in> Pow(A). card A' = k} (e, r, d)"
-    by force
-qed
-*)
-
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
 \<close>
@@ -114,5 +76,47 @@ abbreviation reject_r :: "'r Result \<Rightarrow> 'r set" where
 
 abbreviation defer_r :: "'r Result \<Rightarrow> 'r set" where
   "defer_r r \<equiv> snd (snd r)"
+
+
+subsection \<open>Committee Results\<close>
+
+text \<open>
+  In a committee voting scenario, the well-formedness of results, i.e., committees, depends
+  on an additional parameter k, the desired committee size.
+\<close>
+
+(* WHAT DIDN'T WORK:
+
+locale committee_result = result + 
+  fixes k :: "nat"
+  assumes k_positive [simp] : "k \<ge> 1"
+begin
+...
+
+...
+assumes "\<And> (A:: 'a set) (e :: 'r set set) (r:: 'r set) (d:: 'r set).
+    (well_formed_result A (e, r, d)) \<Longrightarrow> (\<forall> c. c \<in> e \<longrightarrow> (card c = k))"
+ *)
+
+type_synonym 'a Committee = "'a set"
+
+locale committee_result =
+  fixes k :: "nat"
+  assumes k_positive : "k \<ge> 1"
+begin
+
+fun committees :: "'a set \<Rightarrow> 'a Committee set" where
+  "committees A = {C. C \<subseteq> A \<and> card C = k}"
+
+fun well_formed_committee_result :: "'a set \<Rightarrow> ('a Committee) Result \<Rightarrow> bool" where
+  "well_formed_committee_result A res = (disjoint3 res \<and> set_equals_partition (committees A) res)"
+
+fun limit_set_committee :: "'a set \<Rightarrow> ('a Committee) set \<Rightarrow> ('a Committee) set" where
+  "limit_set_committee A res = {C. (\<exists>r \<in> res. C = A \<inter> r) \<and> card C = k}"
+end
+
+fun affected_alts_committee :: "('a Committee) set  \<Rightarrow> 'a set" where
+  "affected_alts_committee res = \<Union> res"
+
 
 end

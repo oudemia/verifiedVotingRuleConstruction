@@ -22,10 +22,10 @@ fun well_formed_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a Result \<Rightarrow> bo
   "well_formed_\<S>\<C>\<F> A res = (disjoint3 res \<and> set_equals_partition A res)"
 
 fun limit_set_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set" where
-  "limit_set_\<S>\<C>\<F> A r = A \<inter> r"
+  "limit_set_\<S>\<C>\<F> A res = A \<inter> res"
 
 fun affected_alts_\<S>\<C>\<F> :: "'a set  \<Rightarrow> 'a set" where
-  "affected_alts_\<S>\<C>\<F> r = r"
+  "affected_alts_\<S>\<C>\<F> res = res"
 
 subsection \<open>Auxiliary Lemmas\<close>
 
