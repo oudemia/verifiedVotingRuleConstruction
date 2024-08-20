@@ -25,7 +25,7 @@ text \<open>
   \<^file>\<open>Social_Choice_Result.thy\<close> for details.
 \<close>
 global_interpretation \<S>\<C>\<F>_result:
-  result "well_formed_\<S>\<C>\<F>" "limit_set_\<S>\<C>\<F>" "affected_alts_\<S>\<C>\<F>"
+  result "well_formed_\<S>\<C>\<F>" "limit_alts" "affected_alts_\<S>\<C>\<F>"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -33,7 +33,7 @@ proof (unfold_locales, safe)
     r :: "'a set" and
     d :: "'a set"
   assume
-    "set_equals_partition (limit_set_\<S>\<C>\<F> A UNIV) (e, r, d)" and
+    "set_equals_partition (limit_alts A UNIV) (e, r, d)" and
     "disjoint3 (e, r, d)"
   thus "well_formed_\<S>\<C>\<F> A (e, r, d)"
     by simp
@@ -43,7 +43,7 @@ next
     a :: "'a" and
     R :: "'a set"
   assume
-    "a \<in> affected_alts_\<S>\<C>\<F> (limit_set_\<S>\<C>\<F> A R)" 
+    "a \<in> affected_alts_\<S>\<C>\<F> (limit_alts A R)" 
   thus "a \<in> A"
     by simp
 qed
@@ -120,16 +120,16 @@ text \<open>
 \<close>
 
 sublocale committee_result \<subseteq> 
-result "well_formed_committee_result" "limit_set_committee" "affected_alts_committee"
+result "well_formed_committee_result" "limit_committees" "affected_alts_committee"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
     e :: "'a Committee set" and
     r :: "'a Committee set" and
     d :: "'a Committee set"
-  assume partition: "set_equals_partition (limit_set_committee A UNIV) (e, r, d)" and
+  assume partition: "set_equals_partition (limit_committees A UNIV) (e, r, d)" and
     disjoint: "disjoint3 (e, r, d)"
-  moreover have comm_eq: "committees A = limit_set_committee A UNIV"
+  moreover have comm_eq: "committees A = limit_committees A UNIV"
   proof (unfold_locales, cases)
     assume no_committees: "committees A = {}"
     have "k \<ge> 1" using k_positive by simp
@@ -138,26 +138,26 @@ proof (unfold_locales, safe)
     have "A \<subseteq> A" by simp
     hence A_le_k: "card A < k" using le_k by simp
     hence "\<forall> C::('a Committee). card (C \<inter> A) < k" using le_k by simp
-    hence "limit_set_committee A UNIV = {}" using calculation(2) by auto
-    thus "committees A = limit_set_committee A UNIV" using no_committees by auto
+    hence "limit_committees A UNIV = {}" using calculation(2) by auto
+    thus "committees A = limit_committees A UNIV" using no_committees by auto
   next
     assume "committees A \<noteq> {}"
-    show "committees A = limit_set_committee A UNIV"
+    show "committees A = limit_committees A UNIV"
     proof
-      show "committees A \<subseteq> limit_set_committee A UNIV"
+      show "committees A \<subseteq> limit_committees A UNIV"
         proof
           fix C :: "'a Committee"
           assume comm_C: "C \<in> committees A"
           hence card_k: "card C = k"  by auto
           moreover have "C = A \<inter> C" using comm_C by auto
           hence "\<exists>R \<in> UNIV. C = A \<inter> R"  by auto
-          thus "C \<in> limit_set_committee A UNIV" using card_k by simp
+          thus "C \<in> limit_committees A UNIV" using card_k by simp
         qed
     next
-      show "(limit_set_committee A UNIV) \<subseteq> committees A"
+      show "(limit_committees A UNIV) \<subseteq> committees A"
       proof
         fix C :: "'a Committee"
-        assume limit_C: "C \<in> limit_set_committee A UNIV"
+        assume limit_C: "C \<in> limit_committees A UNIV"
         hence card_k: "card C = k"  by auto
         moreover have "\<exists>R \<in> UNIV. C = A \<inter> R" using limit_C by auto
         hence "C \<subseteq> A" by auto
@@ -171,7 +171,7 @@ next
     A :: "'a set" and
     R :: "'a Committee set" and
     a :: "'a"
-  assume affected: "a \<in> affected_alts_committee (limit_set_committee A R)"
+  assume affected: "a \<in> affected_alts_committee (limit_committees A R)"
   thus "a \<in> A" by auto
 qed
 

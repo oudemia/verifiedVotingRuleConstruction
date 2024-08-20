@@ -11,7 +11,7 @@ imports
     "Social_Choice_Types/Profile_Interpretations"
     "HOL-Library.Extended_Nat"
     "HOL-Library.Extended_Real"
-    "Enhanced_Profile"
+    "Social_Choice_Types/Aggregate_Profile"
 begin
 
 text \<open>

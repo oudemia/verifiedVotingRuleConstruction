@@ -26,10 +26,10 @@ type_synonym Threshold_Value = "enat"
 
 type_synonym Threshold_Relation = "enat \<Rightarrow> enat \<Rightarrow> bool"
 
-type_synonym ('v, 'r, 'i) Electoral_Set = "'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set"
+type_synonym ('r, 'v, 'b) Electoral_Set = "'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
 
-fun elimination_set :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value \<Rightarrow>
-                            Threshold_Relation \<Rightarrow> ('v, 'r, 'i) Electoral_Set" where
+fun elimination_set :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Threshold_Value \<Rightarrow>
+                            Threshold_Relation \<Rightarrow> ('r, 'v, 'b) Electoral_Set" where
  "elimination_set e t r V A p = {a \<in> A . r (e V a A p) t}"
 
 fun average :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> 'v set \<Rightarrow>
@@ -40,17 +40,9 @@ fun average :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> 'v set \<Rightarr
 
 subsection \<open>Social Choice Definitions\<close>
 
-fun elimination_module' :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value
-                              \<Rightarrow> Threshold_Relation
-                              \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
-"elimination_module' e t r V R p =
-      (if (elimination_set e t r V R p) \<noteq> R
-        then ({}, (elimination_set e t r V R p), R - (elimination_set e t r V R p))
-        else ({}, {}, R))"
-
 fun elimination_module :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Threshold_Value
                               \<Rightarrow> Threshold_Relation
-                              \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+                              \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
   "elimination_module e t r V R p =
       (if (elimination_set e t r V R p) \<noteq> R
         then ({}, (elimination_set e t r V R p), R - (elimination_set e t r V R p))
@@ -58,30 +50,30 @@ fun elimination_module :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Thresh
 
 subsection \<open>Common Social Choice Eliminators\<close>
 
-fun less_eliminator :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value
-                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
-  "less_eliminator e t V R ep = elimination_module' e t (<) V R ep"
+fun less_eliminator :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Threshold_Value
+                          \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
+  "less_eliminator e t V R ep = elimination_module e t (<) V R ep"
 
-fun max_eliminator :: "('v, 'r, 'i) Evaluation_Function'
-                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+fun max_eliminator :: "('r, 'v, 'b) Evaluation_Function
+                          \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
   "max_eliminator e V R ep =
     less_eliminator e (Max {e V x R ep | x. x \<in> R}) V R ep"
 
-fun leq_eliminator :: "('v, 'r, 'i) Evaluation_Function' \<Rightarrow> Threshold_Value
-                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
-  "leq_eliminator e t V R p = elimination_module' e t (\<le>) V R p"
+fun leq_eliminator :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> Threshold_Value
+                          \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
+  "leq_eliminator e t V R p = elimination_module e t (\<le>) V R p"
 
-fun min_eliminator ::  "('v, 'r, 'i) Evaluation_Function'
-                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+fun min_eliminator ::  "('r, 'v, 'b) Evaluation_Function
+                          \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
   "min_eliminator e V R p =
     leq_eliminator e (Min {e V x R p | x. x \<in> R}) V R p"
 
-fun less_average_eliminator ::  "('v, 'r, 'i) Evaluation_Function'
-                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+fun less_average_eliminator ::  "('r, 'v, 'b) Evaluation_Function
+                          \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
   "less_average_eliminator e V R p = less_eliminator e (average e V R p) V R p"
 
-fun leq_average_eliminator :: "('v, 'r, 'i) Evaluation_Function'
-                          \<Rightarrow> ('v, 'r, 'i) Electoral_Module" where
+fun leq_average_eliminator :: "('r, 'v, 'b) Evaluation_Function
+                          \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
   "leq_average_eliminator e V R p = leq_eliminator e (average e V R p) V R p"
 
 subsection \<open>Soundness\<close>

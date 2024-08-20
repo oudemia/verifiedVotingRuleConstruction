@@ -10,9 +10,9 @@ section \<open>Electoral Module\<close>
 
 theory Electoral_Module
   imports 
-  Enhanced_Profile
   "Social_Choice_Types/Property_Interpretations" 
   "Social_Choice_Types/Electoral_Structure"
+  "Social_Choice_Types/Aggregate_Profile"
 begin
 
 text \<open>
@@ -41,28 +41,24 @@ text \<open>
   An electoral module maps an election to a result.
   To enable currying, the Election type is not used here because that would require tuples.
 \<close>
-type_synonym ('v, 'r, 'i) Electoral_Module = 
-	"'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r Result"
-
-fun fun\<^sub>\<E> :: "('v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r)
-                  \<Rightarrow> (('a, 'v, 'b) Election \<Rightarrow> 'r)" where
-  "fun\<^sub>\<E> m = (\<lambda> E. m (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E))"
+type_synonym ('r, 'v, 'b) Electoral_Module = 
+	"'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r Result"
 
 text \<open>
   The next three functions take an electoral module and turn it into a
   function only outputting the elect, reject, or defer set respectively.
 \<close>
 
-abbreviation elect :: "('v, 'r, 'i) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
-        \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set" where
+abbreviation elect :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+        \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set" where
   "elect m V R p \<equiv> elect_r (m V R p)"
 
-abbreviation reject :: "('v, 'r, 'i) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
-        \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set" where
+abbreviation reject :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+        \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set" where
   "reject m V A p \<equiv> reject_r (m V A p)"
 
-abbreviation "defer" :: "('v, 'r, 'i) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
-        \<Rightarrow> ('v, 'r, 'i) Enhanced_Profile \<Rightarrow> 'r set" where
+abbreviation "defer" :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+        \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set" where
   "defer m V A p \<equiv> defer_r (m V A p)"
 
 subsection \<open>Auxiliary Definitions\<close>
@@ -76,22 +72,20 @@ text \<open>
   in multiple structures to create more complex electoral modules.
 \<close>
 
-fun (in electoral_structure) electoral_module :: "( 'v, 'b, 'r) Electoral_Module
+fun (in electoral_structure) electoral_module :: "('r, 'v, 'b) Electoral_Module
                                       \<Rightarrow> bool" where
-    "electoral_module m = (\<forall> A V p. well_formed_profile V A p \<longrightarrow> well_formed_result A (m V (limit_set A UNIV) p))"
-    
+    "electoral_module m = (\<forall> A R V p. well_formed_profile V A p \<and> affected_alts R = A \<longrightarrow> well_formed_result A (m V R p))"
 
-fun voters_determine_election :: "('v, 'b, 'r) Electoral_Module \<Rightarrow> bool" where
+fun voters_determine_election :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "voters_determine_election m =
-    (\<forall> A V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> m V A p = m V A p')"
+    (\<forall> R V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (m V R p = m V R p'))"
 
 lemma (in electoral_structure) electoral_modI:
-  fixes m :: "('v, 'b, 'r) Electoral_Module"
-  assumes "\<And> A V p. well_formed_profile V A p \<Longrightarrow> well_formed_result A (m V (limit_set A UNIV) p)"
+  fixes m :: "('r, 'v, 'b) Electoral_Module"
+  assumes "\<And> A R V p. well_formed_profile V A p \<and> affected_alts R = A \<Longrightarrow> well_formed_result A (m V R p)"
   shows "electoral_module m"
   unfolding electoral_module.simps
-  using assms
-  by simp
+  using assms by simp
 
 subsection \<open>Properties\<close>
 
@@ -109,25 +103,12 @@ text \<open>
   identical result.
 \<close>
 
-(* definition (in electoral_structure) anonymity :: "('v, 'b, 'r) Electoral_Module
-                                          \<Rightarrow> bool" where *)
-definition (in electoral_structure) anonymity :: "('v, 'b, 'r) Electoral_Module
-                                          \<Rightarrow> bool" where 
+definition (in electoral_structure) anonymity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where 
   "anonymity m \<equiv>
     electoral_module m \<and>
-      (\<forall> A V p \<pi>::('v \<Rightarrow> 'v).
-        bij \<pi> \<longrightarrow> (let (A', V', q) = (rename \<pi> (A, V, p)) in
-            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> m V (limit_set A UNIV) p = m V' (limit_set A' UNIV) q))"
-
-(*
-definition anonymity :: "('v, 'a Preference_Relation, 'a) Electoral_Module
-                                          \<Rightarrow> bool" where 
-  "anonymity m \<equiv>
-    \<P>\<V>_\<S>\<W>\<F>.electoral_module m \<and>
-      (\<forall> A V p \<pi>::('v \<Rightarrow> 'v).
-        bij \<pi> \<longrightarrow> (let (A', V', q) = (\<P>\<V>_profile.rename \<pi> (A, V, p)) in
-            \<P>\<V>_profile.finite_profile V A p \<and> \<P>\<V>_profile.finite_profile V' A' q \<longrightarrow> m V A p = m V' A' q))"
-*)
+      (\<forall> R V p \<pi>::('v \<Rightarrow> 'v).
+        bij \<pi> \<longrightarrow> (let (R', V', q) = (rename \<pi> (R, V, p)) in
+            finite_profile V R p \<and> finite_profile V' R' q \<longrightarrow> m V (limit_set R UNIV) p = m V' (limit_set R' UNIV) q))"
 
 text \<open>
   Anonymity can alternatively be described as invariance
@@ -135,8 +116,12 @@ text \<open>
   via the rename function.
 \<close>
 
+fun fun\<^sub>\<E> :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> (('r, 'v, 'b) Election \<Rightarrow> 'r Result)" where
+  "fun\<^sub>\<E> m = (\<lambda> E. m (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E))"
+
 (* Note: Only single winner case 'r = 'a *)
-fun (in ballot) anonymity' :: "('a, 'v, 'b) Election set \<Rightarrow> ('v, 'b, 'a) Electoral_Module \<Rightarrow> bool" where
+fun (in ballot) anonymity' :: "('a, 'v, 'a Preference_Relation) Election set 
+                  \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
   "anonymity' X m = is_symmetry (fun\<^sub>\<E> m) (Invariance (anonymity\<^sub>\<R> X))"
 
 subsubsection \<open>Homogeneity\<close>

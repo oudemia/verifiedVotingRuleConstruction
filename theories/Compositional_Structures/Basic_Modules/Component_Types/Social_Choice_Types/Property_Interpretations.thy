@@ -6,8 +6,9 @@
 section \<open>Result-Dependent Voting Rule Properties\<close>
 
 theory Property_Interpretations
-  imports Voting_Symmetry
-          Result_Interpretations
+  imports 
+    Voting_Symmetry
+    Electoral_Structure
 begin
 
 subsection \<open>Properties Dependent on the Result Type\<close>
@@ -22,14 +23,14 @@ text \<open>
 \<close>
 
 locale result_properties = result +
-  fixes \<psi>_neutr :: "('a \<Rightarrow> 'a, 'b) binary_fun" and
-        \<E> :: "('a, 'v, 'b) Election"
+  fixes \<psi>_neutr :: "('a \<Rightarrow> 'a, 'a Preference_Relation) binary_fun" and
+        \<E> :: "('a, 'v, 'a Preference_Relation) Election"
   assumes
     act_neutr: "group_action neutrality\<^sub>\<G> UNIV \<psi>_neutr" and
     well_formed_res_neutr:
-      "is_symmetry (\<lambda> \<E> :: ('a, 'v, 'b) Election. limit_set (alternatives_\<E> \<E>) UNIV)
+      "is_symmetry (\<lambda> \<E> :: ('a, 'v, 'a Preference_Relation) Election. limit_set (alternatives_\<E> \<E>) UNIV)
                 (action_induced_equivariance (carrier neutrality\<^sub>\<G>)
-                    valid_elections (\<phi>_neutr valid_elections) (set_action \<psi>_neutr))"
+                    \<P>\<V>_profile.valid_elections (\<phi>_neutr \<P>\<V>_profile.valid_elections) (set_action \<psi>_neutr))"
 
 sublocale result_properties \<subseteq> result
   using result_axioms
@@ -38,7 +39,7 @@ sublocale result_properties \<subseteq> result
 subsection \<open>Interpretations\<close>
 
 global_interpretation \<S>\<C>\<F>_properties:
-  "result_properties" "well_formed_\<S>\<C>\<F>" "limit_set_\<S>\<C>\<F>" "\<psi>_neutr\<^sub>\<c>"
+  result_properties "well_formed_\<S>\<C>\<F>" "limit_set_\<S>\<C>\<F>" "\<psi>_neutr\<^sub>\<c>"
   unfolding result_properties_def result_properties_axioms_def
   using wf_result_neutrality_\<S>\<C>\<F> \<psi>_neutral\<^sub>\<c>_action.group_action_axioms
         \<S>\<C>\<F>_result.result_axioms

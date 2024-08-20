@@ -19,13 +19,13 @@ text \<open>
 \<close>
 
 fun well_formed_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a Result \<Rightarrow> bool" where
-  "well_formed_\<S>\<C>\<F> A res = (disjoint3 res \<and> set_equals_partition A res)"
+  "well_formed_\<S>\<C>\<F> A r = (disjoint3 r \<and> set_equals_partition A r)"
 
-fun limit_set_\<S>\<C>\<F> :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set" where
-  "limit_set_\<S>\<C>\<F> A res = A \<inter> res"
+fun limit_alts :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set" where
+  "limit_alts A c = A \<inter> c"
 
 fun affected_alts_\<S>\<C>\<F> :: "'a set  \<Rightarrow> 'a set" where
-  "affected_alts_\<S>\<C>\<F> res = res"
+  "affected_alts_\<S>\<C>\<F> c = c"
 
 subsection \<open>Auxiliary Lemmas\<close>
 

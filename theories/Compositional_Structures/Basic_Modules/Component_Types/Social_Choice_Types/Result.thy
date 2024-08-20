@@ -55,18 +55,18 @@ text \<open>
 locale result =
   fixes
     well_formed_result :: "'a set \<Rightarrow> ('r Result) \<Rightarrow> bool" and
-    limit_set :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
+    limit_contenders :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
     affected_alts :: "'r set \<Rightarrow> 'a set"
   assumes "\<And> (A::('a set)) (r::('r Result)).
-    (set_equals_partition (limit_set A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
-    "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_set A r)) \<subseteq> A"
+    (set_equals_partition (limit_contenders A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
+    "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_contenders A r)) \<subseteq> A"
 
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
 \<close>
 
 fun (in result) limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
-  "limit_res A (e, r, d) = (limit_set A e, limit_set A r, limit_set A d)"
+  "limit_res A (e, r, d) = (limit_contenders A e, limit_contenders A r, limit_contenders A d)"
 
 abbreviation elect_r :: "'r Result \<Rightarrow> 'r set" where
   "elect_r r \<equiv> fst r"
@@ -104,15 +104,14 @@ locale committee_result =
   fixes k :: "nat"
   assumes k_positive : "k \<ge> 1"
 begin
-
 fun committees :: "'a set \<Rightarrow> 'a Committee set" where
   "committees A = {C. C \<subseteq> A \<and> card C = k}"
 
 fun well_formed_committee_result :: "'a set \<Rightarrow> ('a Committee) Result \<Rightarrow> bool" where
   "well_formed_committee_result A res = (disjoint3 res \<and> set_equals_partition (committees A) res)"
 
-fun limit_set_committee :: "'a set \<Rightarrow> ('a Committee) set \<Rightarrow> ('a Committee) set" where
-  "limit_set_committee A res = {C. (\<exists>r \<in> res. C = A \<inter> r) \<and> card C = k}"
+fun limit_committees :: "'a set \<Rightarrow> ('a Committee) set \<Rightarrow> ('a Committee) set" where
+  "limit_committees A res = {C. (\<exists>r \<in> res. C = A \<inter> r) \<and> card C = k}"
 end
 
 fun affected_alts_committee :: "('a Committee) set  \<Rightarrow> 'a set" where

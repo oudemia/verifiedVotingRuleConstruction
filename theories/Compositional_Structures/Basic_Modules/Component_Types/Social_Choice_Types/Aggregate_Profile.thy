@@ -1,25 +1,39 @@
 theory Aggregate_Profile
   imports
-    Profile
+    Profile_Interpretations
     Result
-    "HOL-Library.Extended_Real"
 begin
 
-section \<open>Contender Schemata\<close>
+section \<open>Aggregate Profiles\<close>
 text \<open>
-  While a voting rule receives an alternative, electoral modules operate on choices,
-  which are of the same type as the results of an election.
+  While a voting rule receives a set of alternatives, electoral modules operate on contenders,
+  which are of the same type as the results of an election. This is negligible in
+  the case of single winner voting, where contenders are alternatives.
 
-  A choice schema is a generalization of a profile and aims to capture information
-  about the preference of voters on choices (in contrast to profiles, which capture
-  the preferences of voters on alternatives).
-  For the sake of clarity, an abstract profile should always store minimally complex data.
+  An aggregate profile is a generalization of a profile and aims to capture information
+  about the preference of voters on contenders (in contrast to profiles, which capture
+  the preferences of voters on alternatives). An aggregate profile is computed based on a
+  profile.
+  For the sake of clarity, an aggregate profile should always store minimally complex data.
 \<close>
-
 
 subsection \<open>Defintion\<close>
 
-type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v,  'r \<Rightarrow> 'i) Profile"
+type_synonym ('r, 'i) Contender_Score = "'r \<Rightarrow> 'i"
+
+type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v, ('r, 'i) Contender_Score) Profile"
+
+type_synonym ('v, 'b, 'r, 'i) Profile_Aggregation = "('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
+
+type_synonym ('b, 'r, 'i) Ballot_Aggregation = "'b \<Rightarrow> ('r, 'i) Contender_Score"
+
+type_synonym ('v, 'a, 'b, 'r) Voting_Rule = "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
+
+type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = 
+	"('v, 'b, 'r, 'i) Profile_Aggregation \<Rightarrow>  ('i \<Rightarrow> real)  \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
+
+fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
+"voting_rule_family f = True"
 
 locale aggregate_profile =
   base: ballot base_ballot empty_base prefers_base wins_base limit_base +
@@ -32,13 +46,16 @@ locale aggregate_profile =
     well_formed_ballot :: "'r set \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> bool" +
   fixes
     contenders :: "'a set \<Rightarrow> 'r set" and
-    aggregate :: "('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
+    aggregate :: "('b, 'r, 'i) Ballot_Aggregation"
 assumes
-    "\<And> (V :: 'v set) (A:: 'a set) (p :: ('v, 'b) Profile). \<forall> v \<in> V. base_ballot A (p v) \<longrightarrow> well_formed_ballot (contenders A) ((aggretate p) v)"
+    preserve_valid: "\<And> (A :: 'a set) (b:: 'b). base_ballot A b \<Longrightarrow> well_formed_ballot (contenders A) (aggregate b)" and
+    valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> base_ballot A b 
+        \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
 
 sublocale aggregate_profile \<subseteq> ballot
  using ballot_axioms
   by simp
+
 
 subsection \<open>Contenders\<close>
 text \<open>
@@ -51,5 +68,4 @@ fun single_contenders :: "'a set \<Rightarrow> 'a set" where
 
 fun (in committee_result) committee_contenders :: "'a set \<Rightarrow> ('a Committee) set" where
 "committee_contenders A = committees A"
-
 end

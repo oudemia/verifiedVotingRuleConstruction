@@ -18,7 +18,7 @@ fun limit_pref_to_alts :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightar
 
 global_interpretation \<P>\<V>_\<S>\<C>\<F>:
   electoral_structure "default_ballot_\<P>\<V>" "prefers_\<P>\<V>" "wins_\<P>\<V>" "limit_\<P>\<V>_ballot" 
-     "limit_set_\<S>\<C>\<F>" "affected_alts_\<S>\<C>\<F>" "ballot_\<P>\<V>" "well_formed_\<S>\<C>\<F>" "limit_pref_to_alts"
+     "limit_alts" "affected_alts_\<S>\<C>\<F>" "ballot_\<P>\<V>" "well_formed_\<S>\<C>\<F>" "limit_pref_to_alts"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -52,20 +52,20 @@ fix
 qed
 
 
-fun limit_approval_to_alts :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
-"limit_approval_to_alts A b = A \<inter> b"
+fun limit_app_to_alts :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
+"limit_app_to_alts A b = A \<inter> b"
 
-fun limit_approval_to_committees :: "('a Committee) set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
-"limit_approval_to_committees C b = \<Union>C \<inter> b"
+fun limit_app_to_comm :: "('a Committee) set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
+"limit_app_to_comm C b = \<Union>C \<inter> b"
 
 global_interpretation \<A>\<V>_\<S>\<C>\<F>:
   electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" 
-     "limit_set_\<S>\<C>\<F>" "affected_alts_\<S>\<C>\<F>" "ballot_\<A>\<V>" "well_formed_\<S>\<C>\<F>" "limit_approval_to_alts"
+     "limit_alts" "affected_alts_\<S>\<C>\<F>" "ballot_\<A>\<V>" "well_formed_\<S>\<C>\<F>" "limit_app_to_alts"
   by unfold_locales auto
 
 global_interpretation \<A>\<V>_committee:
   electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" 
-  "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_approval_to_committees"
+  "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"
   by unfold_locales auto
 
 end

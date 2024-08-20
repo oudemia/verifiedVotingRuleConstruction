@@ -1,54 +1,103 @@
-section \<open>Approval Voting Module\<close>
+section \<open>Thiele Module\<close>
 
 theory Thiele_Module
   imports 
+      "Component_Types/Voting_Rule"      
       "Component_Types/Elimination_Module"
-      "Component_Types/Voting_Rule"
-      "Component_Types/Enhanced_Profile"
+      "Component_Types/Social_Choice_Types/Aggregate_Profile"
       "Component_Types/Social_Choice_Types/Electoral_Structure"
 begin
 
-subsection \<open>Prototype of Thiele Methods\<close>
+subsection \<open>Aggregated Profiles for Thiele Methods\<close>
+
+fun thiele_ballot :: "('a Committee) set \<Rightarrow> (('a Committee) \<Rightarrow> nat) \<Rightarrow> bool" where
+"thiele_ballot R b = (\<forall> r \<in> R. b r \<ge> 0)"
+
+fun (in committee_result) thiele_aggregate :: "('a Approval_Set, 'a Committee, nat) Ballot_Aggregation" where
+"thiele_aggregate b W = (card (W \<inter> b))"
+
+global_interpretation (in committee_result) thiele_profile:
+  aggregate_profile
+"\<lambda> c. 0" (*empty ballot*) 
+"\<lambda> b c d. (b c > b d)" (*prefers*)
+"\<lambda> b c. (\<forall> d. b c \<ge> b d)" (*wins*)
+"\<lambda> C b. b" (* "\<lambda> C b c. if c \<in> C then b c else 0" limit_ballot*)
+"ballot_\<A>\<V>" (*base ballot*)
+"default_ballot_\<A>\<V>" (*empty base*)
+"prefers_\<A>\<V>" (*prefers base*) 
+"wins_\<A>\<V>" (*wins base*)
+"limit_\<A>\<V>_ballot" (*limit base*)
+thiele_ballot (*well formed ballot*)
+committee_contenders 
+thiele_aggregate
+proof (unfold_locales)
+  fix 
+    b :: "'a Committee \<Rightarrow> nat" and
+    c :: "'a Committee" and
+    d :: "'a Committee"
+  assume
+    assm: "c \<noteq> d \<and> b d < b c"
+  hence "b d < b c" by simp
+  thus " \<not>(\<forall>e. b e \<le> b d)" using leD by auto
+next
+  fix
+    C :: "('a Committee) set" and
+    b :: "'a Committee \<Rightarrow> nat"
+  assume "thiele_ballot C b"
+  thus "b = b" by simp
+next
+fix
+    C :: "('a Committee) set" and
+    D :: "('a Committee) set" and
+    b :: "'a Committee \<Rightarrow> nat"
+  assume "C \<subseteq> D"
+  thus "b = b" by simp
+next
+fix
+    C :: "('a Committee) set" and
+    D :: "('a Committee) set" and
+    b :: "'a Committee \<Rightarrow> nat"
+  assume "thiele_ballot D b \<and> C \<subseteq> D"
+  thus "thiele_ballot C b" by simp
+next
+ fix
+    A :: "'a set" and
+    b :: "'a Approval_Set"
+  assume "ballot_\<A>\<V> A b"
+  thus "thiele_ballot (committee_contenders A) (thiele_aggregate b)" by simp
+next
+ fix
+    A :: "'a set" and
+    B :: "'a set" and
+    b :: "'a Approval_Set"
+  assume "A \<subseteq> B \<and> ballot_\<A>\<V> A b"
+  thus "thiele_ballot (committee_contenders B) (thiele_aggregate b)" by simp
+qed
+
+fun (in committee_result) thiele_agg_profile :: "('v, 'a Approval_Set, 'a Committee, nat) Profile_Aggregation" where
+"thiele_agg_profile p v W = thiele_aggregate (p v) W"
+
+
+subsection \<open>Definition\<close>
+
+type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = 
+	"('v, 'b, 'r, 'i) Profile_Aggregation \<Rightarrow>  ('i \<Rightarrow> 'i)  \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
+
 
 type_synonym Thiele_Score = "nat => nat"
 
 type_synonym Thiele_Score' = "nat => real"
 
-fun thiele_score :: "Thiele_Score \<Rightarrow> bool" where
-"thiele_score w = ((w 0 = 0) \<and> (\<forall> x. \<forall> y. x < y \<longrightarrow> (w x \<le> w y)))"
-
-
-text \<open>
-  The enhanced profile for a Thiele method has a specific shape: For any voter v and any
-  committee W, the profile returns the Thiele score of the ballot of v and W.
-\<close>
-
-fun (in committee_result) thiele_contenders :: "'a set => ('a Committee) set" where
-"thiele_contenders A = {W. W \<subseteq> A \<and> card W = k}"
-
-fun (in committee_result) thiele_profile :: "('v, 'a Approval_Set) Profile \<Rightarrow> ('v, 'a Committee, nat) Enhanced_Profile" where
-"thiele_profile p v W = (card (W \<inter> (p v)))"
-
-fun thiele_module :: "Thiele_Score \<Rightarrow> ('v, 'a Committee, nat) Electoral_Module" where
-"thiele_module s V C p = (max_eliminator (\<lambda> V r R ep. (\<Sum> v \<in> V.  s (ep v r)))) V C p"
+fun thiele_module :: "('a Committee \<Rightarrow> nat) \<Rightarrow> ('a Committee, 'v, ('a Committee \<Rightarrow> nat)) Electoral_Module" where
+"thiele_module s V C p = (max_eliminator (\<lambda> V r R p. (\<Sum> v \<in> V.  s (p v r)))) V C p"
 
 fun (in committee_result) thiele_family :: "('v, 'a, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where 
 "thiele_family w V A p =
-	elect (thiele_module w) V (thiele_contenders A) (thiele_profile p)"
+	elect (thiele_module w) V (committees A) (thiele_agg_profile p)"
+
+subsection \<open>Sequential Thiele Methods\<close>
 
 
-subsection \<open>Approval Voting\<close>
-
-fun av_score :: "Thiele_Score" where
-"av_score n = n"
-
-fun (in committee_result) av_rule :: "('v, 'a, 'a Approval_Set, 'a Committee) Voting_Rule" where 
-"av_rule V A p = thiele_family av_score V A p"
-
-fun harmonic :: "nat \<Rightarrow> real" where
-"harmonic n = sum (\<lambda>x. 1/x) {1..n::nat}"
-
-fun pav_score :: "Thiele_Score" where
-"pav_score n = harmonic n"
+subsection \<open>Reverse-Sequential Thiele Methods\<close>
 
 end
