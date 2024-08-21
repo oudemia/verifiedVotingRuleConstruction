@@ -54,19 +54,19 @@ text \<open>
 
 locale result =
   fixes
-    well_formed_result :: "'a set \<Rightarrow> ('r Result) \<Rightarrow> bool" and
-    limit_contenders :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
+    well_formed_result :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" and
+    limit_conts :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
     affected_alts :: "'r set \<Rightarrow> 'a set"
   assumes "\<And> (A::('a set)) (r::('r Result)).
-    (set_equals_partition (limit_contenders A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
-    "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_contenders A r)) \<subseteq> A"
+    (set_equals_partition (limit_conts A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
+    "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_conts A r)) \<subseteq> A"
 
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
 \<close>
 
 fun (in result) limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
-  "limit_res A (e, r, d) = (limit_contenders A e, limit_contenders A r, limit_contenders A d)"
+  "limit_res A (e, r, d) = (limit_conts A e, limit_conts A r, limit_conts A d)"
 
 abbreviation elect_r :: "'r Result \<Rightarrow> 'r set" where
   "elect_r r \<equiv> fst r"
