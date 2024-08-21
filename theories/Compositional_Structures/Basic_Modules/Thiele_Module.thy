@@ -41,81 +41,35 @@ global_interpretation (in committee_result) thiele_v1:
     "\<lambda> x. x"(*affected alts*)
     committee_contenders 
     thiele_aggregate
-proof (unfold_locales)
-  fix 
+proof (unfold_locales, auto)
+ fix 
     b :: "'a Committee \<Rightarrow> nat" and
     c :: "'a Committee" and
-    d :: "'a Committee"
-  assume
-    assm: "c \<noteq> d \<and> b d < b c"
-  hence "b d < b c" by simp
-  thus " \<not>(\<forall>e. b e \<le> b d)" using leD by auto
+    d :: "'a Committee" and
+    a :: "'a"
+  assume "a \<in> c" and
+    pref_c: "b d < b c" and
+    pref_d: "\<forall>e. b e \<le> b d"
+  hence "b c \<le> b d" by simp
+  hence "False" using pref_c leD by blast
+  thus "a \<in> d" by simp
 next
-  fix
-    C :: "('a Committee) set" and
-    b :: "'a Committee \<Rightarrow> nat"
-  assume "thiele_ballot C b"
-  thus "b = b" by simp
-next
-fix
-    C :: "('a Committee) set" and
-    D :: "('a Committee) set" and
-    b :: "'a Committee \<Rightarrow> nat"
-  assume "C \<subseteq> D"
-  thus "b = b" by simp
-next
-fix
-    C :: "('a Committee) set" and
-    D :: "('a Committee) set" and
-    b :: "'a Committee \<Rightarrow> nat"
-  assume "thiele_ballot D b \<and> C \<subseteq> D"
-  thus "thiele_ballot C b" by simp
-next
- fix
-    C :: "('a Committee) set" and
-    r :: "('a Committee) Result"
-  assume " set_equals_partition (C \<inter> UNIV) r \<and> disjoint3 r"
-  thus "thiele_result C r" by simp
-next
-  fix
-    C :: "('a Committee) set" and
-    D :: "('a Committee) set"
-  show "C \<inter> D \<subseteq> C" by simp
-next
-  fix b :: "('a Committee) \<Rightarrow> nat"
-  show "b = b" by simp
-next
-  fix C :: "('a Committee) set"
-  show "C = C" by simp
+ fix 
+    b :: "'a Committee \<Rightarrow> nat" and
+    c :: "'a Committee" and
+    d :: "'a Committee" and
+    a :: "'a"
+  assume "a \<in> d" and
+    pref_c: "b d < b c" and
+    pref_d: "\<forall>e. b e \<le> b d"
+  hence "b c \<le> b d" by simp
+  hence "False" using pref_c leD by blast
+  thus "a \<in> c" by simp
 next
   have "\<forall> W. W \<inter> default_ballot_\<A>\<V> = {}" by (simp add: default_ballot_\<A>\<V>_def)
   hence "\<forall> W. (card (W \<inter> default_ballot_\<A>\<V>)) = 0" by (metis card.empty)
   thus "thiele_aggregate default_ballot_\<A>\<V> = (\<lambda>c. 0)" by (metis thiele_aggregate.simps)
-next
-  fix A :: "'a set"
-  have " \<Union> (committees A) \<subseteq> A"
-    proof
-      fix a :: "'a"
-      assume "a \<in> (\<Union> (committees A))"
-      hence "\<exists> C. C \<subseteq> A \<and> card C = k \<and> a \<in> C" by simp
-      thus "a \<in> A" by blast
-    qed
-    thus "\<Union> (committee_contenders A) \<subseteq> A" by simp
-next
- fix
-    A :: "'a set" and
-    b :: "'a Approval_Set"
-  assume "ballot_\<A>\<V> A b"
-  thus "thiele_ballot (committee_contenders A) (thiele_aggregate b)" by simp
-next
- fix
-    A :: "'a set" and
-    B :: "'a set" and
-    b :: "'a Approval_Set"
-  assume "A \<subseteq> B \<and> ballot_\<A>\<V> A b"
-  thus "thiele_ballot (committee_contenders B) (thiele_aggregate b)" by simp
 qed
-  oops
 
 global_interpretation (in committee_result) thiele_v0:
   aggregate_ballot
