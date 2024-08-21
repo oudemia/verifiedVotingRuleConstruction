@@ -12,6 +12,14 @@ locale electoral_structure =
   assumes
     "\<And> (A :: 'a set) (b :: 'b) (R :: 'r set). limit_by_conts R b = limit_ballot (affected_alts R) b"
 
+sublocale electoral_structure \<subseteq> ballot
+proof (unfold_locales)
+qed
+
+sublocale electoral_structure \<subseteq> result
+proof (unfold_locales)
+qed
+
 
 fun limit_pref_to_alts :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> 'a Preference_Relation" where
 "limit_pref_to_alts A b = (A \<times> A) \<inter> b"
@@ -88,8 +96,7 @@ locale aggregate_structure =
   base: electoral_structure 
         empty\<^sub>B prefers\<^sub>B wins\<^sub>B limit_ballot\<^sub>B limit_conts\<^sub>B affected_alts\<^sub>B
         well_formed_ballot\<^sub>B well_formed_result\<^sub>B limit_by_conts\<^sub>B +
-  agg: electoral_structure 
-        _ _ _ limit_ballot _ _ _ _ limit_ballot for
+  agg: electoral_structure empty_ballot _ _ _  _ affected_alts for
     empty\<^sub>B :: "'b" and
     prefers\<^sub>B :: "'b \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" and
     wins\<^sub>B :: "'b \<Rightarrow> 'a \<Rightarrow> bool" and    
@@ -99,29 +106,22 @@ locale aggregate_structure =
     well_formed_ballot\<^sub>B :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
     well_formed_result\<^sub>B :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" and
     limit_by_conts\<^sub>B :: "'r set \<Rightarrow> 'b \<Rightarrow> 'b" and
-    limit_ballot :: "'r set \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> ('r \<Rightarrow> 'i)" +
+    empty_ballot :: "'r \<Rightarrow> 'i" and
+    affected_alts :: "'r set \<Rightarrow> 'r set" +
   fixes
     contenders :: "'a set \<Rightarrow> 'r set" and
     aggregate :: "('b, 'r, 'i) Ballot_Aggregation"
   assumes
-    dummy: "limit_by_conts = limit_ballot" and 
     conts_are_alts: "\<And> (R :: 'r set). affected_alts R = R" and
     preserve_empty: "aggregate empty\<^sub>B = empty_ballot" and
-    contenders_valid: "\<And>(A :: 'a set). affected_alts\<^sub>B (contenders A) = A" and
-    agg_valid: "\<And> (A:: 'a set) (b:: 'b). well_formed_ballot\<^sub>B A b \<Longrightarrow> well_formed_ballot (contenders A) (aggretate b)" and
+    contenders_valid: "\<And>(A :: 'a set). affected_alts\<^sub>B (contenders A) \<subseteq> A" and
+    agg_valid: "\<And> (A:: 'a set) (b:: 'b). well_formed_ballot\<^sub>B A b \<Longrightarrow> well_formed_ballot (contenders A) (aggregate b)" and
     valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> well_formed_ballot\<^sub>B A b 
-        \<Longrightarrow> well_formed_ballot (contenders B) (aggretate b)"
+        \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
 
 
 sublocale aggregate_structure \<subseteq> electoral_structure
 proof (unfold_locales)
-  fix 
-    R :: "'r set" and
-    b :: "'r \<Rightarrow> 'i"
-  have "affected_alts R = R" using conts_are_alts by simp
-  moreover have "limit_by_conts = limit_ballot" using dummy by simp
-  ultimately show "limit_by_conts R b =  limit_ballot (affected_alts R) b" by simp
 qed
-
 
 end

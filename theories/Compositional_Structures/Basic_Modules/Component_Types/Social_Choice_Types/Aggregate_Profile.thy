@@ -35,7 +35,7 @@ type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family =
 fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
 "voting_rule_family f = True"
 
-locale aggregate_profile =
+locale aggregate_ballot =
   base: ballot base_ballot empty_base prefers_base wins_base limit_base +
   ballot well_formed_ballot  for
     base_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
@@ -52,7 +52,7 @@ assumes
     valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> base_ballot A b 
         \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
 
-sublocale aggregate_profile \<subseteq> ballot
+sublocale aggregate_ballot \<subseteq> ballot
  using ballot_axioms
   by simp
 
