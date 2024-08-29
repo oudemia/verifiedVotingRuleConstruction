@@ -20,11 +20,10 @@ text \<open>
 subsection \<open>Defintion\<close>
 
 type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v, ('r \<Rightarrow>'i)) Profile"
-
+  
 type_synonym ('v, 'b, 'r, 'i) Profile_Aggregation = "('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
 
 type_synonym ('b, 'r, 'i) Ballot_Aggregation = "'b \<Rightarrow> ('r \<Rightarrow> 'i)"
-
 
 locale aggregate_ballot =
   base: ballot base_ballot empty_base prefers_base wins_base limit_base +
@@ -38,11 +37,19 @@ locale aggregate_ballot =
   fixes
     contenders :: "'a set \<Rightarrow> 'r set" and
     aggregate :: "('b, 'r, 'i) Ballot_Aggregation"
-assumes
+  assumes
     preserve_valid: "\<And> (A :: 'a set) (b:: 'b). base_ballot A b \<Longrightarrow> well_formed_ballot (contenders A) (aggregate b)" and
+    preserve_empty: "aggregate empty_base = empty_ballot" and
     valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> base_ballot A b 
-        \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
+        \<Longrightarrow> well_formed_ballot (contenders B) (aggregate (limit_base B b))"
 
+text \<open>
+ Aggregate ballots are ballots. This is important because it allows us to use them in
+ electoral structures later on.
+\<close>
+sublocale aggregate_ballot \<subseteq> ballot
+  using ballot_axioms
+  by simp
 
 subsection \<open>Contenders\<close>
 text \<open>

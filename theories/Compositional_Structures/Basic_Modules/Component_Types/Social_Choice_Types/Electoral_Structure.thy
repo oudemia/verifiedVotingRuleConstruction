@@ -76,48 +76,4 @@ global_interpretation \<A>\<V>_committee:
   "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"
   by unfold_locales auto
 
-
-subsection \<open>Electoral Structure with Aggregate Profiles\<close>
-
-text \<open>
-  While a voting rule receives a set of alternatives, electoral modules operate on contenders,
-  which are of the same type as the results of an election. This is negligible in
-  the case of single winner voting, where contenders are alternatives.
-
-  An aggregate profile is a generalization of a profile and aims to capture information
-  about the preference of voters on contenders (in contrast to profiles, which capture
-  the preferences of voters on alternatives). An aggregate profile is computed based on a
-  profile.
-  For the sake of clarity, an aggregate profile should always store minimally complex data.
-\<close>
-
-type_synonym ('b, 'r, 'i) Ballot_Aggregation = "'b \<Rightarrow> ('r \<Rightarrow> 'i)"
-
-locale aggregate_structure =
-  base: electoral_structure 
-        empty\<^sub>B prefers\<^sub>B wins\<^sub>B limit_ballot\<^sub>B limit_conts\<^sub>B affected_alts\<^sub>B
-        well_formed_ballot\<^sub>B well_formed_result\<^sub>B limit_by_conts\<^sub>B +
-  agg: electoral_structure empty_ballot _ _ _  _ affected_alts for
-    empty\<^sub>B :: "'b" and
-    prefers\<^sub>B :: "'b \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" and
-    wins\<^sub>B :: "'b \<Rightarrow> 'a \<Rightarrow> bool" and    
-    limit_ballot\<^sub>B :: "'a set \<Rightarrow> 'b \<Rightarrow> 'b" and
-    limit_conts\<^sub>B :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
-    affected_alts\<^sub>B :: "'r set \<Rightarrow> 'a set" and
-    well_formed_ballot\<^sub>B :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
-    well_formed_result\<^sub>B :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" and
-    limit_by_conts\<^sub>B :: "'r set \<Rightarrow> 'b \<Rightarrow> 'b" and
-    empty_ballot :: "'r \<Rightarrow> 'i" and
-    affected_alts :: "'r set \<Rightarrow> 'r set" +
-  fixes
-    contenders :: "'a set \<Rightarrow> 'r set" and
-    aggregate :: "('b, 'r, 'i) Ballot_Aggregation"
-  assumes
-    conts_are_alts: "\<And> (R :: 'r set). affected_alts R = R" and
-    preserve_empty: "aggregate empty\<^sub>B = empty_ballot" and
-    contenders_valid: "\<And>(A :: 'a set). affected_alts\<^sub>B (contenders A) \<subseteq> A" and
-    agg_valid: "\<And> (A:: 'a set) (b:: 'b). well_formed_ballot\<^sub>B A b \<Longrightarrow> well_formed_ballot (contenders A) (aggregate b)" and
-    valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> well_formed_ballot\<^sub>B A b 
-        \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
-
 end
