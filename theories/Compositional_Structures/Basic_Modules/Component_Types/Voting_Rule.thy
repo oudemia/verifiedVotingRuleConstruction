@@ -4,6 +4,7 @@ theory Voting_Rule
 
 imports
     Electoral_Module
+    Evaluation_Function
     "Social_Choice_Types/Aggregate_Profile"
 begin
 
@@ -22,10 +23,9 @@ subsection \<open>Definition\<close>
 
 type_synonym ('v, 'a, 'b, 'r) Voting_Rule = "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
 
-type_synonym ('v, 'b, 'r, 'i) Profile_Aggregation = "('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
-
 type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = 
-	"('v, 'b, 'r, 'i) Profile_Aggregation \<Rightarrow>  ('r, 'i) Contender_Score  \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
+	"('v, 'b, 'r, 'i) Profile_Aggregation \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function  \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
+
 
 fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
 "voting_rule_family f = True"

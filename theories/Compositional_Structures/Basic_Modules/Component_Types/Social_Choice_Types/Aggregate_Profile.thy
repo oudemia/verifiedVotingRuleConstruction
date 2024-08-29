@@ -19,21 +19,12 @@ text \<open>
 
 subsection \<open>Defintion\<close>
 
-type_synonym ('r, 'i) Contender_Score = "'r \<Rightarrow> 'i"
-
-type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v, ('r, 'i) Contender_Score) Profile"
+type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v, ('r \<Rightarrow>'i)) Profile"
 
 type_synonym ('v, 'b, 'r, 'i) Profile_Aggregation = "('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
 
-type_synonym ('b, 'r, 'i) Ballot_Aggregation = "'b \<Rightarrow> ('r, 'i) Contender_Score"
+type_synonym ('b, 'r, 'i) Ballot_Aggregation = "'b \<Rightarrow> ('r \<Rightarrow> 'i)"
 
-type_synonym ('v, 'a, 'b, 'r) Voting_Rule = "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
-
-type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = 
-	"('v, 'b, 'r, 'i) Profile_Aggregation \<Rightarrow>  ('i \<Rightarrow> real)  \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
-
-fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
-"voting_rule_family f = True"
 
 locale aggregate_ballot =
   base: ballot base_ballot empty_base prefers_base wins_base limit_base +
@@ -51,10 +42,6 @@ assumes
     preserve_valid: "\<And> (A :: 'a set) (b:: 'b). base_ballot A b \<Longrightarrow> well_formed_ballot (contenders A) (aggregate b)" and
     valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> base_ballot A b 
         \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
-
-sublocale aggregate_ballot \<subseteq> ballot
- using ballot_axioms
-  by simp
 
 
 subsection \<open>Contenders\<close>

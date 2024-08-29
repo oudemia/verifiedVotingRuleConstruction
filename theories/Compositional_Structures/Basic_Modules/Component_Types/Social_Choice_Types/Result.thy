@@ -117,5 +117,4 @@ end
 fun affected_alts_committee :: "('a Committee) set  \<Rightarrow> 'a set" where
   "affected_alts_committee res = \<Union> res"
 
-
 end

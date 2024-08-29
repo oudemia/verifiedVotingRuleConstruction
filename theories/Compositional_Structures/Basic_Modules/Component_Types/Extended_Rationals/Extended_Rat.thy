@@ -63,7 +63,7 @@ proof (rule transpI, unfold split_paired_all)
   show "eratrel_nn (x1, y1) (x3, y3)"
   proof cases
     assume x1_inf: "x1 = \<infinity>"
-    hence x2_inf: "x2 = \<infinity>"  using eq12 eratrel_inf by blast
+    hence x2_inf: "x2 = \<infinity>" using eq12 eratrel_inf by blast
     have "x3 = \<infinity>"  using x2_inf eq23 eratrel_inf by blast
     hence "x1 * y3 = x3 * y1" using eq12 eq23 x1_inf by auto
     thus "eratrel_nn (x1, y1) (x3, y3)" using eq12 eq23 by auto
@@ -127,13 +127,22 @@ proof (auto)
     x1 x2 x3 x4 :: enat and
     y1 y2 y3 y4 :: nat
   assume 
-    "0 < y1" and "0 < y2" and "0 < y3" and "0 < y4" and
+    y1: "0 < y1" and y2: "0 < y2" and y3: "0 < y3" and y4: "0 < y4" and
     eq12: "x1 * enat y2 = x2 * enat y1" and
     eq34: "x3 * enat y4 = x4 * enat y3"
   show "(x1 * enat y3 + x3 * enat y1) * enat (y2 * y4) =
        (x2 * enat y4 + x4 * enat y2) * enat (y1 * y3)"
   proof cases
-    assume "x1 = \<infinity>"
+    assume x1_inf: "x1 = \<infinity>"
+    hence x2_inf: "x2 = \<infinity>" using eq12 eratrel_inf using y2 by fastforce
+    have "(x1 * enat y3 + x3 * enat y1) * enat (y2 * y4) = \<infinity>" using x1_inf y1 y2 y3 y4 by auto
+    moreover have "(x2 * enat y4 + x4 * enat y2) * enat (y1 * y3) = \<infinity>" using x2_inf y1 y2 y3 y4 by auto
+    finally show "(x1 * enat y3 + x3 * enat y1) * enat (y2 * y4) = 
+        (x2 * enat y4 + x4 * enat y2) * enat (y1 * y3)" by simp
+  next
+    assume x1_not_inf: "x1 \<noteq> \<infinity>"
+    hence x2_not_inf: "x2 \<noteq> \<infinity>" using eq12 eratrel_inf y1 y2 by fastforce
+
   qed
 qed
 

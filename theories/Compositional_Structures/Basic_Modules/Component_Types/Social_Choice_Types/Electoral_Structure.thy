@@ -77,7 +77,8 @@ global_interpretation \<A>\<V>_committee:
   by unfold_locales auto
 
 
-subsection \<open>Aggregate Profiles\<close>
+subsection \<open>Electoral Structure with Aggregate Profiles\<close>
+
 text \<open>
   While a voting rule receives a set of alternatives, electoral modules operate on contenders,
   which are of the same type as the results of an election. This is negligible in
@@ -118,10 +119,5 @@ locale aggregate_structure =
     agg_valid: "\<And> (A:: 'a set) (b:: 'b). well_formed_ballot\<^sub>B A b \<Longrightarrow> well_formed_ballot (contenders A) (aggregate b)" and
     valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> well_formed_ballot\<^sub>B A b 
         \<Longrightarrow> well_formed_ballot (contenders B) (aggregate b)"
-
-
-sublocale aggregate_structure \<subseteq> electoral_structure
-proof (unfold_locales)
-qed
 
 end
