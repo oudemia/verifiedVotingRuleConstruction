@@ -18,435 +18,1042 @@ text \<open>
   infinity.
 \<close>
 
-typedef erat = "UNIV :: rat option set" ..
+datatype erat = erat rat | PInfty | MInfty
 
-definition erat :: "rat \<Rightarrow> erat" where
-  "erat r = Abs_erat (Some r)"
+lemma erat_cong: "x = y \<Longrightarrow> erat x = erat y" by simp
+
+instantiation erat :: uminus
+begin
+
+fun uminus_erat where
+  "- (erat r) = erat (- r)"
+| "- PInfty = MInfty"
+| "- MInfty = PInfty"
+
+instance ..
+
+end
+
+lemma erat_uminus_uminus[simp]:
+  fixes a :: erat
+  shows "- (- a) = a"
+  by (cases a) simp_all
+
+subsection \<open>Dealing with Infinity\<close>
 
 instantiation erat :: infinity
 begin
-definition "\<infinity> = Abs_erat None"
+
+definition "(\<infinity>::erat) = PInfty"
 instance ..
+
 end
 
-lemma not_infinity_eq [iff]: "(x \<noteq> \<infinity>) = (\<exists>i. x = erat i)"
+lemma
+  shows PInfty_eq_infinity[simp]: "PInfty = \<infinity>"
+    and MInfty_eq_minfinity[simp]: "MInfty = - \<infinity>"
+    and MInfty_neq_PInfty[simp]: "\<infinity> \<noteq> - (\<infinity>::erat)" "- \<infinity> \<noteq> (\<infinity>::erat)"
+    and MInfty_neq_erat[simp]: "erat r \<noteq> - \<infinity>" "- \<infinity> \<noteq> erat r"
+    and PInfty_neq_erat[simp]: "erat r \<noteq> \<infinity>" "\<infinity> \<noteq> erat r"
+    and PInfty_cases[simp]: "(case \<infinity> of erat r \<Rightarrow> f r | PInfty \<Rightarrow> y | MInfty \<Rightarrow> z) = y"
+    and MInfty_cases[simp]: "(case - \<infinity> of erat r \<Rightarrow> f r | PInfty \<Rightarrow> y | MInfty \<Rightarrow> z) = z"
+  by (simp_all add: infinity_erat_def)
+
+lemma not_infinity_eq [iff]: "(x \<noteq> \<infinity> \<and> x \<noteq> - \<infinity>) = (\<exists>i. x = erat i)"
 proof (cases x)
-  case (Abs_erat y)
-  then show ?thesis 
-  proof (cases y)
-    case None
-    hence inf: "x = \<infinity>" by (simp add: Abs_erat(1) infinity_erat_def)
-    hence "\<forall>i. x \<noteq> Abs_erat (Some i)" using Abs_erat(1) Abs_erat_inject None by blast
-    hence "\<forall>i. x \<noteq> erat i" by (simp add: erat_def)
-    thus ?thesis using inf by simp
-  next
-    case (Some a)
-    hence not_inf: "x = erat a" by (simp add: Abs_erat(1) erat_def)
-    hence "x \<noteq> \<infinity>" by (simp add: Abs_erat_inject erat_def infinity_erat_def)
-    thus ?thesis using not_inf by blast
-  qed
+  case (erat y)
+  thus ?thesis using erat by simp
+next
+  case (PInfty)
+  thus ?thesis by simp
+next
+  case (MInfty)
+  thus ?thesis by simp
 qed
 
-lemma not_erat_eq [iff]: "(\<forall>y. x \<noteq> erat y) = (x = \<infinity>)"
-  using Extended_Rat.not_infinity_eq by blast
+lemma not_erat_eq [iff]: "(\<forall>y. x \<noteq> erat y) = (x = \<infinity> \<or> x = -\<infinity>)" 
+  by (meson not_infinity_eq)
 
-declare [[coercion "erat::rat\<Rightarrow>erat"]]
+declare
+  PInfty_eq_infinity[code_post]
+  MInfty_eq_minfinity[code_post]
 
-lemma erat_ex_split: "(\<exists>c::erat. P c) \<longleftrightarrow> P \<infinity> \<or> (\<exists>c::rat. P c)"
-  by (metis not_erat_eq)
+lemma [code_unfold]:
+  "\<infinity> = PInfty"
+  "- PInfty = MInfty"
+  by simp_all
 
-old_rep_datatype erat "\<infinity> :: erat"
-proof -
-  fix 
-    P :: "erat \<Rightarrow> bool" and
-    r :: erat
-  assume "\<And>j. P (erat j)" and "P \<infinity>"
-  then show "P r"
-  proof induct
-    case (Abs_erat y) 
-    thus ?case
-      by (cases y rule: option.exhaust)
-         (auto simp: erat_def infinity_erat_def)
-  qed
-next
-  fix r1 r2 :: rat
-  show "(erat r1 = erat r2) = (r1 = r2)"
-  proof auto
-    assume "erat r1 = erat r2"
-    hence "Some r1 = Some r2" by (simp add: Abs_erat_inject erat_def)
-    thus "r1 = r2" by simp
-  qed
-next
-  fix r :: rat
-  show "erat r \<noteq> \<infinity>" by blast
-qed
+subsection \<open>Proof Methods on Extended Rationals\<close>
 
-primrec the_erat :: "erat \<Rightarrow> rat"
-  where "the_erat (erat n) = n"
+lemma inj_erat[simp]: "inj_on erat A"
+  unfolding inj_on_def by auto
+
+lemma erat_cases[cases type: erat]:
+  obtains (rat) r where "x = erat r"
+    | (PInf) "x = \<infinity>"
+    | (MInf) "x = -\<infinity>"
+  by (cases x) auto
+
+lemmas erat2_cases = erat_cases[case_product erat_cases]
+lemmas erat3_cases = erat2_cases[case_product erat_cases]
+
+declare [[coercion "erat :: rat \<Rightarrow> erat"]]
+
+lemma erat_all_split: "\<And>P. (\<forall>x::erat. P x) \<longleftrightarrow> P \<infinity> \<and> (\<forall>x. P (erat x)) \<and> P (-\<infinity>)"
+  by (metis erat_cases)
+
+lemma erat_ex_split: "\<And>P. (\<exists>x::erat. P x) \<longleftrightarrow> P \<infinity> \<or> (\<exists>x. P (erat x)) \<or> P (-\<infinity>)"
+  by (metis erat_cases)
+
+lemma erat_uminus_eq_iff[simp]:
+  fixes a b :: erat
+  shows "-a = -b \<longleftrightarrow> a = b"
+  by (cases rule: erat2_cases[of a b]) simp_all
 
 
+subsection \<open>Basic Properties\<close>
 
-instantiation erat :: zero_neq_one
+function rat_of_erat :: "erat \<Rightarrow> rat" where
+  "rat_of_erat (erat r) = r"
+| "rat_of_erat \<infinity> = 0"
+| "rat_of_erat (-\<infinity>) = 0"
+  by (auto intro: erat_cases)
+termination by standard (rule wf_empty)
+
+lemma rat_of_erat[simp]:
+  "rat_of_erat (- x :: erat) = - (rat_of_erat x)"
+  by (cases x) simp_all
+
+lemma range_erat[simp]: "range erat = UNIV - {\<infinity>, -\<infinity>}"
+proof safe
+  fix x
+  assume "x \<notin> range erat" "x \<noteq> \<infinity>"
+  then show "x = -\<infinity>"
+    by (cases x) auto
+qed auto
+
+lemma erat_range_uminus[simp]: "range uminus = (UNIV::erat set)"
+proof safe
+  fix x :: erat
+  show "x \<in> range uminus"
+    by (intro image_eqI[of _ _ "-x"]) auto
+qed auto
+
+instantiation erat :: abs
 begin
 
-definition
-  "0 = erat (Fract 0 1)"
+function abs_erat where
+  "\<bar>erat r\<bar> = erat \<bar>r\<bar>"
+| "\<bar>-\<infinity>\<bar> = (\<infinity>::erat)"
+| "\<bar>\<infinity>\<bar> = (\<infinity>::erat)"
+by (auto intro: erat_cases)
+termination proof qed (rule wf_empty)
 
-definition
-  "1 = erat (Fract 1 1)"
-
-instance sorry
-  (* moreover have "Fract 0 1 \<noteq> Fract 1 1" using One_rat_def Zero_rat_def by auto
-  hence "erat (Fract 0 1) \<noteq> erat (Fract 1 1)" by blast
-  thus "0 \<noteq> 1" *)
-
-end
-subsection \<open>Addition\<close>
-
-lemmas erat2_cases = erat.exhaust[case_product erat.exhaust]
-lemmas erat3_cases = erat.exhaust[case_product erat.exhaust erat.exhaust]
-
-
-instantiation erat :: comm_monoid_add
-begin
-
-definition [nitpick_simp]:
-  "m + n = (case m of \<infinity> \<Rightarrow> \<infinity> | erat m \<Rightarrow> (case n of \<infinity> \<Rightarrow> \<infinity> | erat n \<Rightarrow> erat (m + n)))"
-
-lemma plus_erat_simps [simp, code]:
-  fixes q :: erat
-  shows "erat m + erat n = erat (m + n)"
-    and "\<infinity> + q = \<infinity>"
-    and "q + \<infinity> = \<infinity>"
-  by (simp_all add: plus_erat_def split: erat.splits)
-
-instance
-proof
-  fix n m q :: erat
-  show "n + m + q = n + (m + q)"
-    by (cases n m q rule: erat3_cases) auto
-  show "n + m = m + n"
-    by (cases n m rule: erat2_cases) auto
-  show "0 + n = n"
-  proof (cases n)
-    case (erat r)
-    hence "0 + n = erat (0 + r)" by (simp add: Zero_rat_def zero_erat_def)
-    thus ?thesis by (simp add: erat)
-  next
-    case infinity
-    hence "0 + n = \<infinity>" by simp
-    thus ?thesis by (simp add: infinity)
-  qed
-qed
+instance ..
 
 end
 
-subsection \<open>Multiplication\<close>
+lemma abs_eq_infinity_cases[elim!]:
+  fixes x :: erat
+  assumes "\<bar>x\<bar> = \<infinity>"
+  obtains "x = \<infinity>" | "x = -\<infinity>"
+  using assms by (cases x) auto
 
-instantiation erat :: "{comm_semiring_1, semiring_no_zero_divisors}"
-begin
+lemma abs_neq_infinity_cases[elim!]:
+  fixes x :: erat
+  assumes "\<bar>x\<bar> \<noteq> \<infinity>"
+  obtains r where "x = erat r"
+  using assms by (cases x) auto
 
-definition times_erat_def [nitpick_simp]:
-  "m * n = (case m of \<infinity> \<Rightarrow> if n = 0 then 0 else \<infinity> | erat m \<Rightarrow>
-    (case n of \<infinity> \<Rightarrow> if m = 0 then 0 else \<infinity> | erat n \<Rightarrow> erat (m * n)))"
+lemma abs_erat_uminus[simp]:
+  fixes x :: erat
+  shows "\<bar>- x\<bar> = \<bar>x\<bar>"
+  by (cases x) auto
 
-lemma times_erat_simps [simp, code]:
-  "erat m * erat n = erat (m * n)"
-  "\<infinity> * \<infinity> = (\<infinity>::erat)"
-  "\<infinity> * erat n = (if n = 0 then 0 else \<infinity>)"
-  "erat m * \<infinity> = (if m = 0 then 0 else \<infinity>)"
-  unfolding times_erat_def zero_erat_def 
-proof auto
-  fix n
-  assume "n = Fract 0 1"
-  show "Fract 0 1 = 0" by (simp add: Zero_rat_def)
-next
- fix n
-  assume *: "Fract 0 1 \<noteq> 0" and "n = 0"
-  show "False" using * by (simp add: Zero_rat_def)
-qed
-
-lemma times_rat_assoc: "\<forall> a b c :: erat. ((a \<noteq> \<infinity> \<and> b \<noteq> \<infinity> \<and> c \<noteq> \<infinity>) \<longrightarrow> (a * b) * c = a * (b * c))"
+lemma erat_infinity_cases:
+  fixes a :: erat
+  shows "a \<noteq> \<infinity> \<Longrightarrow> a \<noteq> -\<infinity> \<Longrightarrow> \<bar>a\<bar> \<noteq> \<infinity>"
   by auto
 
-lemma times_zero_assoc: "\<forall> a b c :: erat. ((a = 0 \<or> b = 0 \<or> c = 0) \<longrightarrow> (a * b) * c = a * (b * c))"
-proof auto
-  fix b c :: erat
-  have "0 * b = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_cancel_left1 zero_erat_def)
-  hence "0 * b * c = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_cancel_left1 zero_erat_def)
-  moreover have "0 * (b * c) = 0" using times_erat_simps by (metis (mono_tags) Zero_rat_def erat.exhaust mult_zero_left zero_erat_def)
-  ultimately show "(0 * b) * c = 0 * (b * c)" by simp
-next
-  fix a c :: erat
-  have *: "a * 0 = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_zero_right zero_erat_def)
-  hence **: "a * 0 * c = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_cancel_left1 zero_erat_def)
-  moreover have "0 * c = 0" using times_erat_simps by (metis (mono_tags) Zero_rat_def erat.exhaust mult_zero_left zero_erat_def)
-  moreover have " a * (0 * c) = 0" using * ** by simp
-  ultimately show "a * 0 * c = a * (0 * c)" by simp
-next
- fix a b :: erat
-  have "0 * b = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_cancel_left1 zero_erat_def)
-  hence "a * b * 0 = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_zero_right zero_erat_def)
-  moreover have "b * 0 = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_zero_right zero_erat_def)
-  moreover have " a * (b * 0) = 0" using times_erat_simps by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust mult_cancel_right1 zero_erat_def)
-  ultimately show " a * b * 0 = a * (b * 0)" by simp
-qed
+subsection \<open>Basic Operations\<close>
 
-lemma zero_helper: "\<forall> a b :: erat. ((a \<noteq> 0 \<and> b \<noteq> 0 ) \<longrightarrow> (a * b) \<noteq> 0)"
-proof auto
-  fix a b :: erat
-  assume *: "a \<noteq> 0" and **: "b \<noteq> 0" and ***: "a * b = 0"
-  show "False"
-  proof cases
-    assume "a = \<infinity> \<or> b = \<infinity>"
-    hence "a * b = \<infinity>" using * ** times_erat_simps zero_erat_def by (metis (mono_tags, lifting) Zero_rat_def erat.exhaust)
-    hence "a * b \<noteq> 0" by (simp add: zero_erat_def)
-    thus "False" using *** by simp
-  next
-    assume "\<not>(a = \<infinity> \<or> b = \<infinity>)"
-    hence no_inf: "a \<noteq> \<infinity> \<and> b \<noteq> \<infinity>" by simp
-    hence "\<exists> ra :: rat. a = erat ra \<and> ra \<noteq> 0" using *  Zero_rat_def zero_erat_def by fastforce
-    moreover have "\<exists> rb :: rat. b = erat rb \<and> rb \<noteq> 0"  using ** no_inf Zero_rat_def zero_erat_def by fastforce
-    ultimately have "\<exists> ra rb :: rat. (a * b) = erat (ra * rb) \<and> ra \<noteq> 0 \<and> rb \<noteq> 0" using times_erat_simps by blast
-    hence "a * b \<noteq> 0" by (metis Zero_rat_def erat.inject mult_eq_0_iff zero_erat_def) 
-    thus "False" using *** by simp
-  qed
-qed
+subsubsection "Addition"
+
+instantiation erat :: "{one,comm_monoid_add,zero_neq_one}"
+begin
+
+definition "0 = erat 0"
+definition "1 = erat 1"
+
+function plus_erat where
+  "erat r + erat p = erat (r + p)"
+| "\<infinity> + a = (\<infinity>::erat)"
+| "a + \<infinity> = (\<infinity>::erat)"
+| "erat r + -\<infinity> = - \<infinity>"
+| "-\<infinity> + erat p = -(\<infinity>::erat)"
+| "-\<infinity> + -\<infinity> = -(\<infinity>::erat)"
+proof goal_cases
+  case prems: (1 P x)
+  then obtain a b where "x = (a, b)"
+    by (cases x) auto
+  with prems show P
+   by (cases rule: erat2_cases[of a b]) auto
+qed auto
+termination by standard (rule wf_empty)
+
+lemma Infty_neq_0[simp]:
+  "(\<infinity>::erat) \<noteq> 0" "0 \<noteq> (\<infinity>::erat)"
+  "-(\<infinity>::erat) \<noteq> 0" "0 \<noteq> -(\<infinity>::erat)"
+  by (simp_all add: zero_erat_def)
+
+lemma erat_eq_0[simp]:
+  "erat r = 0 \<longleftrightarrow> r = 0"
+  "0 = erat r \<longleftrightarrow> r = 0"
+  unfolding zero_erat_def by simp_all
+
+lemma erat_eq_1[simp]:
+  "erat r = 1 \<longleftrightarrow> r = 1"
+  "1 = erat r \<longleftrightarrow> r = 1"
+  unfolding one_erat_def by simp_all
 
 instance
 proof
   fix a b c :: erat
-  show "(a * b) * c = a * (b * c)"
-  proof cases
-    assume no_inf: "a \<noteq> \<infinity> \<and> b \<noteq> \<infinity> \<and> c \<noteq> \<infinity>"
-    thus ?thesis using times_rat_assoc by auto
-  next
-    assume "\<not>(a \<noteq> \<infinity> \<and> b \<noteq> \<infinity> \<and> c \<noteq> \<infinity>)"
-    hence inf: "a = \<infinity> \<or> b = \<infinity> \<or> c = \<infinity>" by simp
-    thus ?thesis 
-    proof cases
-      assume "a = 0 \<or> b = 0 \<or> c = 0"
-      thus ?thesis using times_zero_assoc by blast
-    next
-      assume "\<not>(a = 0 \<or> b = 0 \<or> c = 0)"
-      hence no_zero: "a \<noteq> 0 \<and> b \<noteq> 0 \<and> c \<noteq> 0" by simp
-    thus ?thesis 
-    proof cases
-      assume a_inf: "a = \<infinity>"
-      hence "a * b = \<infinity>" using no_zero times_erat_def by simp
-      hence *: "(a * b) * c = \<infinity>" using no_zero times_erat_def by simp
-      have "b \<noteq> 0 \<and> c \<noteq> 0" using no_zero by simp
-      hence "b * c \<noteq> 0" using zero_helper by simp
-      hence "a * (b * c) = \<infinity>" using a_inf times_erat_def by simp
-      thus ?thesis using * by simp
-    next
-      assume a_fin: "\<not> a = \<infinity>"
-      hence b_or_c_inf: "b = \<infinity> \<or> c = \<infinity>" using inf by blast
-      thus ?thesis
-      proof cases
-        assume b_inf: "b = \<infinity>"
-        hence *: "a * b = \<infinity>" using no_zero times_erat_def using a_fin zero_helper by fastforce
-        hence **: "(a * b) * c = \<infinity>" using no_zero times_erat_def by simp
-        have "b * c = \<infinity>" using  b_inf no_zero times_erat_def  by simp
-        hence "a * (b * c) = \<infinity>" using * b_inf by auto
-        thus ?thesis using ** by simp
-      next
-        assume b_fin: "\<not> b = \<infinity>"
-        hence c_inf: "c = \<infinity>" using b_or_c_inf by auto
-        hence "b * c = \<infinity>" using no_zero times_erat_def using b_fin zero_helper by fastforce
-        hence **: "a * (b * c) = \<infinity>" using no_zero times_erat_def a_fin zero_helper by fastforce
-        moreover have "(a * b) * c = \<infinity>" using no_zero c_inf a_fin b_fin zero_helper by fastforce
-        thus ?thesis using ** by simp
-      qed
-    qed
-  qed
+  show "0 + a = a"
+    by (cases a) (simp_all add: zero_erat_def)
+  show "a + b = b + a"
+    by (cases rule: erat2_cases[of a b]) simp_all
+  show "a + b + c = a + (b + c)"
+    by (cases rule: erat3_cases[of a b c]) simp_all
+  show "0 \<noteq> (1::erat)"
+    by (simp add: one_erat_def zero_erat_def)
 qed
-next
- fix a b  :: erat
-  show "a * b = b * a"
-  proof cases
-    assume "a = \<infinity> \<or> b = \<infinity>"
-    thus ?thesis by (metis not_erat_eq times_erat_simps(3) times_erat_simps(4))
-  next
-    assume "\<not>(a = \<infinity> \<or> b = \<infinity>)"
-    hence "a \<noteq> \<infinity> \<and> b \<noteq> \<infinity>" by simp
-    hence "\<exists> ra rb :: rat. a = erat ra \<and> b = erat rb" by simp
-    then show ?thesis by (metis  mult.commute times_erat_simps(1))
-  qed 
-next
-  fix a  :: erat
-  show "1 * a = a" using  one_erat_def times_erat_simps zero_neq_one by (metis (mono_tags, lifting) One_rat_def erat.exhaust mult_1)
-next
-  fix a b c :: erat
-  show distr: "(a + b) * c = a * c + b * c"
-  oops
 
 end
 
+lemma erat_0_plus [simp]: "erat 0 + x = x"
+  and plus_erat_0 [simp]: "x + erat 0 = x"
+by(simp_all flip: zero_erat_def)
 
-section \<open>Definition\<close>
+instance erat :: numeral ..
 
-text\<open>
-  Extended rationals are a simplified representation of rational numbers extended by the
-  special value "\<infinity>", i.e., infinity. An extended rational that unequal to \<infinity> is represented
-  as the quotient of two integers; its numerator and its denominator.
-\<close>
+lemma rat_of_erat_0[simp]: "rat_of_erat (0::erat) = 0"
+  unfolding zero_erat_def by simp
 
-subsection \<open>Non-Negative Extended Rationals\<close>
+lemma abs_erat_zero[simp]: "\<bar>0\<bar> = (0::erat)"
+  unfolding zero_erat_def abs_erat.simps by simp
 
-definition eratrel_nn :: "(erat \<times> nat) \<Rightarrow> (erat \<times> nat) \<Rightarrow> bool"
-  where "eratrel_nn = (\<lambda>x y. snd x \<noteq> 0 \<and> snd y \<noteq> 0 \<and> fst x * snd y = fst y * snd x)"
+lemma erat_uminus_zero[simp]: "- 0 = (0::erat)"
+  by (simp add: zero_erat_def)
 
-value "eratrel_nn (1, 2) (1, 2)"
-value "eratrel_nn (\<infinity>, 1) (\<infinity>, 1)"
-value "eratrel_nn (\<infinity>, 1) (\<infinity>, 5)"
+lemma erat_uminus_zero_iff[simp]:
+  fixes a :: erat
+  shows "-a = 0 \<longleftrightarrow> a = 0"
+  by (cases a) simp_all
 
-lemma  eratrel_nn [simp]: "eratrel_nn (x1, y1) (x2, y2) \<longleftrightarrow>  (y1 \<noteq> 0 \<and> y2 \<noteq> 0 \<and> x1 * y2 = x2 * y1)"
-  by (simp add:  eratrel_nn_def)
+lemma erat_plus_eq_PInfty[simp]:
+  fixes a b :: erat
+  shows "a + b = \<infinity> \<longleftrightarrow> a = \<infinity> \<or> b = \<infinity>"
+  by (cases rule: erat2_cases[of a b]) auto
 
-lemma exists_eratrel_nn_refl: "\<exists>x. eratrel_nn x x"
-  by (auto intro!: one_neq_zero)
+lemma erat_plus_eq_MInfty[simp]:
+  fixes a b :: erat
+  shows "a + b = -\<infinity> \<longleftrightarrow> (a = -\<infinity> \<or> b = -\<infinity>) \<and> a \<noteq> \<infinity> \<and> b \<noteq> \<infinity>"
+  by (cases rule: erat2_cases[of a b]) auto
 
-lemma symp_eratrel_nn: "symp eratrel_nn"
-  by (simp add:  eratrel_nn_def symp_def)
+lemma erat_add_cancel_left:
+  fixes a b :: erat
+  assumes "a \<noteq> -\<infinity>"
+  shows "a + b = a + c \<longleftrightarrow> a = \<infinity> \<or> b = c"
+  using assms by (cases rule: erat3_cases[of a b c]) auto
 
-lemma eratrel_inf: "eratrel_nn (x1, y1) (x2, y2) \<longrightarrow> (x1 = \<infinity> \<longleftrightarrow> x2 = \<infinity>)"
-proof
-  fix 
-    x1 x2 :: erat and
-    y1 y2 :: nat
-  assume eq: "eratrel_nn (x1, y1) (x2, y2)"
-  show "x1 = \<infinity> \<longleftrightarrow> x2 = \<infinity>"
-  proof cases
-    assume x1_inf: "x1 = \<infinity>"
-    hence "x1 * y2 = \<infinity>" using eq by auto
-    moreover have "x1 * y2 = x2 * y1" using eq by auto
-    ultimately have "x2 * y1 = \<infinity>" by auto
-    hence "x2 = \<infinity>" by (simp add: imult_is_infinity)
-    thus "x1 = \<infinity> \<longleftrightarrow> x2 = \<infinity>" using x1_inf by simp
-  next
-    assume x1_not_inf: "x1 \<noteq> \<infinity>" 
-    hence "x1 * y2 \<noteq> \<infinity>" using not_erat_eq by fastforce
-    moreover have "x1 * y2 = x2 * y1" using eq by auto
-    ultimately have "x2 * y1 \<noteq> \<infinity>" using not_erat_eq by fastforce
-    hence "x2 \<noteq> \<infinity>" using eq erat_0_iff(2) imult_is_infinity by auto
-    thus "x1 = \<infinity> \<longleftrightarrow> x2 = \<infinity>" using x1_not_inf by blast
-  qed
-qed
+lemma erat_add_cancel_right:
+  fixes a b :: erat
+  assumes "a \<noteq> -\<infinity>"
+  shows "b + a = c + a \<longleftrightarrow> a = \<infinity> \<or> b = c"
+  using assms by (cases rule: erat3_cases[of a b c]) auto
 
-lemma transp_eratrel_nn: "transp eratrel_nn"
-proof (rule transpI, unfold split_paired_all)
-  fix 
-    x1 x2 x3 :: erat and
-    y1 y2 y3 :: nat
-  assume eq12: "eratrel_nn (x1, y1) (x2, y2)"
-  assume eq23: "eratrel_nn (x2, y2) (x3, y3)"
-  show "eratrel_nn (x1, y1) (x3, y3)"
-  proof cases
-    assume x1_inf: "x1 = \<infinity>"
-    hence x2_inf: "x2 = \<infinity>" using eq12 eratrel_inf by blast
-    have "x3 = \<infinity>"  using x2_inf eq23 eratrel_inf by blast
-    hence "x1 * y3 = x3 * y1" using eq12 eq23 x1_inf by auto
-    thus "eratrel_nn (x1, y1) (x3, y3)" using eq12 eq23 by auto
-  next
-    assume x1_not_inf: "x1 \<noteq> \<infinity>" 
-    hence "x1 * y2 \<noteq> \<infinity>" using not_erat_eq by fastforce
-    moreover have "x1 * y2 = x2 * y1" using eq12 by auto
-    ultimately have "x2 * y1 \<noteq> \<infinity>" using not_erat_eq by fastforce
-    hence "x2 \<noteq> \<infinity>" using eq12 erat_0_iff(2) imult_is_infinity by auto
-    hence "x2 * y3 \<noteq> \<infinity>" using eq23  using not_erat_eq by fastforce
-    moreover have "x2 * y3 = x3 * y2" using eq23 by auto
-    ultimately have "x3 * y2 \<noteq> \<infinity>"  using not_erat_eq by fastforce
-    hence x3_not_inf: "x3 \<noteq> \<infinity>" using not_erat_eq eq23 by fastforce
-    have "y2 * (x1 * y3) = y3 * (x1 * y2)" by (simp add: mult.commute mult.left_commute)
-    also have "x1 * y2 = x2 * y1" using eq12 by auto
-    also have "y3 * (x2 * y1) = y1 * (x2 * y3)" by (simp add: mult.commute mult.left_commute)
-    also have "x2 * y3 = x3 * y2" using eq23 by auto
-    also have "y1 * (x3 * y2) = y2 * (x3 * y1)" by (simp add: mult.commute mult.left_commute)
-    finally have "y2 * (x1 * y3) = y2 * (x3 * y1)" .
-    moreover have "y2 \<noteq> 0" using eq12 by auto
-    ultimately have "x1 * y3 = x3 * y1" using x1_not_inf x3_not_inf by auto
-    thus "eratrel_nn (x1, y1) (x3, y3)" using eq12 eq23 by auto
-  qed
-qed
+lemma erat_rat: "erat (rat_of_erat x) = (if \<bar>x\<bar> = \<infinity> then 0 else x)"
+  by (cases x) simp_all
 
-lemma part_equivp_eratrel_nn: "part_equivp eratrel_nn"
-  using exists_eratrel_nn_refl part_equivp_refl_symp_transp symp_eratrel_nn transp_eratrel_nn by blast
-
-quotient_type  erat_nn = "erat \<times> nat" / partial: "eratrel_nn"
-  morphisms Rep_Erat Abs_Erat
-  by (rule part_equivp_eratrel_nn)
-
-value "Rep_Erat x"
-value "Abs_Erat x"
+lemma rat_of_erat_add:
+  fixes a b :: erat
+  shows "rat_of_erat (a + b) =
+    (if (\<bar>a\<bar> = \<infinity>) \<and> (\<bar>b\<bar> = \<infinity>) \<or> (\<bar>a\<bar> \<noteq> \<infinity>) \<and> (\<bar>b\<bar> \<noteq> \<infinity>) then rat_of_erat a + rat_of_erat b else 0)"
+  by (cases rule: erat2_cases[of a b]) auto
 
 
-subsubsection \<open>Constructors, representation and asic operations\<close>
+subsubsection "Linear order on \<^typ>\<open>erat\<close>"
 
-lift_definition Fract :: "erat \<Rightarrow> nat \<Rightarrow> erat_nn"
-  is "\<lambda>a b. if b = 0 then (0, 1) else (a, b)"
-  by simp
-
-lemma eq_erat_nn:
-  "\<And>a b c d. b \<noteq> 0 \<Longrightarrow> d \<noteq> 0 \<Longrightarrow> Fract a b = Fract c d \<longleftrightarrow> a * d = c * b"
-  "\<And>a. Fract a 0 = Fract 0 1"
-  "\<And>a c. Fract 0 a = Fract 0 c"
-  by (transfer, simp)+
-
-
-instantiation erat_nn :: field
+instantiation erat :: linorder
 begin
 
-lift_definition zero_erat :: "erat_nn" is "(0, 1)" by simp
+function less_erat
+where
+  "   erat x < erat y     \<longleftrightarrow> x < y"
+| "(\<infinity>::erat) < a           \<longleftrightarrow> False"
+| "         a < -(\<infinity>::erat) \<longleftrightarrow> False"
+| "erat x    < \<infinity>           \<longleftrightarrow> True"
+| "        -\<infinity> < erat r     \<longleftrightarrow> True"
+| "        -\<infinity> < (\<infinity>::erat) \<longleftrightarrow> True"
+proof goal_cases
+  case prems: (1 P x)
+  then obtain a b where "x = (a,b)" by (cases x) auto
+  with prems show P by (cases rule: erat2_cases[of a b]) auto
+qed simp_all
+termination by (relation "{}") simp
 
-lift_definition one_erat :: "erat_nn" is "(1, 1)" by simp
+definition "x \<le> (y::erat) \<longleftrightarrow> x < y \<or> x = y"
 
-lift_definition plus_erat :: "erat_nn \<Rightarrow> erat_nn \<Rightarrow> erat_nn"
-is "\<lambda>x y. (fst x * erat (snd y) + fst y * erat (snd x), snd x * snd y)"
-proof (auto)
-  fix 
-    x1 x2 x3 x4 :: erat and
-    y1 y2 y3 y4 :: nat
-  assume 
-    y1: "0 < y1" and y2: "0 < y2" and y3: "0 < y3" and y4: "0 < y4" and
-    eq12: "x1 * erat y2 = x2 * erat y1" and
-    eq34: "x3 * erat y4 = x4 * erat y3"
-  show "(x1 * erat y3 + x3 * erat y1) * erat (y2 * y4) =
-       (x2 * erat y4 + x4 * erat y2) * erat (y1 * y3)"
-  proof cases
-    assume x1_inf: "x1 = \<infinity>"
-    hence x2_inf: "x2 = \<infinity>" using eq12 eratrel_inf using y2 by fastforce
-    have "(x1 * erat y3 + x3 * erat y1) * erat (y2 * y4) = \<infinity>" using x1_inf y1 y2 y3 y4 by auto
-    moreover have "(x2 * erat y4 + x4 * erat y2) * erat (y1 * y3) = \<infinity>" using x2_inf y1 y2 y3 y4 by auto
-    finally show "(x1 * erat y3 + x3 * erat y1) * erat (y2 * y4) = 
-        (x2 * erat y4 + x4 * erat y2) * erat (y1 * y3)" by simp
-  next
-    assume x1_not_inf: "x1 \<noteq> \<infinity>"
-    hence x2_not_inf: "x2 \<noteq> \<infinity>" using eq12 eratrel_inf y1 y2 by fastforce
+lemma erat_infty_less[simp]:
+  fixes x :: erat
+  shows "x < \<infinity> \<longleftrightarrow> (x \<noteq> \<infinity>)"
+    "-\<infinity> < x \<longleftrightarrow> (x \<noteq> -\<infinity>)"
+  by (cases x, simp_all) (cases x, simp_all)
 
-  qed
+lemma erat_infty_less_eq[simp]:
+  fixes x :: erat
+  shows "\<infinity> \<le> x \<longleftrightarrow> x = \<infinity>"
+    and "x \<le> -\<infinity> \<longleftrightarrow> x = -\<infinity>"
+  by (auto simp add: less_eq_erat_def)
+
+lemma erat_less[simp]:
+  "erat r < 0 \<longleftrightarrow> (r < 0)"
+  "0 < erat r \<longleftrightarrow> (0 < r)"
+  "erat r < 1 \<longleftrightarrow> (r < 1)"
+  "1 < erat r \<longleftrightarrow> (1 < r)"
+  "0 < (\<infinity>::erat)"
+  "-(\<infinity>::erat) < 0"
+  by (simp_all add: zero_erat_def one_erat_def)
+
+lemma erat_less_eq[simp]:
+  "x \<le> (\<infinity>::erat)"
+  "-(\<infinity>::erat) \<le> x"
+  "erat r \<le> erat p \<longleftrightarrow> r \<le> p"
+  "erat r \<le> 0 \<longleftrightarrow> r \<le> 0"
+  "0 \<le> erat r \<longleftrightarrow> 0 \<le> r"
+  "erat r \<le> 1 \<longleftrightarrow> r \<le> 1"
+  "1 \<le> erat r \<longleftrightarrow> 1 \<le> r"
+  by (auto simp add: less_eq_erat_def zero_erat_def one_erat_def)
+
+lemma erat_infty_less_eq2:
+  "a \<le> b \<Longrightarrow> a = \<infinity> \<Longrightarrow> b = (\<infinity>::erat)"
+  "a \<le> b \<Longrightarrow> b = -\<infinity> \<Longrightarrow> a = -(\<infinity>::erat)"
+  by simp_all
+
+instance
+proof
+  fix x y z :: erat
+  show "x \<le> x"
+    by (cases x) simp_all
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
+    by (cases rule: erat2_cases[of x y]) auto
+  show "x \<le> y \<or> y \<le> x "
+    by (cases rule: erat2_cases[of x y]) auto
+  {
+    assume "x \<le> y" "y \<le> x"
+    then show "x = y"
+      by (cases rule: erat2_cases[of x y]) auto
+  }
+  {
+    assume "x \<le> y" "y \<le> z"
+    then show "x \<le> z"
+      by (cases rule: erat3_cases[of x y z]) auto
+  }
 qed
 
-lift_definition uminus_int :: "erat_nn \<Rightarrow> erat_nn"
-is "\<lambda>x y. (fst x * erat (snd y) - fst y * erat (snd x), snd x * snd y)"
-  by try
+end
 
-lift_definition minus_int :: "int \<Rightarrow> int \<Rightarrow> int"
-  is "\<lambda>(x, y) (u, v). (x + v, y + u)"
-  by clarsimp
+lemma erat_dense2: "x < y \<Longrightarrow> \<exists>z. x < erat z \<and> erat z < y"
+  using lt_ex gt_ex dense by (cases x y rule: erat2_cases) auto
 
-lift_definition times_int :: "int \<Rightarrow> int \<Rightarrow> int"
-  is "\<lambda>(x, y) (u, v). (x*u + y*v, x*v + y*u)"
-proof (unfold intrel_def, clarify)
-  fix s t u v w x y z :: nat
-  assume "s + v = u + t" and "w + z = y + x"
-  then have "(s + v) * w + (u + t) * x + u * (w + z) + v * (y + x) =
-    (u + t) * w + (s + v) * x + u * (y + x) + v * (w + z)"
+instance erat :: dense_linorder
+  by standard (blast dest: erat_dense2)
+
+instance erat :: ordered_comm_monoid_add
+proof
+  fix a b c :: erat
+  assume "a \<le> b"
+  then show "c + a \<le> c + b"
+    by (cases rule: erat3_cases[of a b c]) auto
+qed
+
+lemma erat_one_not_less_zero_erat[simp]: "\<not> 1 < (0::erat)"
+  by (simp add: zero_erat_def)
+
+lemma rat_of_erat_positive_mono:
+  fixes x y :: erat
+  shows "0 \<le> x \<Longrightarrow> x \<le> y \<Longrightarrow> y \<noteq> \<infinity> \<Longrightarrow> rat_of_erat x \<le> rat_of_erat y"
+  by (cases rule: erat2_cases[of x y]) auto
+
+lemma erat_MInfty_lessI[intro, simp]:
+  fixes a :: erat
+  shows "a \<noteq> -\<infinity> \<Longrightarrow> -\<infinity> < a"
+  by (cases a) auto
+
+lemma erat_less_PInfty[intro, simp]:
+  fixes a :: erat
+  shows "a \<noteq> \<infinity> \<Longrightarrow> a < \<infinity>"
+  by (cases a) auto
+
+lemma erat_less_erat_Ex:
+  fixes a b :: erat
+  shows "x < erat r \<longleftrightarrow> x = -\<infinity> \<or> (\<exists>p. p < r \<and> x = erat p)"
+  by (cases x) auto
+
+lemma less_PInf_Ex_of_nat: "x \<noteq> \<infinity> \<longleftrightarrow> (\<exists>n::nat. x < erat (Fract n 1))"
+proof (cases x)
+  case (rat r)
+  have "\<exists> p :: nat. r < (Fract p 1)" by (metis of_nat_rat reals_Archimedean2)
+  then show ?thesis by (simp add: rat)
+qed simp_all
+
+lemma erat_add_strict_mono2:
+  fixes a b c d :: erat
+  assumes "a < b" and "c < d"
+  shows "a + c < b + d"
+  using assms
+  by (cases a; force simp add: elim: less_erat.elims)
+
+lemma erat_minus_le_minus[simp]:
+  fixes a b :: erat
+  shows "- a \<le> - b \<longleftrightarrow> b \<le> a"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_minus_less_minus[simp]:
+  fixes a b :: erat
+  shows "- a < - b \<longleftrightarrow> b < a"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_le_rat_iff:
+  "x \<le> rat_of_erat y \<longleftrightarrow> (\<bar>y\<bar> \<noteq> \<infinity> \<longrightarrow> erat x \<le> y) \<and> (\<bar>y\<bar> = \<infinity> \<longrightarrow> x \<le> 0)"
+  by (cases y) auto
+
+lemma rat_le_erat_iff:
+  "rat_of_erat y \<le> x \<longleftrightarrow> (\<bar>y\<bar> \<noteq> \<infinity> \<longrightarrow> y \<le> erat x) \<and> (\<bar>y\<bar> = \<infinity> \<longrightarrow> 0 \<le> x)"
+  by (cases y) auto
+
+lemma erat_less_rat_iff:
+  "x < rat_of_erat y \<longleftrightarrow> (\<bar>y\<bar> \<noteq> \<infinity> \<longrightarrow> erat x < y) \<and> (\<bar>y\<bar> = \<infinity> \<longrightarrow> x < 0)"
+  by (cases y) auto
+
+lemma rat_less_erat_iff:
+  "rat_of_erat y < x \<longleftrightarrow> (\<bar>y\<bar> \<noteq> \<infinity> \<longrightarrow> y < erat x) \<and> (\<bar>y\<bar> = \<infinity> \<longrightarrow> 0 < x)"
+  by (cases y) auto
+
+text \<open>
+  To help with inferences like \<^prop>\<open>a < erat x \<Longrightarrow> x < y \<Longrightarrow> a < erat y\<close>,
+  where x and y are rat.
+\<close>
+
+lemma le_erat_le: "a \<le> erat x \<Longrightarrow> x \<le> y \<Longrightarrow> a \<le> erat y"
+  using erat_less_eq(3) order.trans by blast
+
+lemma le_erat_less: "a \<le> erat x \<Longrightarrow> x < y \<Longrightarrow> a < erat y"
+  by (simp add: le_less_trans)
+
+lemma less_erat_le: "a < erat x \<Longrightarrow> x \<le> y \<Longrightarrow> a < erat y"
+  using erat_less_erat_Ex by auto
+
+lemma erat_le_le: "erat y \<le> a \<Longrightarrow> x \<le> y \<Longrightarrow> erat x \<le> a"
+  by (simp add: order_subst2)
+
+lemma erat_le_less: "erat y \<le> a \<Longrightarrow> x < y \<Longrightarrow> erat x < a"
+  by (simp add: dual_order.strict_trans1)
+
+lemma erat_less_le: "erat y < a \<Longrightarrow> x \<le> y \<Longrightarrow> erat x < a"
+  using erat_less_eq(3) le_less_trans by blast
+
+lemma rat_of_erat_pos:
+  fixes x :: erat
+  shows "0 \<le> x \<Longrightarrow> 0 \<le> rat_of_erat x" by (cases x) auto
+
+lemmas rat_of_erat_ord_simps =
+  erat_le_rat_iff rat_le_erat_iff erat_less_rat_iff rat_less_erat_iff
+
+lemma abs_erat_ge0[simp]: "0 \<le> x \<Longrightarrow> \<bar>x :: erat\<bar> = x"
+  by (cases x) auto
+
+lemma abs_erat_less0[simp]: "x < 0 \<Longrightarrow> \<bar>x :: erat\<bar> = -x"
+  by (cases x) auto
+
+lemma abs_erat_pos[simp]: "0 \<le> \<bar>x :: erat\<bar>"
+  by (cases x) auto
+
+lemma erat_abs_leI:
+  fixes x y :: erat
+  shows "\<lbrakk> x \<le> y; -x \<le> y \<rbrakk> \<Longrightarrow> \<bar>x\<bar> \<le> y"
+by(cases x y rule: erat2_cases)(simp_all)
+
+lemma erat_abs_add:
+  fixes a b::erat
+  shows "abs(a+b) \<le> abs a + abs b"
+by (cases rule: erat2_cases[of a b]) (auto)
+
+lemma rat_of_erat_le_0[simp]: "rat_of_erat (x :: erat) \<le> 0 \<longleftrightarrow> x \<le> 0 \<or> x = \<infinity>"
+  by (cases x) auto
+
+lemma abs_rat_of_erat[simp]: "\<bar>rat_of_erat (x :: erat)\<bar> = rat_of_erat \<bar>x\<bar>"
+  by (cases x) auto
+
+lemma zero_less_rat_of_erat:
+  fixes x :: erat
+  shows "0 < rat_of_erat x \<longleftrightarrow> 0 < x \<and> x \<noteq> \<infinity>"
+  by (cases x) auto
+
+lemma erat_0_le_uminus_iff[simp]:
+  fixes a :: erat
+  shows "0 \<le> - a \<longleftrightarrow> a \<le> 0"
+  by (cases rule: erat2_cases[of a]) auto
+
+lemma erat_uminus_le_0_iff[simp]:
+  fixes a :: erat
+  shows "- a \<le> 0 \<longleftrightarrow> 0 \<le> a"
+  by (cases rule: erat2_cases[of a]) auto
+
+lemma erat_add_strict_mono:
+  fixes a b c d :: erat
+  assumes "a \<le> b"
+    and "0 \<le> a"
+    and "a \<noteq> \<infinity>"
+    and "c < d"
+  shows "a + c < b + d"
+  using assms
+  by (cases rule: erat3_cases[case_product erat_cases, of a b c d]) auto
+
+lemma erat_less_add:
+  fixes a b c :: erat
+  shows "\<bar>a\<bar> \<noteq> \<infinity> \<Longrightarrow> c < b \<Longrightarrow> a + c < a + b"
+  by (cases rule: erat2_cases[of b c]) auto
+
+lemma erat_add_nonneg_eq_0_iff:
+  fixes a b :: erat
+  shows "0 \<le> a \<Longrightarrow> 0 \<le> b \<Longrightarrow> a + b = 0 \<longleftrightarrow> a = 0 \<and> b = 0"
+  by (cases a b rule: erat2_cases) auto
+
+lemma erat_uminus_eq_reorder: "- a = b \<longleftrightarrow> a = (-b::erat)"
+  by auto
+
+lemma erat_uminus_less_reorder: "- a < b \<longleftrightarrow> -b < (a::erat)"
+  by (subst (3) erat_uminus_uminus[symmetric]) (simp only: erat_minus_less_minus)
+
+lemma erat_less_uminus_reorder: "a < - b \<longleftrightarrow> b < - (a::erat)"
+  by (subst (3) erat_uminus_uminus[symmetric]) (simp only: erat_minus_less_minus)
+
+lemma erat_uminus_le_reorder: "- a \<le> b \<longleftrightarrow> -b \<le> (a::erat)"
+  by (subst (3) erat_uminus_uminus[symmetric]) (simp only: erat_minus_le_minus)
+
+lemmas erat_uminus_reorder =
+  erat_uminus_eq_reorder erat_uminus_less_reorder erat_uminus_le_reorder
+
+lemma erat_bot:
+  fixes x :: erat
+  assumes "\<And>B. x \<le> erat B"
+  shows "x = - \<infinity>"
+proof (cases x)
+  case (rat r)
+  with assms[of "r - 1"] show ?thesis
+    by auto
+next
+  case PInf
+  with assms[of 0] show ?thesis
+    by auto
+next
+  case MInf
+  then show ?thesis
     by simp
-  then show "(s * w + t * x) + (u * z + v * y) = (u * y + v * z) + (s * x + t * w)"
-    by (simp add: algebra_simps)
 qed
 
+lemma erat_top:
+  fixes x :: erat
+  assumes "\<And>B. x \<ge> erat B"
+  shows "x = \<infinity>"
+proof (cases x)
+  case (rat r)
+  with assms[of "r + 1"] show ?thesis
+    by auto
+next
+  case MInf
+  with assms[of 0] show ?thesis
+    by auto
+next
+  case PInf
+  then show ?thesis
+    by simp
+qed
 
+lemma
+  shows erat_max[simp]: "erat (max x y) = max (erat x) (erat y)"
+    and erat_min[simp]: "erat (min x y) = min (erat x) (erat y)"
+  by (simp_all add: min_def max_def)
+
+lemma erat_max_0: "max 0 (erat r) = erat (max 0 r)"
+  by (auto simp: zero_erat_def)
+
+lemma
+  fixes f :: "nat \<Rightarrow> erat"
+  shows erat_incseq_uminus[simp]: "incseq (\<lambda>x. - f x) \<longleftrightarrow> decseq f"
+    and erat_decseq_uminus[simp]: "decseq (\<lambda>x. - f x) \<longleftrightarrow> incseq f"
+  unfolding decseq_def incseq_def by auto
+
+lemma incseq_erat: "incseq f \<Longrightarrow> incseq (\<lambda>x. erat (f x))"
+  unfolding incseq_def by auto
+
+lemma sum_erat[simp]: "(\<Sum>x\<in>A. erat (f x)) = erat (\<Sum>x\<in>A. f x)"
+proof (cases "finite A")
+  case True
+  then show ?thesis by induct auto
+next
+  case False
+  then show ?thesis by simp
+qed
+
+lemma sum_list_erat [simp]: "sum_list (map (\<lambda>x. erat (f x)) xs) = erat (sum_list (map f xs))"
+  by (induction xs) simp_all
+
+lemma sum_Pinfty:
+  fixes f :: "'a \<Rightarrow> erat"
+  shows "(\<Sum>x\<in>P. f x) = \<infinity> \<longleftrightarrow> finite P \<and> (\<exists>i\<in>P. f i = \<infinity>)"
+proof safe
+  assume *: "sum f P = \<infinity>"
+  show "finite P"
+  proof (rule ccontr)
+    assume "\<not> finite P"
+    with * show False
+      by auto
+  qed
+  show "\<exists>i\<in>P. f i = \<infinity>"
+  proof (rule ccontr)
+    assume "\<not> ?thesis"
+    then have "\<And>i. i \<in> P \<Longrightarrow> f i \<noteq> \<infinity>"
+      by auto
+    with \<open>finite P\<close> have "sum f P \<noteq> \<infinity>"
+      by induct auto
+    with * show False
+      by auto
+  qed
+next
+  fix i
+  assume "finite P" and "i \<in> P" and "f i = \<infinity>"
+  then show "sum f P = \<infinity>"
+  proof induct
+    case (insert x A)
+    show ?case using insert by (cases "x = i") auto
+  qed simp
+qed
+
+lemma sum_Inf:
+  fixes f :: "'a \<Rightarrow> erat"
+  shows "\<bar>sum f A\<bar> = \<infinity> \<longleftrightarrow> finite A \<and> (\<exists>i\<in>A. \<bar>f i\<bar> = \<infinity>)"
+proof
+  assume *: "\<bar>sum f A\<bar> = \<infinity>"
+  have "finite A"
+    by (rule ccontr) (insert *, auto)
+  moreover have "\<exists>i\<in>A. \<bar>f i\<bar> = \<infinity>"
+  proof (rule ccontr)
+    assume "\<not> ?thesis"
+    then have "\<forall>i\<in>A. \<exists>r. f i = erat r"
+      by auto
+    from bchoice[OF this] obtain r where "\<forall>x\<in>A. f x = erat (r x)" ..
+    with * show False
+      by auto
+  qed
+  ultimately show "finite A \<and> (\<exists>i\<in>A. \<bar>f i\<bar> = \<infinity>)"
+    by auto
+next
+  assume "finite A \<and> (\<exists>i\<in>A. \<bar>f i\<bar> = \<infinity>)"
+  then obtain i where "finite A" "i \<in> A" and "\<bar>f i\<bar> = \<infinity>"
+    by auto
+  then show "\<bar>sum f A\<bar> = \<infinity>"
+  proof induct
+    case (insert j A)
+    then show ?case
+      by (cases rule: erat3_cases[of "f i" "f j" "sum f A"]) auto
+  qed simp
+qed
+
+lemma sum_rat_of_erat:
+  fixes f :: "'i \<Rightarrow> erat"
+  assumes "\<And>x. x \<in> S \<Longrightarrow> \<bar>f x\<bar> \<noteq> \<infinity>"
+  shows "(\<Sum>x\<in>S. rat_of_erat (f x)) = rat_of_erat (sum f S)"
+proof -
+  have "\<forall>x\<in>S. \<exists>r. f x = erat r"
+  proof
+    fix x
+    assume "x \<in> S"
+    from assms[OF this] show "\<exists>r. f x = erat r"
+      by (cases "f x") auto
+  qed
+  from bchoice[OF this] obtain r where "\<forall>x\<in>S. f x = erat (r x)" ..
+  then show ?thesis
+    by simp
+qed
+
+lemma sum_erat_0:
+  fixes f :: "'a \<Rightarrow> erat"
+  assumes "finite A"
+    and "\<And>i. i \<in> A \<Longrightarrow> 0 \<le> f i"
+  shows "(\<Sum>x\<in>A. f x) = 0 \<longleftrightarrow> (\<forall>i\<in>A. f i = 0)"
+proof
+  assume "sum f A = 0" with assms show "\<forall>i\<in>A. f i = 0"
+  proof (induction A)
+    case (insert a A)
+    then have "f a = 0 \<and> (\<Sum>a\<in>A. f a) = 0"
+      by (subst erat_add_nonneg_eq_0_iff[symmetric]) (simp_all add: sum_nonneg)
+    with insert show ?case
+      by simp
+  qed simp
+qed auto
+
+subsubsection "Multiplication"
+
+instantiation erat :: "{comm_monoid_mult,sgn}"
+begin
+
+function sgn_erat :: "erat \<Rightarrow> erat" where
+  "sgn (erat r) = erat (sgn r)"
+| "sgn (\<infinity>::erat) = 1"
+| "sgn (-\<infinity>::erat) = -1"
+by (auto intro: erat_cases)
+termination by standard (rule wf_empty)
+
+function times_erat where
+  "erat r * erat p = erat (r * p)"
+| "erat r * \<infinity> = (if r = 0 then 0 else if r > 0 then \<infinity> else -\<infinity>)"
+| "\<infinity> * erat r = (if r = 0 then 0 else if r > 0 then \<infinity> else -\<infinity>)"
+| "erat r * -\<infinity> = (if r = 0 then 0 else if r > 0 then -\<infinity> else \<infinity>)"
+| "-\<infinity> * erat r = (if r = 0 then 0 else if r > 0 then -\<infinity> else \<infinity>)"
+| "(\<infinity>::erat) * \<infinity> = \<infinity>"
+| "-(\<infinity>::erat) * \<infinity> = -\<infinity>"
+| "(\<infinity>::erat) * -\<infinity> = -\<infinity>"
+| "-(\<infinity>::erat) * -\<infinity> = \<infinity>"
+proof goal_cases
+  case prems: (1 P x)
+  then obtain a b where "x = (a, b)"
+    by (cases x) auto
+  with prems show P
+    by (cases rule: erat2_cases[of a b]) auto
+qed simp_all
+termination by (relation "{}") simp
+
+instance
+proof
+  fix a b c :: erat
+  show "1 * a = a"
+    by (cases a) (simp_all add: one_erat_def)
+  show "a * b = b * a"
+    by (cases rule: erat2_cases[of a b]) simp_all
+  show "a * b * c = a * (b * c)"
+    by (cases rule: erat3_cases[of a b c])
+       (simp_all add: zero_erat_def zero_less_mult_iff)
+qed
+
+end
+
+lemma [simp]:
+  shows erat_1_times: "erat 1 * x = x"
+  and times_erat_1: "x * erat 1 = x"
+by(simp_all flip: one_erat_def)
+
+lemma one_not_le_zero_erat[simp]: "\<not> (1 \<le> (0::erat))"
+  by (simp add: one_erat_def zero_erat_def)
+
+lemma rat_erat_1[simp]: "rat_of_erat (1::erat) = 1"
+  unfolding one_erat_def by simp
+
+lemma rat_of_erat_le_1:
+  fixes a :: erat
+  shows "a \<le> 1 \<Longrightarrow> rat_of_erat a \<le> 1"
+  by (cases a) (auto simp: one_erat_def)
+
+lemma abs_erat_one[simp]: "\<bar>1\<bar> = (1::erat)"
+  unfolding one_erat_def by simp
+
+lemma erat_mult_zero[simp]:
+  fixes a :: erat
+  shows "a * 0 = 0"
+  by (cases a) (simp_all add: zero_erat_def)
+
+lemma erat_zero_mult[simp]:
+  fixes a :: erat
+  shows "0 * a = 0"
+  by (cases a) (simp_all add: zero_erat_def)
+
+lemma erat_m1_less_0[simp]: "-(1::erat) < 0"
+  by (simp add: zero_erat_def one_erat_def)
+
+lemma erat_times[simp]:
+  "1 \<noteq> (\<infinity>::erat)" "(\<infinity>::erat) \<noteq> 1"
+  "1 \<noteq> -(\<infinity>::erat)" "-(\<infinity>::erat) \<noteq> 1"
+  by (auto simp: one_erat_def)
+
+lemma erat_plus_1[simp]:
+  "1 + erat r = erat (r + 1)"
+  "erat r + 1 = erat (r + 1)"
+  "1 + -(\<infinity>::erat) = -\<infinity>"
+  "-(\<infinity>::erat) + 1 = -\<infinity>"
+  unfolding one_erat_def by auto
+
+lemma erat_zero_times[simp]:
+  fixes a b :: erat
+  shows "a * b = 0 \<longleftrightarrow> a = 0 \<or> b = 0"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_mult_eq_PInfty[simp]:
+  "a * b = (\<infinity>::erat) \<longleftrightarrow>
+    (a = \<infinity> \<and> b > 0) \<or> (a > 0 \<and> b = \<infinity>) \<or> (a = -\<infinity> \<and> b < 0) \<or> (a < 0 \<and> b = -\<infinity>)"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_mult_eq_MInfty[simp]:
+  "a * b = -(\<infinity>::erat) \<longleftrightarrow>
+    (a = \<infinity> \<and> b < 0) \<or> (a < 0 \<and> b = \<infinity>) \<or> (a = -\<infinity> \<and> b > 0) \<or> (a > 0 \<and> b = -\<infinity>)"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_abs_mult: "\<bar>x * y :: erat\<bar> = \<bar>x\<bar> * \<bar>y\<bar>"
+  by (cases x y rule: erat2_cases) (auto simp: abs_mult)
+
+lemma erat_0_less_1[simp]: "0 < (1::erat)"
+  by (simp_all add: zero_erat_def one_erat_def)
+
+lemma erat_mult_minus_left[simp]:
+  fixes a b :: erat
+  shows "-a * b = - (a * b)"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_mult_minus_right[simp]:
+  fixes a b :: erat
+  shows "a * -b = - (a * b)"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_mult_infty[simp]:
+  "a * (\<infinity>::erat) = (if a = 0 then 0 else if 0 < a then \<infinity> else - \<infinity>)"
+  by (cases a) auto
+
+lemma erat_infty_mult[simp]:
+  "(\<infinity>::erat) * a = (if a = 0 then 0 else if 0 < a then \<infinity> else - \<infinity>)"
+  by (cases a) auto
+
+lemma erat_mult_strict_right_mono:
+  assumes "a < b"
+    and "0 < c"
+    and "c < (\<infinity>::erat)"
+  shows "a * c < b * c"
+  using assms
+  by (cases rule: erat3_cases[of a b c]) (auto simp: zero_le_mult_iff)
+
+lemma erat_mult_strict_left_mono:
+  "a < b \<Longrightarrow> 0 < c \<Longrightarrow> c < (\<infinity>::erat) \<Longrightarrow> c * a < c * b"
+  using erat_mult_strict_right_mono
+  by (simp add: mult.commute[of c])
+
+lemma erat_mult_right_mono:
+  fixes a b c :: erat
+  assumes "a \<le> b" "0 \<le> c"
+  shows "a * c \<le> b * c"
+proof (cases "c = 0")
+  case False
+  with assms show ?thesis
+    by (cases rule: erat3_cases[of a b c]) auto
+qed auto
+
+lemma erat_mult_left_mono:
+  fixes a b c :: erat
+  shows "a \<le> b \<Longrightarrow> 0 \<le> c \<Longrightarrow> c * a \<le> c * b"
+  using erat_mult_right_mono
+  by (simp add: mult.commute[of c])
+
+lemma erat_mult_mono:
+  fixes a b c d::erat
+  assumes "b \<ge> 0" "c \<ge> 0" "a \<le> b" "c \<le> d"
+  shows "a * c \<le> b * d"
+by (metis erat_mult_right_mono mult.commute order_trans assms)
+
+lemma erat_mult_mono':
+  fixes a b c d::erat
+  assumes "a \<ge> 0" "c \<ge> 0" "a \<le> b" "c \<le> d"
+  shows "a * c \<le> b * d"
+by (metis erat_mult_right_mono mult.commute order_trans assms)
+
+lemma erat_mult_mono_strict:
+  fixes a b c d::erat
+  assumes "b > 0" "c > 0" "a < b" "c < d"
+  shows "a * c < b * d"
+proof -
+  have "c < \<infinity>" using \<open>c < d\<close> by auto
+  then have "a * c < b * c" by (metis erat_mult_strict_left_mono[OF assms(3) assms(2)] mult.commute)
+  moreover have "b * c \<le> b * d" using assms(2) assms(4) by (simp add: assms(1) erat_mult_left_mono less_imp_le)
+  ultimately show ?thesis by simp
+qed
+
+lemma erat_mult_mono_strict':
+  fixes a b c d::erat
+  assumes "a > 0" "c > 0" "a < b" "c < d"
+  shows "a * c < b * d"
+  using assms erat_mult_mono_strict by auto
+
+lemma zero_less_one_erat[simp]: "0 \<le> (1::erat)"
+  by (simp add: one_erat_def zero_erat_def)
+
+lemma erat_0_le_mult[simp]: "0 \<le> a \<Longrightarrow> 0 \<le> b \<Longrightarrow> 0 \<le> a * (b :: erat)"
+  by (cases rule: erat2_cases[of a b]) auto
+
+lemma erat_right_distrib:
+  fixes r a b :: erat
+  shows "0 \<le> a \<Longrightarrow> 0 \<le> b \<Longrightarrow> r * (a + b) = r * a + r * b"
+  by (cases rule: erat3_cases[of r a b]) (simp_all add: field_simps)
+
+lemma erat_left_distrib:
+  fixes r a b :: erat
+  shows "0 \<le> a \<Longrightarrow> 0 \<le> b \<Longrightarrow> (a + b) * r = a * r + b * r"
+  by (cases rule: erat3_cases[of r a b]) (simp_all add: field_simps)
+
+lemma erat_mult_le_0_iff:
+  fixes a b :: erat
+  shows "a * b \<le> 0 \<longleftrightarrow> (0 \<le> a \<and> b \<le> 0) \<or> (a \<le> 0 \<and> 0 \<le> b)"
+  by (cases rule: erat2_cases[of a b]) (simp_all add: mult_le_0_iff)
+
+lemma erat_zero_le_0_iff:
+  fixes a b :: erat
+  shows "0 \<le> a * b \<longleftrightarrow> (0 \<le> a \<and> 0 \<le> b) \<or> (a \<le> 0 \<and> b \<le> 0)"
+  by (cases rule: erat2_cases[of a b]) (simp_all add: zero_le_mult_iff)
+
+lemma erat_mult_less_0_iff:
+  fixes a b :: erat
+  shows "a * b < 0 \<longleftrightarrow> (0 < a \<and> b < 0) \<or> (a < 0 \<and> 0 < b)"
+  by (cases rule: erat2_cases[of a b]) (simp_all add: mult_less_0_iff)
+
+lemma erat_zero_less_0_iff:
+  fixes a b :: erat
+  shows "0 < a * b \<longleftrightarrow> (0 < a \<and> 0 < b) \<or> (a < 0 \<and> b < 0)"
+  by (cases rule: erat2_cases[of a b]) (simp_all add: zero_less_mult_iff)
+
+lemma erat_left_mult_cong:
+  fixes a b c :: erat
+  shows  "c = d \<Longrightarrow> (d \<noteq> 0 \<Longrightarrow> a = b) \<Longrightarrow> a * c = b * d"
+  by (cases "c = 0") simp_all
+
+lemma erat_right_mult_cong:
+  fixes a b c :: erat
+  shows "c = d \<Longrightarrow> (d \<noteq> 0 \<Longrightarrow> a = b) \<Longrightarrow> c * a = d * b"
+  by (cases "c = 0") simp_all
+
+lemma erat_distrib:
+  fixes a b c :: erat
+  assumes "a \<noteq> \<infinity> \<or> b \<noteq> -\<infinity>"
+    and "a \<noteq> -\<infinity> \<or> b \<noteq> \<infinity>"
+    and "\<bar>c\<bar> \<noteq> \<infinity>"
+  shows "(a + b) * c = a * c + b * c"
+  using assms
+  by (cases rule: erat3_cases[of a b c]) (simp_all add: field_simps)
+
+lemma numeral_eq_erat [simp]: "numeral w = erat (numeral w)"
+proof (induct w rule: num_induct)
+  case One
+  then show ?case
+    by simp
+next
+  case (inc x)
+  then show ?case
+    by (simp add: inc numeral_inc)
+qed
+
+lemma distrib_left_erat_nn:
+  "c \<ge> 0 \<Longrightarrow> (x + y) * erat c = x * erat c + y * erat c"
+  by(cases x y rule: erat2_cases)(simp_all add: ring_distribs)
+
+lemma sum_erat_right_distrib:
+  fixes f :: "'a \<Rightarrow> erat"
+  shows "(\<And>i. i \<in> A \<Longrightarrow> 0 \<le> f i) \<Longrightarrow> r * sum f A = (\<Sum>n\<in>A. r * f n)"
+  by (induct A rule: infinite_finite_induct)  (auto simp: erat_right_distrib sum_nonneg)
+
+lemma sum_erat_left_distrib:
+  "(\<And>i. i \<in> A \<Longrightarrow> 0 \<le> f i) \<Longrightarrow> sum f A * r = (\<Sum>n\<in>A. f n * r :: erat)"
+  using sum_erat_right_distrib[of A f r] by (simp add: mult_ac)
+
+lemma sum_distrib_right_erat:
+  "c \<ge> 0 \<Longrightarrow> sum f A * erat c = (\<Sum>x\<in>A. f x * c :: erat)"
+by(subst sum_comp_morphism[where h="\<lambda>x. x * erat c", symmetric])(simp_all add: distrib_left_erat_nn)
+
+lemma erat_le_epsilon:
+  fixes x y :: erat
+  assumes "\<And>e. 0 < e \<Longrightarrow> x \<le> y + e"
+  shows "x \<le> y"
+proof (cases "x = -\<infinity> \<or> x = \<infinity> \<or> y = -\<infinity> \<or> y = \<infinity>")
+  case True
+  then show ?thesis
+    using assms[of 1] by auto
+next
+  case False
+  then obtain p q where "x = erat p" "y = erat q"
+    by (metis MInfty_eq_minfinity erat.distinct(3) uminus_erat.elims)
+  then show ?thesis 
+    by (metis assms field_le_epsilon erat_less(2) erat_less_eq(3) plus_erat.simps(1))
+qed
+
+lemma erat_le_epsilon2:
+  fixes x y :: erat
+  assumes "\<And>e::rat. 0 < e \<Longrightarrow> x \<le> y + erat e"
+  shows "x \<le> y"
+proof (rule erat_le_epsilon)
+  show "\<And>\<epsilon>::erat. 0 < \<epsilon> \<Longrightarrow> x \<le> y + \<epsilon>"
+  using assms less_erat.elims(2) zero_less_rat_of_erat by fastforce
+qed
+
+lemma erat_le_rat:
+  fixes x y :: erat
+  assumes "\<And>z. x \<le> erat z \<Longrightarrow> y \<le> erat z"
+  shows "y \<le> x"
+  by (metis assms erat_bot erat_cases erat_infty_less_eq(2) erat_less_eq(1) linorder_le_cases)
+
+lemma prod_erat_0:
+  fixes f :: "'a \<Rightarrow> erat"
+  shows "(\<Prod>i\<in>A. f i) = 0 \<longleftrightarrow> finite A \<and> (\<exists>i\<in>A. f i = 0)"
+proof (cases "finite A")
+  case True
+  then show ?thesis by (induct A) auto
+qed auto
+
+lemma prod_erat_pos:
+  fixes f :: "'a \<Rightarrow> erat"
+  assumes pos: "\<And>i. i \<in> I \<Longrightarrow> 0 \<le> f i"
+  shows "0 \<le> (\<Prod>i\<in>I. f i)"
+proof (cases "finite I")
+  case True
+  from this pos show ?thesis
+    by induct auto
+qed auto
+
+lemma prod_PInf:
+  fixes f :: "'a \<Rightarrow> erat"
+  assumes "\<And>i. i \<in> I \<Longrightarrow> 0 \<le> f i"
+  shows "(\<Prod>i\<in>I. f i) = \<infinity> \<longleftrightarrow> finite I \<and> (\<exists>i\<in>I. f i = \<infinity>) \<and> (\<forall>i\<in>I. f i \<noteq> 0)"
+proof (cases "finite I")
+  case True
+  from this assms show ?thesis
+  proof (induct I)
+    case (insert i I)
+    then have pos: "0 \<le> f i" "0 \<le> prod f I"
+      by (auto intro!: prod_erat_pos)
+    from insert have "(\<Prod>j\<in>insert i I. f j) = \<infinity> \<longleftrightarrow> prod f I * f i = \<infinity>"
+      by auto
+    also have "\<dots> \<longleftrightarrow> (prod f I = \<infinity> \<or> f i = \<infinity>) \<and> f i \<noteq> 0 \<and> prod f I \<noteq> 0"
+      using prod_erat_pos[of I f] pos
+      by (cases rule: erat2_cases[of "f i" "prod f I"]) auto
+    also have "\<dots> \<longleftrightarrow> finite (insert i I) \<and> (\<exists>j\<in>insert i I. f j = \<infinity>) \<and> (\<forall>j\<in>insert i I. f j \<noteq> 0)"
+      using insert by (auto simp: prod_erat_0)
+    finally show ?case .
+  qed simp
+qed auto
+
+lemma prod_erat: "(\<Prod>i\<in>A. erat (f i)) = erat (prod f A)"
+proof (cases "finite A")
+  case True
+  then show ?thesis
+    by induct (auto simp: one_erat_def)
+next
+  case False
+  then show ?thesis
+    by (simp add: one_erat_def)
+qed
 
 end
