@@ -236,8 +236,8 @@ text \<open>
   A common action of interest on elections is renaming the voters,
   e.g., when talking about anonymity.
 \<close>
-fun rename :: "('v \<Rightarrow> 'v) \<Rightarrow> ('a, 'v, 'b) Election \<Rightarrow> ('a, 'v, 'b) Election" where
-  "rename \<pi> (A, V, p) = (A, \<pi> ` V, p \<circ> (the_inv \<pi>))"
+fun rename :: "('v \<Rightarrow> 'v) \<Rightarrow> ('x, 'v, 'b) Election \<Rightarrow> ('x, 'v, 'b) Election" where
+  "rename \<pi> (X, V, p) = (X, \<pi> ` V, p \<circ> (the_inv \<pi>))"
 
 lemma rename_sound:
   fixes

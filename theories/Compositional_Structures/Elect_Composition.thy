@@ -22,16 +22,16 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun (in electoral_structure) elector :: "('v, 'b, 'r) Electoral_Module
-                  \<Rightarrow> ('v, 'b, 'r) Electoral_Module" where
+fun (in electoral_structure) elector :: "('r, 'v, 'b) Electoral_Module
+                  \<Rightarrow> ('r, 'v, 'b) Electoral_Module" where
   "elector m = (m \<triangleright> elect_module)"
 
 subsection \<open>Auxiliary Lemmas\<close>
 
 lemma (in electoral_structure) elector_seqcomp_assoc:
   fixes
-    a :: "('v, 'b, 'r) Electoral_Module" and
-    b :: "('v, 'b, 'r) Electoral_Module"
+    a :: "('r, 'v, 'b) Electoral_Module" and
+    b :: "('r, 'v, 'b) Electoral_Module"
   shows "(a \<triangleright> (elector b)) = (elector (a \<triangleright> b))"
   unfolding elector.simps elect_module.simps sequential_composition.simps
   using boolean_algebra_cancel.sup2 fst_eqD snd_eqD sup_commute

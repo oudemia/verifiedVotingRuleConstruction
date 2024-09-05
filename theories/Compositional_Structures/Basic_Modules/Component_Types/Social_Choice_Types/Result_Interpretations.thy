@@ -25,7 +25,7 @@ text \<open>
   \<^file>\<open>Social_Choice_Result.thy\<close> for details.
 \<close>
 global_interpretation \<S>\<C>\<F>_result:
-  result "well_formed_\<S>\<C>\<F>" "limit_alts" "affected_alts_\<S>\<C>\<F>"
+  result "\<lambda> A. A" "well_formed_\<S>\<C>\<F>" "limit_alts" "affected_alts_\<S>\<C>\<F>"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -46,6 +46,24 @@ next
     "a \<in> affected_alts_\<S>\<C>\<F> (limit_alts A R)" 
   thus "a \<in> A"
     by simp
+next
+  fix A :: "'a set" and a :: 'a
+  assume "a \<in> affected_alts_\<S>\<C>\<F> A"
+  thus "a \<in> A" by simp
+next
+  fix A :: "'a set" and a :: 'a
+  assume "a \<in> A"
+  thus "a \<in> affected_alts_\<S>\<C>\<F> A" by simp
+next
+  fix 
+    A B:: "'a set" and 
+    a :: 'a
+  assume 
+    sub: "A \<subseteq> B" and 
+    cont: "a \<in> limit_alts B A"
+  have "A \<inter> B = A" using sub by (simp add: Int_absorb2)
+  hence "limit_alts B A = A" by (simp add: Int_commute)
+  thus "a \<in> B" using sub cont by auto
 qed
 
 text \<open>
@@ -54,7 +72,7 @@ text \<open>
   \<open>[[Not actually used yet.]]\<close>
 \<close>
 global_interpretation multi_winner_result:
-  result "\<lambda> A r. set_equals_partition (Pow A) r \<and> disjoint3 r"
+  result "\<lambda> A. Pow A" "\<lambda> A r. set_equals_partition (Pow A) r \<and> disjoint3 r"
           "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs"
 proof (unfold_locales, safe)
   fix
@@ -65,6 +83,24 @@ proof (unfold_locales, safe)
   assume "set_equals_partition {r \<inter> A |r. r \<in> UNIV} (e, r, d)"
   thus "set_equals_partition (Pow A) (e, r, d)"
     by force
+next
+  fix
+    A X :: "'a set" and
+    a :: 'a
+  assume "a \<in> X" and "X \<subseteq> A"
+  thus "a \<in> A" by blast
+next
+  fix
+    A :: "'a set" and
+    a :: 'a
+  assume "a \<in> A"
+  thus "a \<in> \<Union> (Pow A)" by blast
+next
+  fix
+    A B C :: "'a set" and
+    a :: 'a
+  assume "A \<subseteq> B" and "C \<subseteq> A" and  "a \<in> C"
+  thus "a \<in> B" by blast
 qed
 
 text \<open>
@@ -73,7 +109,7 @@ text \<open>
   \<^file>\<open>Social_Welfare_Result.thy\<close> for details.
 \<close>
 global_interpretation \<S>\<W>\<F>_result:
-  result "well_formed_\<S>\<W>\<F>" "limit_set_\<S>\<W>\<F>" "affected_alts_\<S>\<W>\<F>"
+  result "\<lambda>A. limit_set_\<S>\<W>\<F> A UNIV" "well_formed_\<S>\<W>\<F>" "limit_set_\<S>\<W>\<F>" "affected_alts_\<S>\<W>\<F>"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -109,8 +145,46 @@ next
   assume
     "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A R)" 
   thus "a \<in> A"
-  by auto
+    by auto
+next
+  fix
+    A :: "'a set" and
+    a :: "'a"
+  assume
+    "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV)" 
+  thus "a \<in> A"
+    by auto
+next
+  fix
+    A :: "'a set" and
+    a :: "'a"
+  assume elem: "a \<in> A"
+  show "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV)" 
+  proof (unfold affected_alts_\<S>\<W>\<F>.simps limit_set_\<S>\<W>\<F>.simps)
+    have "\<exists>r. linear_order_on A r" using well_order_on well_order_on_def by blast
+    then obtain r where ord: "linear_order_on A r" by blast
+    hence "\<forall> (a, b) \<in> r. a \<in> A \<and> b \<in> A" 
+      using linear_order_on_def partial_order_onD(1) refl_onD1 refl_onD2 by fastforce
+    hence "limit A r = r" by auto
+    moreover have "r \<in> UNIV" by simp
+    ultimately have r: "r \<in> {limit A r |r. r \<in> UNIV \<and> linear_order_on A (limit A r)}"  
+      using ord by fastforce
+    have "\<exists>b. (a, b) \<in> r \<or> (b, a) \<in> r" using elem ord
+      by (meson linear_order_on_def partial_order_onD(1) refl_onD)
+    thus "a \<in> (\<Union>r\<in>{limit A r |r. r \<in> UNIV \<and> linear_order_on A (limit A r)}.
+             {a. \<exists>b. (a, b) \<in> r \<or> (b, a) \<in> r})" using r by blast
+  qed
+next
+ fix
+    A B C:: "'a set" and
+    r :: "'a Preference_Relation"
+  assume 
+    sub: "A \<subseteq> B" and 
+    elem: "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
+  hence "linear_order_on A r" by auto
+  show "r \<in> limit_set_\<S>\<W>\<F> B UNIV" by sledgehammer
 qed
+oops
 
 
 text \<open>
@@ -120,7 +194,7 @@ text \<open>
 \<close>
 
 sublocale committee_result \<subseteq> 
-result "well_formed_committee_result" "limit_committees" "affected_alts_committee"
+result "committees" "well_formed_committee_result" "limit_committees" "affected_alts_committee"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -174,6 +248,7 @@ next
   assume affected: "a \<in> affected_alts_committee (limit_committees A R)"
   thus "a \<in> A" by auto
 qed
+  oops
 
 setup Locale_Code.close_block
 

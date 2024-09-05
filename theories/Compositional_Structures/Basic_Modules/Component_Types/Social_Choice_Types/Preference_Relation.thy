@@ -107,6 +107,7 @@ fun limit :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> 'a Prefe
 definition connex :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightarrow> bool" where
   "connex A r \<equiv> limited A r \<and> (\<forall> a \<in> A. \<forall> b \<in> A. a \<preceq>\<^sub>r b \<or> b \<preceq>\<^sub>r a)"
 
+
 lemma connex_imp_refl:
   fixes
     A :: "'a set" and
@@ -290,6 +291,27 @@ lemma limit_presv_lin_ord:
   unfolding preorder_on_def partial_order_on_def linear_order_on_def
   by metis
 
+lemma helper:
+  fixes
+    A B :: "'a set" and
+    ra :: "'a Preference_Relation"
+  assumes
+    lin_ord_A: "linear_order_on A ra" and
+    sub: "A \<subseteq> B"
+  shows "\<exists>rb. linear_order_on B rb \<and> ra = (limit A rb)"
+proof (standard)
+  have "\<exists>rc. linear_order_on (B-A) rc" using order_on_defs(5) well_order_on by blast
+  then obtain rc where lin_ord_BA: "linear_order_on (B-A) rc" by blast
+  then obtain rd where gap: "rd = {(a, b). a \<in> A \<and> b \<in> B}" by simp
+  then obtain rb where "rb = ra \<union> rd \<union> rd"  by simp
+  have "linear_order_on B rb"
+  proof
+    sorry
+  have "ra = (limit A rb)" by sorry
+  thus "\<exists>rb. linear_order_on B rb \<and> ra = (limit A rb)"
+ 
+qed
+   
 lemma limit_presv_prefs:
   fixes
     A :: "'a set" and

@@ -5,7 +5,7 @@ theory Electoral_Structure
 begin
 
 locale electoral_structure =
-  ballot well_formed_ballot + result well_formed_result for
+  ballot well_formed_ballot + result _ well_formed_result for
   well_formed_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
   well_formed_result :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" + 
   fixes limit_by_conts :: "'r set \<Rightarrow> 'b \<Rightarrow> 'b"
@@ -25,7 +25,7 @@ fun limit_pref_to_alts :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightar
 "limit_pref_to_alts A b = (A \<times> A) \<inter> b"
 
 global_interpretation \<P>\<V>_\<S>\<C>\<F>:
-  electoral_structure "default_ballot_\<P>\<V>" "prefers_\<P>\<V>" "wins_\<P>\<V>" "limit_\<P>\<V>_ballot" 
+  electoral_structure "default_ballot_\<P>\<V>" "prefers_\<P>\<V>" "wins_\<P>\<V>" "limit_\<P>\<V>_ballot" "\<lambda>A. A"
      "limit_alts" "affected_alts_\<S>\<C>\<F>" "ballot_\<P>\<V>" "well_formed_\<S>\<C>\<F>" "limit_pref_to_alts"
 proof (unfold_locales, safe)
   fix
@@ -67,12 +67,12 @@ fun limit_app_to_comm :: "('a Committee) set \<Rightarrow> 'a Approval_Set \<Rig
 "limit_app_to_comm C b = \<Union>C \<inter> b"
 
 global_interpretation \<A>\<V>_\<S>\<C>\<F>:
-  electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" 
+  electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" "\<lambda>A. A"
      "limit_alts" "affected_alts_\<S>\<C>\<F>" "ballot_\<A>\<V>" "well_formed_\<S>\<C>\<F>" "limit_app_to_alts"
   by unfold_locales auto
 
-global_interpretation \<A>\<V>_committee:
-  electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" 
+global_interpretation (in committee_result) \<A>\<V>_committee:
+  electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot"  "committees"
   "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"
   by unfold_locales auto
 
