@@ -22,6 +22,9 @@ datatype erat = erat rat | PInfty | MInfty
 
 lemma erat_cong: "x = y \<Longrightarrow> erat x = erat y" by simp
 
+fun erat_of :: "nat \<Rightarrow> erat" where
+"erat_of n = erat (Fract n 1)"
+
 instantiation erat :: uminus
 begin
 

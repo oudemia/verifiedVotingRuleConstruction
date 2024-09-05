@@ -23,9 +23,67 @@ subsection \<open>Definition\<close>
 
 type_synonym ('v, 'a, 'b, 'r) Voting_Rule = "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
 
-type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = 
-	"('v, 'b, 'r, 'i) Profile_Aggregation \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function  \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
+fun (in result) electing :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule" where
+"electing m V A p = elect m V (contenders A) p"
 
+context electoral_structure 
+begin
+
+fun voting_rule :: "('v, 'a, 'b, 'r) Voting_Rule \<Rightarrow> bool" where
+    "voting_rule r = (\<forall> A  V p. well_formed_profile V A p \<longrightarrow> card (r V A p) > 0)"
+
+
+subsection \<open>Properties\<close>
+
+definition vr_anonymity :: "('v, 'a, 'b, 'r) Voting_Rule \<Rightarrow> bool" where 
+  "vr_anonymity r \<equiv>
+    voting_rule r \<and>
+      (\<forall> A V p \<pi>::('v \<Rightarrow> 'v).
+        bij \<pi> \<longrightarrow> (let (A', V', q) = (rename \<pi> (A, V, p)) in
+            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> r V A p = r V A q))"
+
+lemma sw_lift_anonymity: 
+  fixes 
+    m :: "('a, 'v, 'b) Electoral_Module" and
+    r :: "('v, 'a, 'b, 'r) Voting_Rule"
+  assumes 
+    vr: "voting_rule r" and
+    eq: "\<forall> A R V p. affected_alts R = A \<longrightarrow> (r V A p = elect m V R p)" and 
+    anon: "anonymity m"
+  shows "vr_anonymity r"
+proof (unfold anonymity_def vr_anonymity_def, auto)
+  fix 
+    V :: "'v set" and
+    A :: "'a set" and
+    p :: "('v, 'b) Profile"
+  assume "well_formed_profile V A p"
+  thus "0 < card (r V A p)" using vr by simp
+next
+ fix 
+    V :: "'v set" and
+    A :: "'a set" and
+    p :: "('v, 'b) Profile" and
+    \<pi> :: "'v \<Rightarrow> 'v" and
+    res :: "'r"
+  assume 
+    "bij \<pi>" and
+    "finite V" and "finite A" and
+    "well_formed_profile V A p" and
+    "well_formed_profile (\<pi> ` V) A (p \<circ> the_inv \<pi>)" and
+    "res \<in> r V A p"
+  show "res \<in> r V A (p \<circ> the_inv \<pi>)"
+  proof
+  qed
+
+qed
+
+end
+
+subsection \<open>Voting Rule Families\<close>
+
+type_synonym 'i Aggregate_Evaluation = "'i \<Rightarrow> erat"
+
+type_synonym ('v, 'a, 'b, 'r, 'i) Voting_Rule_Family = "'i Aggregate_Evaluation \<Rightarrow> ('v, 'a, 'b, 'r) Voting_Rule"
 
 fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
 "voting_rule_family f = True"

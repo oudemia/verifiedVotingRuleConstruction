@@ -20,13 +20,15 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-fun (in electoral_structure) elect_module :: "('v, 'b, 'r) Electoral_Module" where
+fun (in electoral_structure) elect_module :: "('r, 'v, 'b) Electoral_Module" where
   "elect_module V R p = (R, {}, {})"
 
 subsection \<open>Soundness\<close>
 
-theorem \<P>\<V>_elect_mod_sound[simp]: "\<P>\<V>_\<S>\<C>\<F>.electoral_module \<P>\<V>_\<S>\<C>\<F>.elect_module"
-  unfolding \<P>\<V>_\<S>\<C>\<F>.electoral_module.simps
+theorem (in electoral_structure) \<P>\<V>_elect_mod_sound[simp]: "electoral_module elect_module"
+  unfolding electoral_module.simps
+proof standard
+qed
   by simp
 
 theorem \<A>\<V>_elect_mod_sound[simp]: "\<A>\<V>_\<S>\<C>\<F>.electoral_module \<A>\<V>_\<S>\<C>\<F>.elect_module"

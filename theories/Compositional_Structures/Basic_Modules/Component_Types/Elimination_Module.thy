@@ -10,7 +10,6 @@ theory Elimination_Module
   imports 
       Evaluation_Function
       Electoral_Module
-      "HOL-Library.Extended_Real"
 begin
 
 text \<open>
@@ -22,9 +21,9 @@ text \<open>
 
 subsection \<open>General Definitions\<close>
 
-type_synonym Threshold_Value = "enat"
+type_synonym Threshold_Value = "erat"
 
-type_synonym Threshold_Relation = "enat \<Rightarrow> enat \<Rightarrow> bool"
+type_synonym Threshold_Relation = "erat \<Rightarrow> erat \<Rightarrow> bool"
 
 type_synonym ('r, 'v, 'b) Electoral_Set = "'v set \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
 
@@ -36,7 +35,7 @@ fun average :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> 'v set \<Rightarr
   'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> Threshold_Value" where
   "average e V A p = (let sum = (\<Sum> x \<in> A. e V x A p) in
                       (if (sum = infinity) then (infinity)
-                       else ((the_enat sum) div (card A))))"
+                       else ((rat_of_erat sum) div (Fract (card A) 1))))"
 
 subsection \<open>Social Choice Definitions\<close>
 
@@ -78,14 +77,17 @@ fun leq_average_eliminator :: "('r, 'v, 'b) Evaluation_Function
 
 subsection \<open>Soundness\<close>
 
+context electoral_structure
+begin
 lemma elim_mod_sound[simp]:
   fixes
-    e :: "('a, 'v, 'a Preference_Relation) Evaluation_Function" and
+    e :: "('r, 'v, 'b) Evaluation_Function" and
     t :: "Threshold_Value" and
     r :: "Threshold_Relation"
-  shows "\<P>\<V>_\<S>\<C>\<F>.electoral_module (elimination_module e t r)"
-  unfolding \<P>\<V>_\<S>\<C>\<F>.electoral_module.simps
+  shows "electoral_module (elimination_module e t r)"
+  unfolding electoral_module.simps
   by auto
+end
 
 lemma less_elim_sound[simp]:
   fixes

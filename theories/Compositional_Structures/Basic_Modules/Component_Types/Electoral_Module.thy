@@ -106,21 +106,20 @@ text \<open>
 definition (in electoral_structure) anonymity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where 
   "anonymity m \<equiv>
     electoral_module m \<and>
-      (\<forall> R V p \<pi>::('v \<Rightarrow> 'v).
+      (\<forall> (R::('r set)) V p \<pi>::('v \<Rightarrow> 'v).
         bij \<pi> \<longrightarrow> (let (R', V', q) = (rename \<pi> (R, V, p)) in
-            finite_profile V R p \<and> finite_profile V' R' q \<longrightarrow> m V (limit_set R UNIV) p = m V' (limit_set R' UNIV) q))"
+            finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> m V R p = m V' R' q))"
 
 text \<open>
-  Anonymity can alternatively be described as invariance
-  under the voter permutation group acting on elections
+  In the case of single-winner elctions, anonymity can alternatively be described 
+  as invariance under the voter permutation group acting on elections
   via the rename function.
 \<close>
 
 fun fun\<^sub>\<E> :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> (('r, 'v, 'b) Election \<Rightarrow> 'r Result)" where
   "fun\<^sub>\<E> m = (\<lambda> E. m (voters_\<E> E) (alternatives_\<E> E) (profile_\<E> E))"
 
-(* Note: Only single winner case 'r = 'a *)
-fun (in ballot) anonymity' :: "('a, 'v, 'a Preference_Relation) Election set 
+fun anonymity' :: "('a, 'v, 'a Preference_Relation) Election set 
                   \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
   "anonymity' X m = is_symmetry (fun\<^sub>\<E> m) (Invariance (anonymity\<^sub>\<R> X))"
 
@@ -134,8 +133,8 @@ text \<open>
   implies anonymity.
 \<close>
 
-fun (in electoral_structure) homogeneity :: "('a, 'v, 'b) Election set
-                                \<Rightarrow> ('v, 'b, 'r) Electoral_Module \<Rightarrow> bool" where
+fun (in electoral_structure) homogeneity :: "('r, 'v, 'b) Election set
+                                \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "homogeneity X m = is_symmetry (fun\<^sub>\<E> m) (Invariance (homogeneity\<^sub>\<R> X))"
 \<comment> \<open>This does not require any specific behaviour on infinite voter sets \<open>\<dots>\<close>
     It might make sense to extend the definition to that case somehow.\<close>
@@ -184,8 +183,8 @@ text \<open>
   candidates in the candidate set and election results.
 \<close>
 
-fun (in result_properties) neutrality :: "('a, 'v) Election set
-        \<Rightarrow> ('a, 'v, 'b Result) Electoral_Module \<Rightarrow> bool" where
+fun (in result_properties) neutrality :: "('a, 'v, 'b) Election set
+        \<Rightarrow> ('a, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "neutrality X m =
     is_symmetry (fun\<^sub>\<E> m) (action_induced_equivariance (carrier neutrality\<^sub>\<G>) X
           (\<phi>_neutr X) (result_action \<psi>_neutr))"
@@ -886,7 +885,7 @@ text \<open>
 definition (in electoral_structure) non_electing :: "('v, 'b,'r) Electoral_Module \<Rightarrow> bool" where
   "non_electing m \<equiv>
     electoral_module m
-      \<and> (\<forall> A V p. well_formed_profile V A p \<longrightarrow> elect m V (limit_set A UNIV) p = {})"
+      \<and> (\<forall> A V p. well_formed_profile V A p \<longrightarrow> elect m V (limit_conts A UNIV) p = {})"
 
 lemma single_rej_decr_def_card:
   fixes
@@ -1333,9 +1332,9 @@ text \<open>
   when an elected alternative is lifted, this alternative remains elected.
 \<close>
 
-definition monotonicity :: "('a, 'v, 'a Result) Electoral_Module \<Rightarrow> bool" where
+definition (in electoral_structure) monotonicity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "monotonicity m \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
+    electoral_module m \<and>
       (\<forall> A V p q a. a \<in> elect m V A p \<and> lifted V A p q a \<longrightarrow> a \<in> elect m V A q)"
 
 end
