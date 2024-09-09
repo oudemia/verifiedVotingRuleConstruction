@@ -29,15 +29,11 @@ fun (in result) electing :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('v, 'a
 context electoral_structure 
 begin
 
-fun voting_rule :: "('v, 'a, 'b, 'r) Voting_Rule \<Rightarrow> bool" where
-    "voting_rule r = (\<forall> A  V p. well_formed_profile V A p \<longrightarrow> card (r V A p) > 0)"
-
 
 subsection \<open>Properties\<close>
 
 definition vr_anonymity :: "('v, 'a, 'b, 'r) Voting_Rule \<Rightarrow> bool" where 
   "vr_anonymity r \<equiv>
-    voting_rule r \<and>
       (\<forall> A V p \<pi>::('v \<Rightarrow> 'v).
         bij \<pi> \<longrightarrow> (let (A', V', q) = (rename \<pi> (A, V, p)) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> r V A p = r V A q))"

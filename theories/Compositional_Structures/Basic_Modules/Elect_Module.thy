@@ -25,9 +25,16 @@ fun (in electoral_structure) elect_module :: "('r, 'v, 'b) Electoral_Module" whe
 
 subsection \<open>Soundness\<close>
 
-theorem (in electoral_structure) \<P>\<V>_elect_mod_sound[simp]: "electoral_module elect_module"
+theorem  \<P>\<V>_elect_mod_sound[simp]: "electoral_module elect_module"
   unfolding electoral_module.simps
-proof standard
+proof safe
+  fix
+    A :: "'a set" and
+    R :: "'r set" and
+    V :: "'v set" and
+    p :: "('v, 'b) Profile"
+  assume " well_formed_profile V (affected_alts R) p"
+  thus ""
 qed
   by simp
 
