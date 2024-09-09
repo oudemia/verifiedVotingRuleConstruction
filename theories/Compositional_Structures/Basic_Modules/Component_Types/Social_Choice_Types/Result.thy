@@ -61,8 +61,8 @@ locale result =
   assumes "\<And> (A::('a set)) (r::('r Result)).
     (set_equals_partition (limit_contenders A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
     "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_contenders A r)) \<subseteq> A" and
-    "\<And> (A::('a set)). affected_alts (contenders A) = A" and
-    "\<And> (A :: 'a set)(B :: 'a set). A \<subseteq> B  \<Longrightarrow> limit_contenders A (contenders B) = contenders A"
+    "\<And> (A::('a set)). affected_alts (contenders A) = A \<or> contenders A = {}" and
+    "\<And> (A :: 'a set)(B :: 'a set). A \<subseteq> B  \<Longrightarrow> (affected_alts (contenders A)) \<subseteq> (affected_alts (contenders B))"
 
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
@@ -105,10 +105,40 @@ type_synonym 'a Committee = "'a set"
 
 locale committee_result =
   fixes k :: "nat"
-  assumes k_positive : "k \<ge> 1"
+  assumes k_positive : "k \<ge> 1" 
 begin
 fun committees :: "'a set \<Rightarrow> 'a Committee set" where
   "committees A = {C. C \<subseteq> A \<and> card C = k}"
+
+lemma committees_cover_A: "k \<le> card A \<longrightarrow> \<Union>(committees A) = A "
+proof standard
+  fix A :: "'a set"
+  assume *: "k \<le> card A"
+  show "\<Union> (committees A) = A"
+  proof safe
+    fix
+      C :: "'a set" and
+      a :: 'a
+    assume 
+      elem:"a \<in> C" and
+      comm: "C \<in> committees A"
+    have "C \<subseteq> A" using comm by simp
+    thus "a \<in> A" using elem by auto
+  next
+    fix
+      a :: 'a
+    assume 
+      elem:"a \<in> A"
+    have "card (A - {a}) \<ge> k-1" using elem * by force
+    hence "\<exists>C \<subseteq> (A - {a}). card C = k-1" using * by (meson obtain_subset_with_card_n)
+    then obtain C where comm: "C \<subseteq> (A - {a}) \<and> card C = k-1" by blast
+    hence "a \<notin> C" by blast
+    hence "card (C \<union> {a}) = k" using comm * k_positive
+      by (metis One_nat_def Suc_pred Un_insert_right card.infinite card_insert_disjoint finite_Diff finite_subset less_eq_Suc_le not_one_le_zero sup_bot_right)
+    hence "C \<union> {a} \<in> committees A" using elem comm * by auto
+    thus "a \<in> \<Union>(committees A)" by blast
+  qed
+qed
 
 fun well_formed_committee_result :: "'a set \<Rightarrow> ('a Committee) Result \<Rightarrow> bool" where
   "well_formed_committee_result A res = (disjoint3 res \<and> set_equals_partition (committees A) res)"

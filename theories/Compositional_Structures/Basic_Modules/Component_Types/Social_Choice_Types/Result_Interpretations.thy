@@ -60,10 +60,20 @@ next
     a :: 'a
   assume 
     sub: "A \<subseteq> B" and 
-    cont: "a \<in> limit_alts B A"
+    cont: "a \<in> limit_alts A B"
   have "A \<inter> B = A" using sub by (simp add: Int_absorb2)
-  hence "limit_alts B A = A" by (simp add: Int_commute)
-  thus "a \<in> B" using sub cont by auto
+  hence "limit_alts A B = A" by (simp add: Int_commute)
+  thus "a \<in> A" using sub cont by auto
+next
+  fix 
+    A B:: "'a set" and 
+    a :: 'a
+  assume 
+    sub: "A \<subseteq> B" and 
+    cont: "a \<in> A"
+  have "A \<inter> B = A" using sub by (simp add: Int_absorb2)
+  hence "limit_alts A B = A" by (simp add: Int_commute)
+  thus "a \<in>  limit_alts A B " using sub cont by auto
 qed
 
 text \<open>
@@ -176,13 +186,26 @@ next
   qed
 next
  fix
-    A B C:: "'a set" and
+    A B :: "'a set" and
+    r :: "'a Preference_Relation"
+  assume 
+    sub: "A \<subseteq> B" and 
+    elem: "r \<in> limit_set_\<S>\<W>\<F> A (limit_set_\<S>\<W>\<F> B UNIV)"
+  show "r \<in> limit_set_\<S>\<W>\<F> A UNIV" using elem by auto
+next
+ fix
+    A B :: "'a set" and
     r :: "'a Preference_Relation"
   assume 
     sub: "A \<subseteq> B" and 
     elem: "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
-  hence "linear_order_on A r" by auto
-  show "r \<in> limit_set_\<S>\<W>\<F> B UNIV" by sledgehammer
+  have "linear_order_on A r" using elem by auto
+  hence "partial_order_on A r \<and> total_on A r" by (simp add: linear_order_on_def)
+  hence "\<forall> (a, b) \<in> r. a \<in> A \<and> b \<in> A"
+    using linear_order_on_def partial_order_onD(1) refl_onD1 refl_onD2 by fastforce
+  hence "\<forall> (a, b) \<in> r. a \<in> B \<and> b \<in> B" using sub by blast
+  hence "\<exists> r'. linear_order_on B r' \<and> r = limit A r'" by try
+  thus "r \<in> limit_set_\<S>\<W>\<F> A (limit_set_\<S>\<W>\<F> B UNIV)" using sub elem by sledgehammer
 qed
 oops
 
