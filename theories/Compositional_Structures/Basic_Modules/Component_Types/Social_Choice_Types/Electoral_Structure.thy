@@ -102,34 +102,6 @@ global_interpretation \<A>\<V>_\<S>\<C>\<F>:
      "limit_alts" "affected_alts_\<S>\<C>\<F>" "ballot_\<A>\<V>" "well_formed_\<S>\<C>\<F>" "limit_app_to_alts"
   by unfold_locales auto
 
-lemma fin_subset_with_elem:
-  fixes 
-    A :: "'a set" and
-    a :: 'a and
-    n :: nat
-  assumes 
-    inf: "infinite A" and
-    elem: "a \<in> A" and
-    n_pos: "n \<ge> 1"
-  shows "\<exists>B \<subseteq> A. card B = n \<and> a \<in> B"
-proof cases
-    assume "n = 1"
-    hence"{a} \<subseteq> A \<and> card {a} = n" using elem by simp
-    thus ?thesis by blast
-  next
-    assume "\<not> n = 1"
-    hence ge1: "n > 1" using n_pos by simp
-    have "infinite (A - {a})" by (simp add: inf)
-    hence "\<exists>B \<subseteq> (A - {a}). card B = n-1" using inf n_pos by (meson infinite_arbitrarily_large) 
-    then obtain B where sub: "B \<subseteq> (A - {a}) \<and> card B = n-1" by blast
-    hence "finite B" using ge1 by (simp add: card_ge_0_finite)
-    moreover have "a \<notin> B" using sub by auto
-    ultimately have car: "card (B \<union> {a}) = n" using ge1 by (simp add: sub)
-    have "B \<union> {a} \<subseteq> A" using sub elem by auto
-    thus ?thesis using car by blast
-qed
-
-
 sublocale committee_result \<subseteq> \<A>\<V>_committee:
   electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" "committees"
   "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"

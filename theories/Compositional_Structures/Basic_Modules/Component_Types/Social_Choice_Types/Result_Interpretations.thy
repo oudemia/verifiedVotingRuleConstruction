@@ -60,20 +60,8 @@ next
     a :: 'a
   assume 
     sub: "A \<subseteq> B" and 
-    cont: "a \<in> limit_alts A B"
-  have "A \<inter> B = A" using sub by (simp add: Int_absorb2)
-  hence "limit_alts A B = A" by (simp add: Int_commute)
-  thus "a \<in> A" using sub cont by auto
-next
-  fix 
-    A B:: "'a set" and 
-    a :: 'a
-  assume 
-    sub: "A \<subseteq> B" and 
-    cont: "a \<in> A"
-  have "A \<inter> B = A" using sub by (simp add: Int_absorb2)
-  hence "limit_alts A B = A" by (simp add: Int_commute)
-  thus "a \<in>  limit_alts A B " using sub cont by auto
+    cont: "a \<in> affected_alts_\<S>\<C>\<F> A"
+  show "a \<in> affected_alts_\<S>\<C>\<F> B" using sub cont by auto
 qed
 
 text \<open>
@@ -110,7 +98,7 @@ next
     A B C :: "'a set" and
     a :: 'a
   assume "A \<subseteq> B" and "C \<subseteq> A" and  "a \<in> C"
-  thus "a \<in> B" by blast
+  thus "a \<in>  \<Union> (Pow B)" by blast
 qed
 
 text \<open>
@@ -118,6 +106,7 @@ text \<open>
   modularity given as three sets of (potentially tied) linear orders over the alternatives. See
   \<^file>\<open>Social_Welfare_Result.thy\<close> for details.
 \<close>
+
 global_interpretation \<S>\<W>\<F>_result:
   result "\<lambda>A. limit_set_\<S>\<W>\<F> A UNIV" "well_formed_\<S>\<W>\<F>" "limit_set_\<S>\<W>\<F>" "affected_alts_\<S>\<W>\<F>"
 proof (unfold_locales, safe)
@@ -169,45 +158,23 @@ next
     A :: "'a set" and
     a :: "'a"
   assume elem: "a \<in> A"
-  show "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV)" 
-  proof (unfold affected_alts_\<S>\<W>\<F>.simps limit_set_\<S>\<W>\<F>.simps)
-    have "\<exists>r. linear_order_on A r" using well_order_on well_order_on_def by blast
-    then obtain r where ord: "linear_order_on A r" by blast
-    hence "\<forall> (a, b) \<in> r. a \<in> A \<and> b \<in> A" 
-      using linear_order_on_def partial_order_onD(1) refl_onD1 refl_onD2 by fastforce
-    hence "limit A r = r" by auto
-    moreover have "r \<in> UNIV" by simp
-    ultimately have r: "r \<in> {limit A r |r. r \<in> UNIV \<and> linear_order_on A (limit A r)}"  
-      using ord by fastforce
-    have "\<exists>b. (a, b) \<in> r \<or> (b, a) \<in> r" using elem ord
-      by (meson linear_order_on_def partial_order_onD(1) refl_onD)
-    thus "a \<in> (\<Union>r\<in>{limit A r |r. r \<in> UNIV \<and> linear_order_on A (limit A r)}.
-             {a. \<exists>b. (a, b) \<in> r \<or> (b, a) \<in> r})" using r by blast
+  show "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV)"
+  using elem by (metis res_surj_\<S>\<W>\<F>)
+next
+ fix
+    A B :: "'a set" and
+    a :: 'a
+  assume 
+    sub: "A \<subseteq> B" and 
+    elem: "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV)"
+  show "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> B UNIV)"
+  proof -
+    have "a \<in> A" using elem by (metis res_surj_\<S>\<W>\<F>)
+    hence "a \<in> B" using sub by blast
+    thus "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> B UNIV)" by (metis res_surj_\<S>\<W>\<F>)
   qed
-next
- fix
-    A B :: "'a set" and
-    r :: "'a Preference_Relation"
-  assume 
-    sub: "A \<subseteq> B" and 
-    elem: "r \<in> limit_set_\<S>\<W>\<F> A (limit_set_\<S>\<W>\<F> B UNIV)"
-  show "r \<in> limit_set_\<S>\<W>\<F> A UNIV" using elem by auto
-next
- fix
-    A B :: "'a set" and
-    r :: "'a Preference_Relation"
-  assume 
-    sub: "A \<subseteq> B" and 
-    elem: "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
-  have "linear_order_on A r" using elem by auto
-  hence "partial_order_on A r \<and> total_on A r" by (simp add: linear_order_on_def)
-  hence "\<forall> (a, b) \<in> r. a \<in> A \<and> b \<in> A"
-    using linear_order_on_def partial_order_onD(1) refl_onD1 refl_onD2 by fastforce
-  hence "\<forall> (a, b) \<in> r. a \<in> B \<and> b \<in> B" using sub by blast
-  hence "\<exists> r'. linear_order_on B r' \<and> r = limit A r'" by try
-  thus "r \<in> limit_set_\<S>\<W>\<F> A (limit_set_\<S>\<W>\<F> B UNIV)" using sub elem by sledgehammer
 qed
-oops
+
 
 
 text \<open>
@@ -215,63 +182,71 @@ text \<open>
   This means that interpretation is not possible in the general, but depends on the 
   condition of k having a specific value. This can be done with the sublocale command. 
 \<close>
-
+   
 sublocale committee_result \<subseteq> 
 result "committees" "well_formed_committee_result" "limit_committees" "affected_alts_committee"
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
-    e :: "'a Committee set" and
-    r :: "'a Committee set" and
-    d :: "'a Committee set"
-  assume partition: "set_equals_partition (limit_committees A UNIV) (e, r, d)" and
-    disjoint: "disjoint3 (e, r, d)"
-  moreover have comm_eq: "committees A = limit_committees A UNIV"
-  proof (unfold_locales, cases)
-    assume no_committees: "committees A = {}"
-    have "k \<ge> 1" using k_positive by simp
-    moreover have "\<forall> C \<subseteq> A. card C \<noteq> k" using no_committees by auto
-    moreover have le_k: "\<forall> C \<subseteq> A. card C < k" by (meson calculation(2) not_less obtain_subset_with_card_n subset_iff)
-    have "A \<subseteq> A" by simp
-    hence A_le_k: "card A < k" using le_k by simp
-    hence "\<forall> C::('a Committee). card (C \<inter> A) < k" using le_k by simp
-    hence "limit_committees A UNIV = {}" using calculation(2) by auto
-    thus "committees A = limit_committees A UNIV" using no_committees by auto
-  next
-    assume "committees A \<noteq> {}"
-    show "committees A = limit_committees A UNIV"
-    proof
-      show "committees A \<subseteq> limit_committees A UNIV"
-        proof
-          fix C :: "'a Committee"
-          assume comm_C: "C \<in> committees A"
-          hence card_k: "card C = k"  by auto
-          moreover have "C = A \<inter> C" using comm_C by auto
-          hence "\<exists>R \<in> UNIV. C = A \<inter> R"  by auto
-          thus "C \<in> limit_committees A UNIV" using card_k by simp
-        qed
-    next
-      show "(limit_committees A UNIV) \<subseteq> committees A"
-      proof
-        fix C :: "'a Committee"
-        assume limit_C: "C \<in> limit_committees A UNIV"
-        hence card_k: "card C = k"  by auto
-        moreover have "\<exists>R \<in> UNIV. C = A \<inter> R" using limit_C by auto
-        hence "C \<subseteq> A" by auto
-        thus "C \<in> committees A" using card_k by simp
-      qed
-    qed
-  qed
-  thus "well_formed_committee_result A (e, r, d)" using partition disjoint by auto
+    r :: "('a Committee) Result"
+  assume 
+    partition: "set_equals_partition (limit_committees A UNIV) r" and
+    disjoint: "disjoint3 r"
+  moreover have comm_eq: "committees A = limit_committees A UNIV" by auto
+  thus "well_formed_committee_result A r" using partition disjoint by auto
 next
- fix
+   fix
     A :: "'a set" and
-    R :: "'a Committee set" and
-    a :: "'a"
-  assume affected: "a \<in> affected_alts_committee (limit_committees A R)"
+    C :: "('a Committee) set" and
+    a :: 'a
+  assume 
+    elem: "a \<in> affected_alts_committee (limit_committees A C)"
   thus "a \<in> A" by auto
+next
+   fix
+    A :: "'a set" and
+    a :: 'a
+  assume 
+    elem: "a \<in> affected_alts_committee (committees A)"
+  thus "a \<in> A" by auto
+next
+  fix
+    A :: "'a set" and
+    a b :: 'a
+  assume 
+    nonemp: "b \<in> affected_alts_committee (committees A)" and
+    n: "b \<notin> {}" and
+    elem: "a \<in> A"
+  show "a \<in> affected_alts_committee (committees A)"
+    proof cases
+      assume fin: "finite A"
+      have "affected_alts_committee (committees A) \<noteq> {}" using nonemp by blast
+      hence "\<exists>C. C \<in> committees A \<and> C \<noteq> {}" by auto
+      hence "committees A \<noteq> {}" by auto
+      hence "\<exists>C. C \<subseteq> A \<and> card C = k" by simp
+      hence large_A: "card A \<ge> k" using k_positive fin using card_mono by blast
+      hence "c \<in> A \<longrightarrow> (\<exists>C.  C \<in> committees A \<and> c \<in> C)" using committees_cover_A by auto
+      hence "\<exists>C. C \<in> committees A \<and> a \<in> C" 
+        using large_A elem by (metis Union_iff committees_cover_A)
+      thus "a \<in> affected_alts_committee (committees A)" by simp
+    next
+      assume inf: "infinite A"
+      hence "\<exists>D \<subseteq> A. card D = k \<and> a \<in> D" using elem by (meson fin_subset_with_elem k_positive)
+      then obtain D where *: "D \<subseteq> A \<and> card D = k \<and> a \<in> D" by blast
+      hence "D \<in> committees A" by simp
+      thus "a \<in> affected_alts_committee (committees A)" using "*" by auto
+    qed
+next
+  fix
+    A B :: "'a set" and
+    a :: 'a
+  assume 
+    elem: "a \<in> affected_alts_committee (committees A)" and
+    sub: "A \<subseteq> B"
+  have "affected_alts_committee (committees A) \<subseteq> affected_alts_committee (committees B)" 
+    using sub by (metis affected_alts_committee.simps subset_committees)
+  thus "a \<in> affected_alts_committee (committees B)" using elem by blast
 qed
-  oops
 
 setup Locale_Code.close_block
 

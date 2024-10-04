@@ -650,7 +650,7 @@ text \<open>
   This keeps all of A's preferences.
 \<close>
 
-(*
+
 lemma limit_prof_trans:
   fixes
     A :: "'a set" and
@@ -663,7 +663,7 @@ lemma limit_prof_trans:
   shows "limit_profile C p = limit_profile C (limit_profile B p)"
   using assms
   by (metis limit_profile.simps limit_trans)
-*)
+
 
 lemma limit_profile_sound:
   fixes

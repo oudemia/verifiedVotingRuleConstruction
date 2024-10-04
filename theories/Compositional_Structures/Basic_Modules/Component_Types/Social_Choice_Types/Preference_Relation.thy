@@ -291,26 +291,81 @@ lemma limit_presv_lin_ord:
   unfolding preorder_on_def partial_order_on_def linear_order_on_def
   by metis
 
-lemma helper:
+
+lemma rel_extend_supset:
   fixes
     A B :: "'a set" and
     ra :: "'a Preference_Relation"
   assumes
     lin_ord_A: "linear_order_on A ra" and
     sub: "A \<subseteq> B"
-  shows "\<exists>rb. linear_order_on B rb \<and> ra = (limit A rb)"
-proof (standard)
+  shows "\<exists> rb. linear_order_on B rb \<and> ra = (limit A rb)"
+  proof -
   have "\<exists>rc. linear_order_on (B-A) rc" using order_on_defs(5) well_order_on by blast
   then obtain rc where lin_ord_BA: "linear_order_on (B-A) rc" by blast
-  then obtain rd where gap: "rd = {(a, b). a \<in> A \<and> b \<in> B}" by simp
-  then obtain rb where "rb = ra \<union> rd \<union> rd"  by simp
+  then obtain rd where gap: "rd = {(a, b). a \<in> A \<and> b \<in> (B-A)}" by simp
+  then obtain rb where rb_def: "rb = ra \<union> rc \<union> rd"  by simp
+  have ra_dom: "ra \<subseteq> A \<times> A" using lin_ord_A
+    using linear_order_on_def partial_order_onD(1) refl_on_def by blast
+  hence *: "limit A ra = ra" by auto
+  have rc_dom: "rc \<subseteq> (B-A) \<times> (B-A)" using lin_ord_BA 
+    using linear_order_on_def partial_order_onD(1) refl_on_def by blast
+  hence "limit A rc = {}" by auto
+  moreover have "limit A rd = {}" using gap by simp
+  moreover have "limit A rb = (limit A ra) \<union>  (limit A rc) \<union>  (limit A rd)" using rb_def
+    by auto
+    ultimately have limit_A: "limit A rb = ra" using rb_def sub * by blast
   have "linear_order_on B rb"
-  proof
-    sorry
-  have "ra = (limit A rb)" by sorry
-  thus "\<exists>rb. linear_order_on B rb \<and> ra = (limit A rb)"
- 
+  proof (unfold linear_order_on_def partial_order_on_def preorder_on_def, auto)
+    show "total_on B rb" 
+    proof -
+      have "total_on A ra" using lin_ord_A by (simp add: linear_order_on_def)
+      hence *:  "total_on A rb" using rb_def by (metis UnI1 total_on_def)
+      have "total_on (B-A) rc" using lin_ord_BA by (simp add: linear_order_on_def)
+      hence **: "total_on (B-A) rb" using rb_def by (metis UnCI total_on_def)
+      have "rd = A \<times> (B-A)" using gap by fastforce
+      hence "\<forall>a\<in>A. \<forall>b\<in>(B-A). a \<noteq> b \<longrightarrow> (a, b) \<in> rb" using rb_def by simp
+      thus ?thesis using sub rb_def * **
+        by (smt (verit, best) Diff_partition Un_iff total_on_def)
+    qed
+    next
+      have "refl_on A ra" using lin_ord_A 
+        by (simp add: linear_order_on_def partial_order_onD(1)) 
+      hence *: "\<forall>a\<in>A. (a, a) \<in> rb" using rb_def by (simp add: refl_onD)
+      have "refl_on (B-A) rc" using lin_ord_BA 
+        by (simp add: linear_order_on_def partial_order_onD(1))
+      hence "\<forall>a\<in>(B-A). (a, a) \<in> rb" using rb_def by (simp add: refl_onD)
+      hence ref: "\<forall>a\<in>B. (a, a) \<in> rb" using sub * by blast
+      have "ra \<subseteq> B \<times> B" using sub ra_dom by auto
+      moreover have "rc \<subseteq> B \<times> B" using rc_dom by auto
+      moreover have "rd = A \<times> (B-A)" using gap by fastforce
+      ultimately have "rb \<subseteq> B \<times> B" using sub rb_def by blast
+      thus "refl_on B rb" using rb_def ref by (simp add: refl_on_def)
+    next
+      have *: "rd = A \<times> (B-A)" using gap by fastforce
+      hence "antisym rd" by (metis DiffE antisymI mem_Sigma_iff)
+      moreover have "antisym ra" using lin_ord_A by (simp add: lin_imp_antisym)
+      moreover have "antisym rc" using lin_ord_BA by (simp add: lin_imp_antisym)
+      ultimately show "antisym rb" using rb_def *
+        by (smt (z3) Diff_iff SigmaE UnE antisym_on_def prod.simps(1) ra_dom rc_dom subsetD)
+    next
+      show "trans rb"
+      proof (unfold trans_def, auto)
+        fix a b c :: 'a
+        assume ab: "(a, b) \<in> rb" and bc: "(b, c) \<in> rb"
+        have "(a, b) \<in> ra \<and> (b, c) \<in> ra \<longrightarrow> (a, c) \<in> ra" 
+          using lin_ord_A lin_imp_trans by (metis transE)        
+        hence aa: "(a, b) \<in> ra \<and> (b, c) \<in> ra \<longrightarrow> (a, c) \<in> rb" using rb_def by simp
+        have "(a, b) \<in> rc \<and> (b, c) \<in> rc \<longrightarrow> (a, c) \<in> rc" 
+          using lin_ord_BA lin_imp_trans by (metis transE)        
+        hence cc: "(a, b) \<in> rc \<and> (b, c) \<in> rc \<longrightarrow> (a, c) \<in> rb" using rb_def by simp
+        show "(a, c) \<in> rb" using \<open>(b, c) \<in> rb\<close> aa ab bc cc gap ra_dom rb_def rc_dom by auto
+      qed
+    qed
+  hence "linear_order_on B rb \<and> ra = limit A rb" using limit_A by simp
+  thus ?thesis by auto
 qed
+
    
 lemma limit_presv_prefs:
   fixes
