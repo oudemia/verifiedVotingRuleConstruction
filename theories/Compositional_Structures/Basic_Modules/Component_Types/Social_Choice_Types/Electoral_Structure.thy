@@ -57,37 +57,6 @@ fix
   have a2_in_R:  "a2 \<in> R" using as_in_b by auto
   moreover have "(a1, a2) \<in> b" using as_in_b by auto
   thus "(a1, a2) \<in> limit_pref_to_alts R b" by (simp add: a1_in_R a2_in_R)
-next
-  fix
-    A e r d:: "'a set"
-  assume 
-    part: "set_equals_partition (limit_alts A UNIV) (e, r, d)" and 
-    disj: " disjoint3 (e, r, d)"
-  thus "well_formed_\<S>\<C>\<F> A (e, r, d)" by fastforce
-next
-  fix
-    A R :: "'a set" and
-    a :: 'a
-  assume "a \<in> affected_alts_\<S>\<C>\<F> (limit_alts A R)"
-  thus "a \<in> A" by fastforce
-next
-  fix
-    A :: "'a set" and
-    a b :: 'a
-  assume "a \<notin> {}" and "b \<in> affected_alts_\<S>\<C>\<F> A"
-  thus "b \<in> A" by auto
-next
-  fix
-    A :: "'a set" and
-    a b :: 'a
-  assume "a \<notin> {}" and "b \<in> A"
-  thus "b \<in> affected_alts_\<S>\<C>\<F> A" by auto
-next
- fix
-    A B :: "'a set" and
-    a :: 'a
-  assume "A \<subseteq> B" and "a \<in> affected_alts_\<S>\<C>\<F> A"
-  thus "a \<in> affected_alts_\<S>\<C>\<F> B" by auto
 qed
 
 
@@ -105,30 +74,67 @@ global_interpretation \<A>\<V>_\<S>\<C>\<F>:
 sublocale committee_result \<subseteq> \<A>\<V>_committee:
   electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" "committees"
   "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"
-proof (unfold_locales, auto)
-  fix 
-    A C :: "'a set" and
-    a :: 'a
-  assume 
-    sub: "C \<subseteq> A" and 
-    committee: "k = card C" and 
-    elem: "a \<in> A"
-  show "\<exists>D \<subseteq> A. card D = card C \<and> a \<in> D"
-  proof cases
-    assume "finite A"
-    hence "card C \<le> card A" using sub card_mono by blast
-    hence "card A \<ge> k" using sub committee by simp
-    hence "\<Union>(committees A) = A" using committees_cover_A by auto
-    hence "\<exists>D \<in> committees A. a \<in> D" using elem by auto
-    thus ?thesis using elem committee committees.simps 
-        by (metis (mono_tags, lifting) mem_Collect_eq)
+proof (unfold_locales, safe)
+    fix 
+      A C :: "'a set" and
+      a :: 'a
+    assume 
+      committee: " C \<in> committees A" and 
+      elem: "a \<in> C"
+    show "a \<in> A"
+      using committee elem by auto
   next
-    assume inf: "infinite A"
-    hence "\<exists>D \<subseteq> A. card D = k \<and> a \<in> D" using elem fin_subset_with_elem k_positive by metis
-    then obtain D where *: "D \<subseteq> A \<and> card D = k \<and> a \<in> D" by blast
-    hence "D \<in> committees A" by simp
-    thus ?thesis using elem committee committees.simps using "*" by auto
-  qed
+    fix 
+      A C:: "'a set" and
+      a :: 'a
+      assume
+      comm: "C \<in> committees A" and
+      elem: "a \<in> A"
+    show "a \<in> \<Union> (committees A)" 
+      proof (cases)
+        assume fin: "finite A"
+        have "card C > 0" using comm k_positive by force
+        hence "card C = k" using comm by fastforce
+        have "C \<subseteq> A" using comm by simp
+        hence "card C \<le> card A" using fin by (simp add: card_mono)
+        hence "card A \<ge> k" using fin comm by simp
+        hence "\<Union>(committees A) = A" using committees_cover_A by auto
+        hence "\<exists>D \<in> committees A. a \<in> D" using elem by auto
+        thus ?thesis by simp
+      next
+        assume inf: "infinite A"
+        hence "\<exists>D \<subseteq> A. card D = k \<and> a \<in> D" using elem fin_subset_with_elem k_positive by metis
+        then obtain D where *: "D \<subseteq> A \<and> card D = k \<and> a \<in> D" by blast
+        hence "D \<in> committees A" by simp
+        thus ?thesis using elem comm committees.simps using "*" by auto
+      qed 
+  next
+    fix 
+      A B C :: "'a set" and
+      a :: 'a
+    assume 
+      sub: "A \<subseteq> B" and 
+      comm: " C \<in> committees A" and 
+      elem: "a \<in> C"
+    have "committees A \<subseteq> committees B" using sub by auto
+    moreover have "a \<in>  \<Union> (committees A)" using comm elem by blast 
+    ultimately show "a \<in> \<Union> (committees B)" by blast
+ next
+    fix  
+      A :: "'a set" and
+      R :: "('a Committee) set" and
+      a :: 'a and
+      b :: "'a Approval_Set"
+    assume "a \<in> limit_app_to_comm R b"
+    thus "a \<in> limit_\<A>\<V>_ballot (\<Union> R) b" by fastforce
+  next
+    fix  
+      A :: "'a set" and
+      R :: "('a Committee) set" and
+      a :: 'a and
+      b :: "'a Approval_Set"
+    assume "a \<in> limit_\<A>\<V>_ballot (\<Union> R) b"
+    thus "a \<in> limit_app_to_comm R b"  by fastforce
 qed
 
 end
