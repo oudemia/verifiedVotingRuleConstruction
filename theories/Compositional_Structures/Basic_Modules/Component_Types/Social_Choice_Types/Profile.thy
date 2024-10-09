@@ -2,6 +2,7 @@ theory Profile
   imports 
      Main
      Auxiliary_Lemmas
+     Preference_Relation
      "HOL-Library.Extended_Nat"
      "HOL-Combinatorics.Permutations"
 begin
@@ -439,103 +440,6 @@ lemma pref_count_set_compr:
             (prefer_count V p a) ` (A - {a})"
   by blast
 
-(* TODO: the following two lemmata are only true for preference-based profiles in this form.
-Adapt or move to PV-specific interpretations
-
-lemma pref_count:
-  fixes
-    A :: "'a set" and
-    V :: "'v set" and
-    p :: "('v, 'b) Profile" and
-    a :: "'a" and
-    b :: "'a"
-  assumes
-    prof: "well_formed_profile V A p" and
-    fin: "finite V" and
-    a_in_A: "a \<in> A" and
-    b_in_A: "b \<in> A" and
-    neq: "a \<noteq> b"
-  shows "prefer_count V p a b = card V - (prefer_count V p b a)"
-proof -
-  have "\<forall> v \<in> V. \<not> (let r = (p v) in (b \<preceq>\<^sub>r a)) \<longrightarrow> (let r = (p v) in (a \<preceq>\<^sub>r b))"
-    using a_in_A b_in_A prof lin_ord_imp_connex
-    unfolding profile_def connex_def
-    by metis
-  moreover have "\<forall> v \<in> V. ((b, a) \<in> (p v) \<longrightarrow> (a, b) \<notin> (p v))"
-    using antisymD neq lin_imp_antisym prof
-    unfolding profile_def
-    by metis
-  ultimately have
-    "{v \<in> V. (let r = (p v) in (b \<preceq>\<^sub>r a))} =
-        V - {v \<in> V. (let r = (p v) in (a \<preceq>\<^sub>r b))}"
-    by auto
-  thus ?thesis
-    by (simp add: card_Diff_subset Collect_mono fin)
-qed
-
-lemma pref_count_sym:
-  fixes
-    p :: "('a, 'v) Profile" and
-    V :: "'v set" and
-    a :: "'a" and
-    b :: "'a" and
-    c :: "'a"
-  assumes
-    pref_count_ineq: "prefer_count V p a c \<ge> prefer_count V p c b" and
-    prof: "profile V A p" and
-    a_in_A: "a \<in> A" and
-    b_in_A: "b \<in> A" and
-    c_in_A: "c \<in> A" and
-    a_neq_c: "a \<noteq> c" and
-    c_neq_b: "c \<noteq> b"
-  shows "prefer_count V p b c \<ge> prefer_count V p c a"
-proof (cases "finite V")
-  case True
-  moreover have
-    nat1: "prefer_count V p c a \<in> \<nat>" and
-    nat2: "prefer_count V p b c \<in> \<nat>"
-    unfolding Nats_def
-    using True of_nat_eq_enat
-    by (simp, simp)
-  moreover have smaller: "prefer_count V p c a \<le> card V"
-    using True prof pref_count_voter_set_card
-    by metis
-  moreover have
-    "prefer_count V p a c = card V - (prefer_count V p c a)" and
-    pref_count_b_eq:
-    "prefer_count V p c b = card V - (prefer_count V p b c)"
-    using True pref_count prof c_in_A
-    by (metis (no_types, opaque_lifting) a_in_A a_neq_c,
-        metis (no_types, opaque_lifting) b_in_A c_neq_b)
-  hence "card V - (prefer_count V p b c) + (prefer_count V p c a)
-      \<le> card V - (prefer_count V p c a) + (prefer_count V p c a)"
-    using pref_count_b_eq pref_count_ineq
-    by simp
-  ultimately show ?thesis
-    by simp
-next
-  case False
-  thus ?thesis
-    by simp
-    qed
-
-    lemma empty_prof_imp_zero_pref_count:
-  fixes
-    p :: "('a, 'v) Profile" and
-    V :: "'v set" and
-    a :: "'a" and
-    b :: "'a"
-  assumes "V = {}"
-  shows "prefer_count V p a b = 0"
-  unfolding zero_enat_def
-  using assms
-  by simp
-
-OBSOLETE: preferred_overall
-fun wins :: "'v set \<Rightarrow> 'a \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "wins V a p b =
-    (prefer_count V p a b > prefer_count V p b a)"
-*)
 
 lemma preferred_inf_voters:
   fixes
@@ -683,147 +587,20 @@ proof -
   thus "well_formed_profile V A (limit_profile A p)" 
     using well_formed_profile_def by blast
 qed
-
-subsection \<open>Lifting Property\<close>
-
-(* TODO: the following two lemmata are only true for preference-based profiles in this form.
-Adapt or move to PV-specific interpretations
-
-definition equiv_prof_except_a :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow>
-        ('v, 'b) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "equiv_prof_except_a V A p p' a \<equiv>
-    well_formed_profile V A p \<and> well_formed_profile V A p' \<and> a \<in> A \<and>
-      (\<forall> v \<in> V. equiv_rel_except_a A (p v) (p' v) a)"
-
-text \<open>
-  An alternative gets lifted from one profile to another iff
-  its ranking increases in at least one ballot, and nothing else changes.
-\<close>
-
-definition lifted :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('a, 'v) Profile \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "lifted V A p p' a \<equiv>
-    finite_profile V A p \<and> finite_profile V A p' \<and> a \<in> A
-      \<and> (\<forall> v \<in> V. \<not> Preference_Relation.lifted A (p v) (p' v) a \<longrightarrow> (p v) = (p' v))
-      \<and> (\<exists> v \<in> V. Preference_Relation.lifted A (p v) (p' v) a)"
-
-lemma lifted_imp_equiv_prof_except_a:
+ 
+lemma empty_prof_imp_zero_pref_count:
   fixes
-    A :: "'a set" and
+    p :: "('v, 'b) Profile" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes "lifted V A p p' a"
-  shows "equiv_prof_except_a V A p p' a"
-proof (unfold equiv_prof_except_a_def, safe)
-  show
-    "profile V A p" and
-    "profile V A p'" and
-    "a \<in> A"
-    using assms
-    unfolding lifted_def
-    by (metis, metis, metis)
-next
-  fix v :: "'v"
-  assume "v \<in> V"
-  thus "equiv_rel_except_a A (p v) (p' v) a"
-    using assms lifted_imp_equiv_rel_except_a trivial_equiv_rel
-    unfolding lifted_def profile_def
-    by (metis (no_types))
-qed
-
-lemma negl_diff_imp_eq_limit_prof:
-  fixes
-    A :: "'a set" and
-    A' :: "'a set" and
-    V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes
-    change: "equiv_prof_except_a V A' p q a" and
-    subset: "A \<subseteq> A'" and
-    not_in_A: "a \<notin> A"
-  shows "\<forall> v \<in> V. (limit_profile A p) v = (limit_profile A q) v"
-  \<comment> \<open>With the current definitions of \<open>equiv_prof_except_a\<close> and \<open>limit_prof\<close>, we can
-      only conclude that the limited profiles coincide on the given voter set, since
-      \<open>limit_prof\<close> may change the profiles everywhere, while \<open>equiv_prof_except_a\<close>
-      only makes statements about the voter set.\<close>
-proof (clarify)
-  fix
-    v :: 'v
-  assume "v \<in> V"
-  hence "equiv_rel_except_a A' (p v) (q v) a"
-    using change equiv_prof_except_a_def
-    by metis
-  thus "limit_profile A p v = limit_profile A q v"
-    using subset not_in_A negl_diff_imp_eq_limit
-    by simp
-qed
-
-lemma limit_prof_eq_or_lifted:
-  fixes
-    A :: "'a set" and
-    A' :: "'a set" and
-    V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    p' :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes
-    lifted_a: "lifted V A' p p' a" and
-    subset: "A \<subseteq> A'"
-  shows "(\<forall> v \<in> V. limit_profile A p v = limit_profile A p' v)
-        \<or> lifted V A (limit_profile A p) (limit_profile A p') a"
-proof (cases "a \<in> A")
-  case True
-  have "\<forall> v \<in> V. Preference_Relation.lifted A' (p v) (p' v) a \<or> (p v) = (p' v)"
-    using lifted_a
-    unfolding lifted_def
-    by metis
-  hence one:
-    "\<forall> v \<in> V.
-         Preference_Relation.lifted A (limit A (p v)) (limit A (p' v)) a \<or>
-           (limit A (p v)) = (limit A (p' v))"
-    using limit_lifted_imp_eq_or_lifted subset
-    by metis
-  thus ?thesis
-  proof (cases "\<forall> v \<in> V. limit A (p v) = limit A (p' v)")
-    case True
-    thus ?thesis
-      by simp
-  next
-    case False
-    let ?p = "limit_profile A p"
-    let ?q = "limit_profile A p'"
-    have
-      "profile V A ?p" and
-      "profile V A ?q"
-      using lifted_a subset limit_profile_sound
-      unfolding lifted_def
-      by (safe, safe)
-    moreover have
-      "\<exists> v \<in> V. Preference_Relation.lifted A (?p v) (?q v) a"
-      using False one
-      unfolding limit_profile.simps
-      by (metis (no_types, lifting))
-    ultimately have "lifted V A ?p ?q a"
-      using True lifted_a one rev_finite_subset subset
-      unfolding lifted_def limit_profile.simps
-      by (metis (no_types, lifting))
-    thus ?thesis
-      by simp
-  qed
-next
-  case False
-  thus ?thesis
-    using lifted_a negl_diff_imp_eq_limit_prof subset lifted_imp_equiv_prof_except_a
-    by metis
-qed
-
-*)
+    a :: "'a" and
+    b :: "'a"
+  assumes "V = {}"
+  shows "prefer_count V p a b = 0"
+  unfolding zero_enat_def
+  using assms
+  by simp
 
 end
-
 
 subsection \<open>List Representation for Ordered Voters\<close>
 
