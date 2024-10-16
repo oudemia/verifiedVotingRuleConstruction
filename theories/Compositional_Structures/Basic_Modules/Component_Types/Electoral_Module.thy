@@ -9,8 +9,8 @@
 section \<open>Electoral Module\<close>
 
 theory Electoral_Module
-  imports 
-  "Social_Choice_Types/Property_Interpretations" 
+imports 
+  "Social_Choice_Types/Property_Interpretations"
   "Social_Choice_Types/Electoral_Structure"
   "Social_Choice_Types/Aggregate_Profile"
 begin
@@ -110,6 +110,30 @@ definition (in electoral_structure) anonymity :: "('r, 'v, 'b) Electoral_Module 
         bij \<pi> \<longrightarrow> (let (R', V', q) = (rename \<pi> (R, V, p)) in
             finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> m V R p = m V' R' q))"
 
+lemma (in electoral_structure) anon_helper:
+fixes 
+  m :: "('r, 'v, 'b) Electoral_Module" and
+  R R' :: "'r set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'v \<Rightarrow> 'v" 
+assumes 
+  anon: "anonymity m" and
+  bij: "bij \<pi>" and
+  rename: "(R', V', q) = rename \<pi> (R, V, p)" and
+  fin: "finite_profile V (affected_alts R) p" and
+  fin':  "finite_profile V' (affected_alts R') q"
+shows "m V R p = m V' R' q"
+proof -
+  have "finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q 
+    \<longrightarrow> m V R p = m V' R' q"
+    using anon anonymity_def rename bij Let_def 
+    by (smt (verit, ccfv_SIG) case_prodD)
+  moreover have "finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q"
+    using fin fin' by simp
+  ultimately show "m V R p = m V' R' q" by simp
+qed
+  
 text \<open>
   In the case of single-winner elctions, anonymity can alternatively be described 
   as invariance under the voter permutation group acting on elections
@@ -133,26 +157,26 @@ text \<open>
   implies anonymity.
 \<close>
 
-fun (in electoral_structure) homogeneity :: "('r, 'v, 'b) Election set
-                                \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
+fun homogeneity :: "('a, 'v, 'a Preference_Relation) Election set
+                                \<Rightarrow>('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
   "homogeneity X m = is_symmetry (fun\<^sub>\<E> m) (Invariance (homogeneity\<^sub>\<R> X))"
 \<comment> \<open>This does not require any specific behaviour on infinite voter sets \<open>\<dots>\<close>
     It might make sense to extend the definition to that case somehow.\<close>
 
-fun homogeneity' :: "('a, 'v::linorder, 'b) Election set \<Rightarrow> ('a, 'v, 'b Result, 'r) Electoral_Module
+fun homogeneity' :: "('a, 'v::linorder, 'a Preference_Relation) Election set \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module
                           \<Rightarrow> bool" where
   "homogeneity' X m = is_symmetry (fun\<^sub>\<E> m) (Invariance (homogeneity\<^sub>\<R>' X))"
 
 lemma (in result) hom_imp_anon:
-  fixes X :: "('a, 'v) Election set"
+  fixes X :: "('a, 'v, 'a Preference_Relation) Election set"
   assumes
     "homogeneity X m" and
     "\<forall> E \<in> X. finite (voters_\<E> E)"
   shows "anonymity' X m"
 proof (unfold anonymity'.simps is_symmetry.simps, intro allI impI)
   fix
-    E :: "('a, 'v) Election" and
-    E' :: "('a, 'v) Election"
+    E :: "('a, 'v, 'a Preference_Relation) Election" and
+    E' :: "('a, 'v, 'a Preference_Relation) Election"
   assume rel: "(E, E') \<in> anonymity\<^sub>\<R> X"
   hence
     "E \<in> X" and
@@ -183,8 +207,8 @@ text \<open>
   candidates in the candidate set and election results.
 \<close>
 
-fun (in result_properties) neutrality :: "('a, 'v, 'b) Election set
-        \<Rightarrow> ('a, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
+fun (in result_properties) neutrality :: "('a, 'v, 'a Preference_Relation) Election set
+        \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
   "neutrality X m =
     is_symmetry (fun\<^sub>\<E> m) (action_induced_equivariance (carrier neutrality\<^sub>\<G>) X
           (\<phi>_neutr X) (result_action \<psi>_neutr))"
@@ -196,13 +220,19 @@ text \<open>
   reverses the result rankings as well.
 \<close>
 
-definition reversal_symmetry :: "('a, 'v) Election set
-                        \<Rightarrow> ('a, 'v, 'a rel Result) Electoral_Module \<Rightarrow> bool" where
+definition reversal_symmetry :: "('a, 'v, 'a Preference_Relation) Election set
+                        \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
   "reversal_symmetry X m =
     is_symmetry (fun\<^sub>\<E> m) (action_induced_equivariance (carrier reversal\<^sub>\<G>) X
           (\<phi>_rev X) (result_action \<psi>_rev))"
 
 subsection \<open>Social Choice Modules\<close>
+
+context electoral_structure 
+begin
+
+function partial_outcome :: "'a set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set \<Rightarrow> bool"
+where "partial_outcome A V p R = (well_formed_profile V A p \<and> affected_alts R = A \<and> finite A)"
 
 text \<open>
   The following results require electoral modules to return social choice results,
@@ -215,22 +245,23 @@ text \<open>
   n alternatives, whenever there are n or more alternatives.
 \<close>
 
-definition defers :: "nat \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module \<Rightarrow> bool" where
+
+definition defers :: "nat \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "defers n m \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
-      (\<forall> A V p. (card A \<ge> n \<and> finite A \<and> profile V A p)
-          \<longrightarrow> card (defer m V A p) = n)"
+    electoral_module m \<and>
+      (\<forall> A V p R. (card R \<ge> n \<and> affected_alts R = A \<and> finite A \<and> well_formed_profile V A p)
+          \<longrightarrow> card (defer m V R p) = n)"
 
 text \<open>
   "rejects n" is true for all electoral modules that reject exactly
   n alternatives, whenever there are n or more alternatives.
 \<close>
 
-definition rejects :: "nat \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module \<Rightarrow> bool" where
+definition rejects :: "nat \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "rejects n m \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
-      (\<forall> A V p. (card A \<ge> n \<and> finite A \<and> profile V A p)
-          \<longrightarrow> card (reject m V A p) = n)"
+    electoral_module m \<and>
+      (\<forall> A V p R. (card R \<ge> n \<and> affected_alts R = A \<and> finite A \<and> well_formed_profile V A p)
+          \<longrightarrow> card (reject m V R p) = n)"
 
 text \<open>
   As opposed to "rejects", "eliminates" allows to stop rejecting if no
@@ -239,7 +270,7 @@ text \<open>
 
 definition eliminates :: "nat \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module \<Rightarrow> bool" where
   "eliminates n m \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
+    electoral_module m \<and>
       (\<forall> A V p. (card A > n \<and> profile V A p) \<longrightarrow> card (reject m V A p) = n)"
 
 text \<open>
@@ -269,6 +300,7 @@ definition unique_winner_if_profile_non_empty :: "('a, 'v, 'a Result) Electoral_
     \<S>\<C>\<F>_result.electoral_module m \<and>
     (\<forall> A V p. (A \<noteq> {} \<and> V \<noteq> {} \<and> profile V A p) \<longrightarrow>
               (\<exists> a \<in> A. m V A p = ({a}, A - {a}, {})))"
+end
 
 subsection \<open>Equivalence Definitions\<close>
 

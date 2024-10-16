@@ -10,7 +10,59 @@ locale electoral_structure =
   well_formed_result :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" + 
   fixes limit_by_conts :: "'r set \<Rightarrow> 'b \<Rightarrow> 'b"
   assumes
-    "\<And> (A :: 'a set) (b :: 'b) (R :: 'r set). limit_by_conts R b = limit_ballot (affected_alts R) b"
+    limit_inherit: "\<And> (A :: 'a set) (b :: 'b) (R :: 'r set). limit_by_conts R b = limit_ballot (affected_alts R) b"
+begin
+
+lemma well_formed_ballots_inherit:
+fixes
+  V :: "'v set" and
+  A :: "'a set" and
+  p p' :: "('v, 'b) Profile" and
+  v :: 'v
+assumes 
+  elem: "v \<in> V" and
+  fp: "finite_profile V A p" and
+  lim: "p' = (limit_by_conts (contenders A) \<circ> p)"
+shows "well_formed_ballot (affected_alts (contenders A)) (p' v)"
+proof -
+  let ?R = "contenders A"
+  have "finite A" using fp by simp
+  hence subR: "affected_alts ?R \<subseteq> A" 
+    using result_axioms
+    by (metis bot.extremum result_def subset_iff_psubset_eq)
+  moreover have "well_formed_ballot A (p v)" 
+    using fp elem
+    by (simp add: well_formed_profile_def)
+  moreover have "limit_by_conts ?R (p' v) = limit_ballot (affected_alts ?R) (p' v)"
+    using limit_inherit 
+    by blast
+  ultimately show "well_formed_ballot (affected_alts ?R) (p' v)"
+    by (simp add: lim limit_inherit limit_sound)
+qed
+
+(*
+function permute_bal :: "('a \<Rightarrow> 'a) \<Rightarrow> 'b \<Rightarrow> 'b" where
+  "permute_bal \<pi> b = let \<rho>"
+proof (auto)
+qed  
+
+function permute_cont :: "('a \<Rightarrow> 'a) \<Rightarrow> 'r \<Rightarrow> 'r" where
+  "permute_cont \<pi> c = c"
+proof (auto)
+qed  
+
+fun permute_alts :: "('v \<Rightarrow> 'v) \<Rightarrow> ('x, 'v, 'b) Election \<Rightarrow> ('x, 'v, 'b) Election" where
+  "permute_alts \<pi> (X, V, p) = (X, \<pi> ` V, p \<circ> (the_inv \<pi>))"
+*)
+
+lemma wtf: 
+fixes \<pi> :: "'a \<Rightarrow> 'a"
+assumes "bij \<pi>"
+shows "\<exists>(\<rho> :: 'b \<Rightarrow> 'b). bij \<rho> \<and> (\<forall> b. well_formed_ballot A b \<longrightarrow> (\<forall> B \<subseteq> A. limit_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_ballot B b)))"
+proof
+oops
+
+end
 
 sublocale electoral_structure \<subseteq> ballot
 proof (unfold_locales)
@@ -57,7 +109,50 @@ fix
   have a2_in_R:  "a2 \<in> R" using as_in_b by auto
   moreover have "(a1, a2) \<in> b" using as_in_b by auto
   thus "(a1, a2) \<in> limit_pref_to_alts R b" by (simp add: a1_in_R a2_in_R)
+  next
 qed
+(*
+fix
+    A :: "'a set" and
+    \<pi> :: "'a \<Rightarrow> 'a"
+  assume bij: "bij \<pi>"
+  show "\<exists>\<rho>. bij \<rho> \<and> (\<forall>b. ballot_\<P>\<V> A b \<longrightarrow> (\<forall>B\<subseteq>A. limit_\<P>\<V>_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_\<P>\<V>_ballot B b)))"
+  proof (standard)
+    obtain \<rho> where *: "\<rho> = (\<lambda> b. (\<lambda> (a1, a2). (\<pi> a1, \<pi> a2)) ` b)" by simp
+    have "bij \<rho> \<and> (\<forall>b. ballot_\<P>\<V> A b \<longrightarrow> (\<forall>B\<subseteq>A. limit_\<P>\<V>_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_\<P>\<V>_ballot B b)))"
+    proof (standard)
+    have "bij \<rho>" 
+    proof (unfold bij_def inj_def surj_def, auto)
+    fix 
+      x y :: "('a \<times> 'a) set" and
+      a b :: 'a
+    assume 
+      eq: "\<rho> x = \<rho> y" and 
+      elem: "(a, b) \<in> x"
+    hence "(\<pi> a, \<pi> b) \<in> \<rho> x" using * by fast
+    hence "(\<pi> a, \<pi> b) \<in> \<rho> y" using eq by simp
+    hence "((the_inv \<pi>)(\<pi> a), (the_inv \<pi>)(\<pi> b)) \<in> y" using bij * by try
+
+    thus "(a, b) \<in> y" using bij by try
+    proof (auto)
+    fix
+   
+    qed      
+    next
+      fix B :: "'a set"
+      assume sub: "B \<subseteq> A"
+      have "bij \<rho> \<and> (\<forall>b. ballot_\<P>\<V> A b \<longrightarrow> (\<forall>B\<subseteq>A. limit_\<P>\<V>_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_\<P>\<V>_ballot B b)))" sorry
+   thus ?thesis
+qed
+
+emma "EX x. P x"
+proof -
+obtain x where <...>
+<...>
+have "P x" <...>
+show ?thesis ..
+qed 
+*)
 
 
 fun limit_app_to_alts :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
