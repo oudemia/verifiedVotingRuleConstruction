@@ -71,18 +71,22 @@ text \<open>
   Electoral modules can be used as voting rules. They can also be composed
   in multiple structures to create more complex electoral modules.
 \<close>
-
-fun (in electoral_structure) electoral_module :: "('r, 'v, 'b) Electoral_Module
-                                      \<Rightarrow> bool" where
-    "electoral_module m = (\<forall> A R V p. well_formed_profile V A p \<and> affected_alts R = A \<longrightarrow> well_formed_result A (m V R p))"
-
 fun voters_determine_election :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "voters_determine_election m =
     (\<forall> R V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (m V R p = m V R p'))"
 
-lemma (in electoral_structure) electoral_modI:
+context electoral_structure 
+begin    
+
+fun electoral_module :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
+    "electoral_module m = (\<forall> A R V p. well_formed_profile V A p \<and> R = contenders A \<longrightarrow> 
+        well_formed_result A (m V R p))"
+    (*"electoral_module m = (\<forall> A R V p. well_formed_profile V A p \<and> affected_alts R = A \<longrightarrow> well_formed_result A (m V R p))"*)
+
+
+lemma electoral_modI:
   fixes m :: "('r, 'v, 'b) Electoral_Module"
-  assumes "\<And> A R V p. well_formed_profile V A p \<and> affected_alts R = A \<Longrightarrow> well_formed_result A (m V R p)"
+  assumes "\<And> A R V p. well_formed_profile V A p \<and> R = contenders A \<Longrightarrow> well_formed_result A (m V R p)"
   shows "electoral_module m"
   unfolding electoral_module.simps
   using assms by simp
@@ -103,14 +107,14 @@ text \<open>
   identical result.
 \<close>
 
-definition (in electoral_structure) anonymity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where 
+definition anonymity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where 
   "anonymity m \<equiv>
     electoral_module m \<and>
-      (\<forall> (R::('r set)) V p \<pi>::('v \<Rightarrow> 'v).
+      (\<forall> R V p \<pi>.
         bij \<pi> \<longrightarrow> (let (R', V', q) = (rename \<pi> (R, V, p)) in
             finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> m V R p = m V' R' q))"
 
-lemma (in electoral_structure) anon_helper:
+lemma anonymity_prereq:
 fixes 
   m :: "('r, 'v, 'b) Electoral_Module" and
   R R' :: "'r set" and
@@ -123,17 +127,187 @@ assumes
   rename: "(R', V', q) = rename \<pi> (R, V, p)" and
   fin: "finite_profile V (affected_alts R) p" and
   fin':  "finite_profile V' (affected_alts R') q"
-shows "m V R p = m V' R' q"
-proof -
-  have "finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q 
-    \<longrightarrow> m V R p = m V' R' q"
-    using anon anonymity_def rename bij Let_def 
-    by (smt (verit, ccfv_SIG) case_prodD)
+  shows "m V R p = m V' R' q"
+  proof -
+  have "(let (R', V', q) = (rename \<pi> (R, V, p)) in
+       finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
+       m V R p = m V' R' q)" 
+    using anon anonymity_def bij 
+    by blast
+  hence "finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
+       m V R p = m V' R' q" 
+    using rename 
+    by simp
   moreover have "finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q"
-    using fin fin' by simp
+    using fin fin' 
+    by simp
   ultimately show "m V R p = m V' R' q" by simp
 qed
-  
+
+(*
+lemma permute_V_preserves_winners: 
+fixes 
+  A :: "'a set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'v \<Rightarrow> 'v" and
+  m :: "('r, 'v, 'b) Electoral_Module"
+assumes 
+  bij: "bij \<pi>" and
+  rename: "(A, V', q) = rename \<pi> (A, V, p)" and
+  fp: "finite_profile V A p" and
+  fp': "finite_profile V' A q" and
+  anon: "anonymity m"
+shows "elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p) \<subseteq> elect m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)"
+proof (standard)
+  fix c :: 'r
+  assume win: "c \<in> elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
+  let ?R = "contenders A"
+  let ?p = "(limit_by_conts (contenders A) \<circ> p)"
+  let ?q = "(limit_by_conts (contenders A) \<circ> (p \<circ> the_inv \<pi>))"
+  have subR: "affected_alts ?R \<subseteq> A" 
+    by (metis emptyE result_axioms result_def subsetI)
+  hence finR: "finite (affected_alts ?R)" 
+    using fp finite_subset 
+    by blast
+  have "\<forall> v \<in> V. well_formed_ballot (affected_alts ?R) (?p v)" 
+    using well_formed_ballots_inherit
+    by (metis fp)
+  hence "well_formed_profile V (affected_alts ?R) ?p"
+    using well_formed_profile_def 
+    by blast
+  hence *: "finite_profile V (affected_alts ?R) ?p" 
+    using fp finR
+    by blast
+  have "\<forall> v \<in> V'. well_formed_ballot (affected_alts ?R) (?q v)"
+    using well_formed_ballots_inherit
+    by (metis fp' rename rename.simps snd_conv)
+  hence "well_formed_profile V' (affected_alts ?R) ?q"
+    using well_formed_profile_def 
+    by blast
+  hence **: "finite_profile V' (affected_alts ?R) ?q" 
+    using fp' finR
+    by blast
+  have "(?R, V', ?q) = rename \<pi> (?R, V, ?p)" 
+    using rename 
+    by auto
+  hence "m V ?R ?p = m V' ?R ?q" 
+    using anonymity_prereq anon bij rename * ** 
+    by blast
+  thus "c \<in> elect m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)" 
+    using rename win 
+    by fastforce
+qed
+
+lemma permute_V_preserves_defers: 
+fixes 
+  A :: "'a set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'v \<Rightarrow> 'v" and
+  m :: "('r, 'v, 'b) Electoral_Module"
+assumes 
+  bij: "bij \<pi>" and
+  rename: "(A, V', q) = rename \<pi> (A, V, p)" and
+  fp: "finite_profile V A p" and
+  fp': "finite_profile V' A q" and
+  anon: "anonymity m"
+shows "defer m V (contenders A) (limit_by_conts (contenders A) \<circ> p) \<subseteq> defer m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)"
+proof (standard)
+  fix c :: 'r
+  assume win: "c \<in> defer m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
+  let ?R = "contenders A"
+  let ?p = "(limit_by_conts (contenders A) \<circ> p)"
+  let ?q = "(limit_by_conts (contenders A) \<circ> (p \<circ> the_inv \<pi>))"
+  have subR: "affected_alts ?R \<subseteq> A" 
+    by (metis emptyE result_axioms result_def subsetI)
+  hence finR: "finite (affected_alts ?R)" 
+    using fp finite_subset 
+    by blast
+  have "\<forall> v \<in> V. well_formed_ballot (affected_alts ?R) (?p v)" 
+    using well_formed_ballots_inherit
+    by (metis fp)
+  hence "well_formed_profile V (affected_alts ?R) ?p"
+    using well_formed_profile_def 
+    by blast
+  hence *: "finite_profile V (affected_alts ?R) ?p" 
+    using fp finR
+    by blast
+  have "\<forall> v \<in> V'. well_formed_ballot (affected_alts ?R) (?q v)"
+    using well_formed_ballots_inherit
+    by (metis fp' rename rename.simps snd_conv)
+  hence "well_formed_profile V' (affected_alts ?R) ?q"
+    using well_formed_profile_def 
+    by blast
+  hence **: "finite_profile V' (affected_alts ?R) ?q" 
+    using fp' finR
+    by blast
+  have "(?R, V', ?q) = rename \<pi> (?R, V, ?p)" 
+    using rename 
+    by auto
+  hence "m V ?R ?p = m V' ?R ?q" 
+    using anonymity_prereq anon bij rename * ** 
+    by blast
+  thus "c \<in> defer m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)" 
+    using rename win 
+    by fastforce
+qed
+*)
+
+lemma permute_V_preserves_result: 
+fixes 
+  A :: "'a set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'v \<Rightarrow> 'v" and
+  m :: "('r, 'v, 'b) Electoral_Module"
+assumes 
+  bij: "bij \<pi>" and
+  rename: "(A, V', q) = rename \<pi> (A, V, p)" and
+  fp: "finite_profile V A p" and
+  fp': "finite_profile V' A q" and
+  anon: "anonymity m"
+shows "m V (contenders A) (limit_by_conts (contenders A) \<circ> p) = m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)"
+proof -
+  let ?R = "contenders A"
+  let ?p = "(limit_by_conts (contenders A) \<circ> p)"
+  let ?q = "(limit_by_conts (contenders A) \<circ> (p \<circ> the_inv \<pi>))"
+  have subR: "affected_alts ?R \<subseteq> A" 
+    by (metis emptyE result_axioms result_def subsetI)
+  hence finR: "finite (affected_alts ?R)" 
+    using fp finite_subset 
+    by blast
+  have "\<forall> v \<in> V. well_formed_ballot (affected_alts ?R) (?p v)" 
+    using well_formed_ballots_inherit
+    by (metis fp)
+  hence "well_formed_profile V (affected_alts ?R) ?p"
+    using well_formed_profile_def 
+    by blast
+  hence *: "finite_profile V (affected_alts ?R) ?p" 
+    using fp finR
+    by blast
+  have "\<forall> v \<in> V'. well_formed_ballot (affected_alts ?R) (?q v)"
+    using well_formed_ballots_inherit
+    by (metis fp' rename rename.simps snd_conv)
+  hence "well_formed_profile V' (affected_alts ?R) ?q"
+    using well_formed_profile_def 
+    by blast
+  hence **: "finite_profile V' (affected_alts ?R) ?q" 
+    using fp' finR
+    by blast
+  have rename_res: "(?R, V', ?q) = rename \<pi> (?R, V, ?p)" 
+    using rename 
+    by auto
+  hence res_eq: "m V ?R ?p = m V' ?R ?q" 
+    using anonymity_prereq anon bij rename * ** 
+    by blast
+  thus "m V ?R ?p = m V' ?R (limit_by_conts (contenders A) \<circ> q)"
+    using rename by auto
+qed
+
+
+end
+
 text \<open>
   In the case of single-winner elctions, anonymity can alternatively be described 
   as invariance under the voter permutation group acting on elections
@@ -206,6 +380,8 @@ text \<open>
   Neutrality is equivariance under consistent renaming of
   candidates in the candidate set and election results.
 \<close>
+
+(*
 
 fun (in result_properties) neutrality :: "('a, 'v, 'a Preference_Relation) Election set
         \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
@@ -824,6 +1000,7 @@ proof -
     by metis
 qed
 
+*)
 subsection \<open>Non-Blocking\<close>
 
 text \<open>
@@ -831,11 +1008,14 @@ text \<open>
   this module never rejects all alternatives.
 \<close>
 
-definition non_blocking :: "('a, 'v, 'a Result) Electoral_Module \<Rightarrow> bool" where
+definition (in electoral_structure) non_blocking :: 
+  "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "non_blocking m \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
-      (\<forall> A V p. ((A \<noteq> {} \<and> finite A \<and> profile V A p) \<longrightarrow> reject m V A p \<noteq> A))"
+    electoral_module m \<and>
+      (\<forall> V A R p. ((R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p) 
+      \<longrightarrow> reject m V R p \<noteq> R))"
 
+(*      
 subsection \<open>Electing\<close>
 
 text \<open>
@@ -1369,4 +1549,5 @@ definition (in electoral_structure) monotonicity :: "('r, 'v, 'b) Electoral_Modu
     electoral_module m \<and>
       (\<forall> A V p q a. a \<in> elect m V A p \<and> lifted V A p q a \<longrightarrow> a \<in> elect m V A q)"
 
+*)
 end
