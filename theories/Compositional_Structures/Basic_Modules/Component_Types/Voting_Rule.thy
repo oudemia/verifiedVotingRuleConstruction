@@ -91,6 +91,11 @@ end
 
 subsection \<open>The Elector Voting Rule\<close>
 
+text \<open>
+  The elector voting rule elects exactly those contenders that a given electoral module elects.
+  It therefore discards all deferred and rejected contenders.
+\<close>
+
 lemma bij_id:
 fixes 
   \<pi> :: "'x \<Rightarrow>'x"
@@ -115,70 +120,24 @@ begin
 fun elector :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule" where
 "elector m V A p = elect m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p)"
 
+text \<open>
+  The following variant of the  elector voting rule elects elected and deferred contenders,
+  therefore discarding exactly the rejected contenders.
+\<close>
+fun elector\<^sub>d :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule" where
+"elector\<^sub>d m V A p = ((elect m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p))
+        \<union> (defer m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p)))"
 
-lemma permute_V_preserves_winners: 
-fixes 
-  A :: "'a set" and
-  V V' :: "'v set" and
-  p q :: "('v, 'b) Profile" and
-  \<pi> :: "'v \<Rightarrow> 'v" and
-  m :: "('r, 'v, 'b) Electoral_Module"
-assumes 
-  bij: "bij \<pi>" and
-  rename: "(A, V', q) = rename \<pi> (A, V, p)" and
-  fp: "finite_profile V A p" and
-  fp': "finite_profile V' A q" and
-  anon: "anonymity m"
-shows "elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p) \<subseteq> elect m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)"
-proof (standard)
-  fix c :: 'r
-  assume win: "c \<in> elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
-  let ?R = "contenders A"
-  let ?p = "(limit_by_conts (contenders A) \<circ> p)"
-  let ?q = "(limit_by_conts (contenders A) \<circ> (p \<circ> the_inv \<pi>))"
-  have subR: "affected_alts ?R \<subseteq> A" 
-    by (metis emptyE result_axioms result_def subsetI)
-  hence finR: "finite (affected_alts ?R)" 
-    using fp finite_subset 
-    by blast
-  have "\<forall> v \<in> V. well_formed_ballot (affected_alts ?R) (?p v)" 
-    using well_formed_ballots_inherit
-    by (metis fp)
-  hence "well_formed_profile V (affected_alts ?R) ?p"
-    using well_formed_profile_def 
-    by blast
-  hence *: "finite_profile V (affected_alts ?R) ?p" 
-    using fp finR
-    by blast
-  have "\<forall> v \<in> V'. well_formed_ballot (affected_alts ?R) (?q v)"
-    using well_formed_ballots_inherit
-    by (metis fp' rename rename.simps snd_conv)
-  hence "well_formed_profile V' (affected_alts ?R) ?q"
-    using well_formed_profile_def 
-    by blast
-  hence **: "finite_profile V' (affected_alts ?R) ?q" 
-    using fp' finR
-    by blast
-  have "(?R, V', ?q) = rename \<pi> (?R, V, ?p)" 
-    using rename 
-    by auto
-  hence "m V ?R ?p = m V' ?R ?q" 
-    using anon_helper anon bij rename * ** 
-    by blast
-  thus "c \<in> elect m V' (contenders A) (limit_by_conts (contenders A) \<circ> q)" 
-    using rename win 
-    by fastforce
-qed
   
-lemma elect_inherits_anonymity:   
+lemma elector_inherits_anonymity:   
 fixes m :: "('r, 'v, 'b) Electoral_Module"
 assumes anon: "anonymity m"
 shows "vr_anonymity (elector m)"
 proof (unfold vr_anonymity_def, simp add: Let_def, safe)
 fix 
-  A A' :: "'a set" and
-  V V' :: "'v set" and
-  p q :: "('v, 'b) Profile" and
+  A :: "'a set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile" and
   \<pi> :: "'v \<Rightarrow> 'v" and
   c :: 'r
 let ?V = "(\<pi> ` V)"
@@ -194,13 +153,13 @@ assume
   win: "c \<in> elect m V (contenders A) ?p"
   have "(A, ?V, ?q) = rename \<pi> (A, V, p)" by simp
   thus "c \<in> elect m ?V (contenders A) (limit_by_conts (contenders A) \<circ> ?q)"
-  using assms bij finA finV permute_V_preserves_winners wfp wfp' win 
-  by blast
+  using anon bij finA finV finV' wfp wfp' win permute_V_preserves_result
+  by metis
 next
 fix 
-  A A' :: "'a set" and
-  V V' :: "'v set" and
-  p q :: "('v, 'b) Profile" and
+  A :: "'a set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile" and
   \<pi> :: "'v \<Rightarrow> 'v" and
   c :: 'r
   let ?V = "(\<pi> ` V)"
@@ -234,8 +193,92 @@ assume
     using * 
     by fastforce
   thus "c \<in> elect m V (contenders A) ?p"
-    using assms finA finV inv_bij permute_V_preserves_winners wfp wfp' win 
-    by blast
+    using anon inv_bij finA finV finV' wfp wfp' win permute_V_preserves_result
+    by metis
+qed
+
+lemma elector\<^sub>d_inherits_anonymity:   
+fixes m :: "('r, 'v, 'b) Electoral_Module"
+assumes anon: "anonymity m"
+shows "vr_anonymity (elector\<^sub>d m)"
+proof (unfold vr_anonymity_def Let_def, safe)
+fix 
+  A A' :: "'a set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'v \<Rightarrow> 'v" and
+  c :: 'r
+assume 
+  bij: "bij \<pi>" and
+  rename: "rename \<pi> (A, V, p) = (A', V', q)" and
+  finA: "finite A" and
+  finV: "finite V" and
+  finV': "finite V'" and
+  wfp: "well_formed_profile V A p" and
+  wfp': "well_formed_profile V' A' q" and
+  win: "c \<in> elector\<^sub>d m V A p"
+  have "V' = (\<pi> ` V)" using rename by simp
+  have A_id: "A' = A" using rename by simp
+  have "q = (p \<circ> the_inv \<pi>)" using rename by simp
+  have *: "c \<in> elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p) \<union>
+         defer m V (contenders A) (limit_by_conts (contenders A) \<circ> p)" 
+    using win elector\<^sub>d.simps 
+    by simp
+  thus "c \<in> elector\<^sub>d m V' A' q"
+  proof (cases)
+    assume "c \<in> elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p)" 
+    hence "c \<in> elect m V' (contenders A') (limit_by_conts (contenders A) \<circ> q)"
+      using A_id assms bij finA finV finV' permute_V_preserves_result rename wfp wfp'
+      by metis
+    thus "c \<in> elector\<^sub>d m V' A' q" by (simp add: A_id)
+  next
+    assume "\<not> c \<in> elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
+    hence "c \<in> defer m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
+      using * by blast
+    hence "c \<in> defer m V' (contenders A') (limit_by_conts (contenders A) \<circ> q)"
+      using A_id assms bij finA finV finV' permute_V_preserves_result rename wfp wfp'
+      by metis
+    thus "c \<in> elector\<^sub>d m V' A' q" by (simp add: A_id)
+  qed
+next
+fix 
+  A A' :: "'a set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'v \<Rightarrow> 'v" and
+  c :: 'r
+assume 
+  bij: "bij \<pi>" and
+  rename: "rename \<pi> (A, V, p) = (A', V', q)" and
+  finA: "finite A" and
+  finV: "finite V" and
+  finV': "finite V'" and
+  wfp: "well_formed_profile V A p" and
+  wfp': "well_formed_profile V' A' q" and
+  win: "c \<in> elector\<^sub>d m V' A' q"
+  have "V' = (\<pi> ` V)" using rename by simp
+  have A_id: "A' = A" using rename by simp
+  have "q = (p \<circ> the_inv \<pi>)" using rename by simp
+  have *: "c \<in> elect m V' (contenders A') (limit_by_conts (contenders A') \<circ> q) \<union>
+         defer m V' (contenders A') (limit_by_conts (contenders A') \<circ> q)" 
+    using win elector\<^sub>d.simps 
+    by simp
+  thus "c \<in> elector\<^sub>d m V A p"
+  proof (cases)
+    assume "c \<in> elect m V' (contenders A') (limit_by_conts (contenders A') \<circ> q)" 
+    hence "c \<in> elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
+      using A_id assms bij finA finV finV' permute_V_preserves_result rename wfp wfp'
+      by metis
+    thus "c \<in> elector\<^sub>d m V A p" by (simp add: A_id)
+  next
+    assume "\<not> c \<in> elect m V' (contenders A') (limit_by_conts (contenders A') \<circ> q)"
+    hence "c \<in> defer m V' (contenders A') (limit_by_conts (contenders A') \<circ> q)"
+      using * by blast
+    hence "c \<in> defer m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
+      using A_id assms bij finA finV finV' permute_V_preserves_result rename wfp wfp'
+      by metis
+    thus "c \<in> elector\<^sub>d m V A p" by (simp add: A_id)
+    qed
 qed
 
 end
