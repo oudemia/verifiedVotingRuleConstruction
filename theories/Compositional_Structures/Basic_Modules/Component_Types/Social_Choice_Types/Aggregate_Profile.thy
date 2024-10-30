@@ -56,12 +56,12 @@ fixes
 assumes 
   bij: "bij \<pi>" and 
   rename: "rename \<pi> (A, V, p) = (A', V', q)"
-  shows "rename \<pi> ((committees A), V, (aggregate A) \<circ> p) = ((committees A'), V', (aggregate A') \<circ> q)"
+  shows "rename \<pi> ((contenders A), V, (aggregate A) \<circ> p) = ((contenders A'), V', (aggregate A') \<circ> q)"
   proof (standard, simp)
     have A_id: "A = A'" using rename by simp
-    thus "committees A = committees A'" by simp
+    thus "contenders A = contenders A'" by simp
   next
-    show "snd (rename \<pi> (committees A, V, aggregate A \<circ> p)) = snd (committees A', V', aggregate A' \<circ> q)"
+    show "snd (rename \<pi> (contenders A, V, aggregate A \<circ> p)) = snd (contenders A', V', aggregate A' \<circ> q)"
     proof (standard, simp)
       show "\<pi> ` V = V'" using rename by simp 
     next
@@ -71,8 +71,8 @@ assumes
       hence "(aggregate A') \<circ> q = (aggregate A) \<circ> p \<circ> (the_inv \<pi>)" 
         using A_id 
         by simp
-      thus "snd (snd (rename \<pi> (committees A, V, aggregate A \<circ> p))) = 
-        snd (snd (committees A', V', aggregate A' \<circ> q))" 
+      thus "snd (snd (rename \<pi> (contenders A, V, aggregate A \<circ> p))) = 
+        snd (snd (contenders A', V', aggregate A' \<circ> q))" 
         by simp
   qed
 qed
