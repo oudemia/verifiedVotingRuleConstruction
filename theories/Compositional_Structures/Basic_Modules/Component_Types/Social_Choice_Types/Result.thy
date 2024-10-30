@@ -58,8 +58,8 @@ locale result =
     well_formed_result :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" and
     limit_contenders :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
     affected_alts :: "'r set \<Rightarrow> 'a set"
-  assumes "\<And> (A::('a set)) (r::('r Result)).
-    (set_equals_partition (limit_contenders A UNIV) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
+  assumes min_wf: "\<And> (A::('a set)) (r::('r Result)).
+    (set_equals_partition (contenders A) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
     "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_contenders A r)) \<subseteq> A" and
     "\<And> (A::('a set)). affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
     "\<And> (A :: 'a set)(B :: 'a set). A \<subseteq> B  \<Longrightarrow> (affected_alts (contenders A)) \<subseteq> (affected_alts (contenders B))"
@@ -88,18 +88,6 @@ text \<open>
   on an additional parameter k, the desired committee size.
 \<close>
 
-(* WHAT DIDN'T WORK:
-
-locale committee_result = result + 
-  fixes k :: "nat"
-  assumes k_positive [simp] : "k \<ge> 1"
-begin
-...
-
-...
-assumes "\<And> (A:: 'a set) (e :: 'r set set) (r:: 'r set) (d:: 'r set).
-    (well_formed_result A (e, r, d)) \<Longrightarrow> (\<forall> c. c \<in> e \<longrightarrow> (card c = k))"
- *)
 
 type_synonym 'a Committee = "'a set"
 
@@ -145,6 +133,14 @@ proof standard
     thus "a \<in> \<Union>(committees A)" by blast
   qed
 qed
+  
+lemma no_committees_possible:
+fixes A :: "'a set"
+assumes 
+fin: "finite A" and 
+*: "k > card A"
+shows "committees A = {}"
+using "*" card_mono fin leD by auto
 
 lemma all_committees:
   fixes A :: "'a set"

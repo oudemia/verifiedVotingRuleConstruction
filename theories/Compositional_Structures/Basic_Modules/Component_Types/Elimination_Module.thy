@@ -617,13 +617,9 @@ fixes
   e :: "('r, 'v, 'b) Evaluation_Function" and
   R :: "'r set" and
   V V' :: "'v set" and
-  p q :: "('v, 'b) Profile" and
-  \<pi> :: "'v \<Rightarrow> 'v"
-assumes    
-  bij: "bij \<pi>" and  
-  finR: "finite R" and
-  *: "\<forall>r \<in> R. (e V r R p) = (e V' r R q)"
-  shows "max_eliminator e V R p = max_eliminator e V' R q"
+  p q :: "('v, 'b) Profile"
+assumes *: "\<forall>r \<in> R. (e V r R p) = (e V' r R q)"
+shows "max_eliminator e V R p = max_eliminator e V' R q"
 proof -
   let ?max = "(Max {e V x R p | x. x \<in> R})" 
   let ?max' = "(Max {e V' x R q | x. x \<in> R})" 

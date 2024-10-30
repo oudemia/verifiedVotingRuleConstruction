@@ -33,7 +33,7 @@ proof (unfold_locales, safe)
     r :: "'a set" and
     d :: "'a set"
   assume
-    "set_equals_partition (limit_alts A UNIV) (e, r, d)" and
+    "set_equals_partition A (e, r, d)" and
     "disjoint3 (e, r, d)"
   thus "well_formed_\<S>\<C>\<F> A (e, r, d)"
     by simp
@@ -73,15 +73,6 @@ global_interpretation multi_winner_result:
   result "\<lambda> A. Pow A" "\<lambda> A r. set_equals_partition (Pow A) r \<and> disjoint3 r"
           "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs"
 proof (unfold_locales, safe)
-  fix
-    A :: "'b set" and
-    e :: "'b set set" and
-    r :: "'b set set" and
-    d :: "'b set set"
-  assume "set_equals_partition {r \<inter> A |r. r \<in> UNIV} (e, r, d)"
-  thus "set_equals_partition (Pow A) (e, r, d)"
-    by force
-next
   fix
     A X :: "'a set" and
     a :: 'a
@@ -190,9 +181,8 @@ proof (unfold_locales, safe)
     A :: "'a set" and
     r :: "('a Committee) Result"
   assume 
-    partition: "set_equals_partition (limit_committees A UNIV) r" and
+    partition: "set_equals_partition (committees A) r" and
     disjoint: "disjoint3 r"
-  moreover have comm_eq: "committees A = limit_committees A UNIV" by auto
   thus "well_formed_committee_result A r" using partition disjoint by auto
 next
    fix

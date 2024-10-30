@@ -17,7 +17,7 @@ text \<open>
 
 subsection \<open>Definition\<close>
 
-type_synonym ('a, 'v) Consensus = "('a, 'v) Election \<Rightarrow> bool"
+type_synonym ('a, 'v, 'b) Consensus = "('a, 'v, 'b) Election \<Rightarrow> bool"
 
 subsection \<open>Consensus Conditions\<close>
 
@@ -25,7 +25,7 @@ text \<open>
   Nonempty alternative set.
 \<close>
 
-fun nonempty_set\<^sub>\<C> :: "('a, 'v) Consensus" where
+fun nonempty_set\<^sub>\<C> :: "('a, 'v, 'b) Consensus" where
   "nonempty_set\<^sub>\<C> (A, V, p) = (A \<noteq> {})"
 
 text \<open>
@@ -33,46 +33,46 @@ text \<open>
   Note that this is also true if p v = {} for all voters v in V.
 \<close>
 
-fun nonempty_profile\<^sub>\<C> :: "('a, 'v) Consensus" where
+fun nonempty_profile\<^sub>\<C> :: "('a, 'v, 'b) Consensus" where
   "nonempty_profile\<^sub>\<C> (A, V, p) = (V \<noteq> {})"
 
 text \<open>
   Equal top ranked alternatives.
 \<close>
 
-fun equal_top\<^sub>\<C>' :: "'a \<Rightarrow> ('a, 'v) Consensus" where
+fun equal_top\<^sub>\<C>' :: "'a \<Rightarrow> ('a, 'v, 'b) Consensus" where
   "equal_top\<^sub>\<C>' a (A, V, p) = (a \<in> A \<and> (\<forall> v \<in> V. above (p v) a = {a}))"
 
-fun equal_top\<^sub>\<C> :: "('a, 'v) Consensus" where
+fun equal_top\<^sub>\<C> :: "('a, 'v, 'b) Consensus" where
   "equal_top\<^sub>\<C> c = (\<exists> a. equal_top\<^sub>\<C>' a c)"
 
 text \<open>
   Equal votes.
 \<close>
 
-fun equal_vote\<^sub>\<C>' :: "'a Preference_Relation \<Rightarrow> ('a, 'v) Consensus" where
+fun equal_vote\<^sub>\<C>' :: "'a Preference_Relation \<Rightarrow> ('a, 'v, 'b) Consensus" where
   "equal_vote\<^sub>\<C>' r (A, V, p) = (\<forall> v \<in> V. (p v) = r)"
 
-fun equal_vote\<^sub>\<C> :: "('a, 'v) Consensus" where
+fun equal_vote\<^sub>\<C> :: "('a, 'v, 'b) Consensus" where
   "equal_vote\<^sub>\<C> c = (\<exists> r. equal_vote\<^sub>\<C>' r c)"
 
 text \<open>
   Unanimity condition.
 \<close>
 
-fun unanimity\<^sub>\<C> :: "('a, 'v) Consensus" where
+fun unanimity\<^sub>\<C> :: "('a, 'v, 'b) Consensus" where
   "unanimity\<^sub>\<C> c = (nonempty_set\<^sub>\<C> c \<and> nonempty_profile\<^sub>\<C> c \<and> equal_top\<^sub>\<C> c)"
 
 text \<open>
   Strong unanimity condition.
 \<close>
 
-fun strong_unanimity\<^sub>\<C> :: "('a, 'v) Consensus" where
+fun strong_unanimity\<^sub>\<C> :: "('a, 'v, 'b) Consensus" where
   "strong_unanimity\<^sub>\<C> c = (nonempty_set\<^sub>\<C> c \<and> nonempty_profile\<^sub>\<C> c \<and> equal_vote\<^sub>\<C> c)"
 
 subsection \<open>Properties\<close>
 
-definition consensus_anonymity :: "('a, 'v) Consensus \<Rightarrow> bool" where
+definition consensus_anonymity :: "('a, 'v, 'b) Consensus \<Rightarrow> bool" where
   "consensus_anonymity c \<equiv>
     (\<forall> A V p \<pi>::('v \<Rightarrow> 'v).
         bij \<pi> \<longrightarrow>
@@ -80,15 +80,15 @@ definition consensus_anonymity :: "('a, 'v) Consensus \<Rightarrow> bool" where
             profile V A p \<longrightarrow> profile V' A' q
             \<longrightarrow> c (A, V, p) \<longrightarrow> c (A', V', q)))"
 
-fun consensus_neutrality :: "('a, 'v) Election set \<Rightarrow> ('a, 'v) Consensus \<Rightarrow> bool" where
+fun consensus_neutrality :: "('a, 'v) Election set \<Rightarrow> ('a, 'v, 'b) Consensus \<Rightarrow> bool" where
   "consensus_neutrality X c = is_symmetry c (Invariance (neutrality\<^sub>\<R> X))"
 
 subsection \<open>Auxiliary Lemmas\<close>
 
 lemma cons_anon_conj:
   fixes
-    c1 :: "('a, 'v) Consensus" and
-    c2 :: "('a, 'v) Consensus"
+    c1 :: "('a, 'v, 'b) Consensus" and
+    c2 :: "('a, 'v, 'b) Consensus"
   assumes
     anon1: "consensus_anonymity c1" and
     anon2: "consensus_anonymity c2"
@@ -119,7 +119,7 @@ qed
 
 theorem cons_conjunction_invariant:
   fixes
-    \<CC> :: "('a, 'v) Consensus set" and
+    \<CC> :: "('a, 'v, 'b) Consensus set" and
     rel :: "('a, 'v) Election rel"
   defines "C \<equiv> (\<lambda> E. (\<forall> C' \<in> \<CC>. C' E))"
   assumes "\<And> C'. C' \<in> \<CC> \<Longrightarrow> is_symmetry C' (Invariance rel)"
@@ -140,7 +140,7 @@ qed
 
 lemma cons_anon_invariant:
   fixes
-    c :: "('a, 'v) Consensus" and
+    c :: "('a, 'v, 'b) Consensus" and
     A :: "'a set" and
     A' :: "'a set" and
     V :: "'v set" and
@@ -167,8 +167,8 @@ qed
 
 lemma ex_anon_cons_imp_cons_anonymous:
   fixes
-    b :: "('a, 'v) Consensus" and
-    b':: "'b \<Rightarrow> ('a, 'v) Consensus"
+    b :: "('a, 'v, 'b) Consensus" and
+    b':: "'b \<Rightarrow> ('a, 'v, 'b) Consensus"
   assumes
     general_cond_b: "b = (\<lambda> E. \<exists> x. b' x E)" and
     all_cond_anon: "\<forall> x. consensus_anonymity (b' x)"

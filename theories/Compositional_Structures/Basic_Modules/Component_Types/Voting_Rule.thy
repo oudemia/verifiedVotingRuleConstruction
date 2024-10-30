@@ -281,6 +281,17 @@ assume
     qed
 qed
 
+lemma elector\<^sub>d_det:   
+fixes 
+  m :: "('r, 'v, 'b) Electoral_Module" and
+  A A' :: "'a set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile"
+assumes mod_eq: "m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p) = 
+  m V' (contenders A') ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> q)"
+shows "(elector\<^sub>d m) V A p = (elector\<^sub>d m) V' A' q"
+sorry
+
 end
 
 subsection \<open>Voting Rule Families\<close>

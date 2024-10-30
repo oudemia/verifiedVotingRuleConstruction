@@ -67,7 +67,7 @@ text \<open>
 definition well_formed_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
   "well_formed_profile V A p \<equiv> (\<forall> v \<in> V. well_formed_ballot A (p v))"
 
-abbreviation  finite_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
+abbreviation finite_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
   "finite_profile V A p \<equiv> finite A \<and> finite V \<and> well_formed_profile V A p"
 
 abbreviation finite_election :: "('a, 'v, 'b) Election \<Rightarrow> bool" where
@@ -237,7 +237,7 @@ text \<open>
   A common action of interest on elections is renaming the voters,
   e.g., when talking about anonymity.
 \<close>
-fun rename :: "('v \<Rightarrow> 'v) \<Rightarrow> ('x, 'v, 'b) Election \<Rightarrow> ('x, 'v, 'b) Election" where
+fun rename :: "('v \<Rightarrow> 'v) \<Rightarrow> ('x, 'v, 'y) Election \<Rightarrow> ('x, 'v, 'y) Election" where
   "rename \<pi> (X, V, p) = (X, \<pi> ` V, p \<circ> (the_inv \<pi>))"
 
 lemma rename_sound:

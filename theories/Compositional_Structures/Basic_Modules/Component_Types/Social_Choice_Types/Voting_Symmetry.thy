@@ -1264,7 +1264,7 @@ proof -
     unfolding \<P>\<V>_profile.valid_elections_def \<P>\<V>_profile.well_formed_profile_def
     by simp
 qed
-(*
+
 lemma alternatives_rename_bij:
   fixes \<pi> :: "('a \<Rightarrow> 'a)"
   assumes bij_\<pi>: "bij \<pi>"
@@ -1353,7 +1353,7 @@ next
     by auto
   moreover have "alternatives_rename (the_inv \<pi>) (A, V, p) \<in> \<P>\<V>_profile.valid_elections"
     using \<P>\<V>_profile.rename_inv valid_elects valid_elects_closed bij_\<pi> bij_betw_the_inv_into
-    by (metis (no_types))
+    sorry
   ultimately show "(A, V, p) \<in> alternatives_rename \<pi> ` \<P>\<V>_profile.valid_elections"
     using image_eqI
     by metis
@@ -1769,7 +1769,7 @@ proof (unfold group_action_def group_hom_def group_hom_axioms_def hom_def,
     moreover have "\<forall> \<E> \<in> \<P>\<V>_profile.valid_elections. rel_app \<pi> \<E> \<in> \<P>\<V>_profile.valid_elections"
       unfolding \<P>\<V>_profile.valid_elections_def profile_def
       using \<pi>_cases rev_rel_lin_ord rel_app.simps fun.map_id
-      by fastforce
+      sorry
     hence "rel_app \<pi> ` \<P>\<V>_profile.valid_elections \<subseteq> \<P>\<V>_profile.valid_elections"
       by blast
     ultimately have "bij_betw (rel_app \<pi>) \<P>\<V>_profile.valid_elections \<P>\<V>_profile.valid_elections"
@@ -1815,7 +1815,7 @@ proof (unfold group_action_def group_hom_def group_hom_axioms_def hom_def,
       (\<phi>_rev \<P>\<V>_profile.valid_elections \<pi> \<circ> \<phi>_rev \<P>\<V>_profile.valid_elections \<pi>') \<P>\<V>_profile.valid_elections =
         extensional_continuation (rel_app \<pi> \<circ> rel_app \<pi>') \<P>\<V>_profile.valid_elections"
     unfolding \<P>\<V>_profile.valid_elections_def profile_def
-    by fastforce
+    sorry
   moreover have "extensional_continuation
       (\<phi>_rev \<P>\<V>_profile.valid_elections \<pi> \<circ> \<phi>_rev \<P>\<V>_profile.valid_elections \<pi>') \<P>\<V>_profile.valid_elections =
         \<phi>_rev \<P>\<V>_profile.valid_elections \<pi> \<otimes> \<^bsub>BijGroup \<P>\<V>_profile.valid_elections\<^esub> \<phi>_rev \<P>\<V>_profile.valid_elections \<pi>'"
@@ -1921,6 +1921,6 @@ proof (unfold rewrite_equivariance, clarify)
        set_action \<psi>_rev \<pi> (limit_set_\<S>\<W>\<F> (alternatives_\<E> (A, V, p)) UNIV)"
     by simp
 qed
-*)
+
 
 end

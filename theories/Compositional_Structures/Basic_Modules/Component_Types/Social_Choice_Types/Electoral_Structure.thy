@@ -2,7 +2,8 @@ theory Electoral_Structure
   imports 
      Profile_Interpretations 
      Result_Interpretations
-begin
+     Aggregate_Profile
+     begin
 
 locale electoral_structure =
   ballot well_formed_ballot + result _ well_formed_result for
@@ -40,33 +41,18 @@ proof -
     by (simp add: lim limit_inherit limit_sound)
 qed
 
-(*
-function permute_bal :: "('a \<Rightarrow> 'a) \<Rightarrow> 'b \<Rightarrow> 'b" where
-  "permute_bal \<pi> b = let \<rho>"
-proof (auto)
-qed  
+sublocale ballot well_formed_ballot empty_ballot prefers wins limit_ballot
+by (simp add: ballot_axioms)
 
-function permute_cont :: "('a \<Rightarrow> 'a) \<Rightarrow> 'r \<Rightarrow> 'r" where
-  "permute_cont \<pi> c = c"
-proof (auto)
-qed  
-
-fun permute_alts :: "('v \<Rightarrow> 'v) \<Rightarrow> ('x, 'v, 'b) Election \<Rightarrow> ('x, 'v, 'b) Election" where
-  "permute_alts \<pi> (X, V, p) = (X, \<pi> ` V, p \<circ> (the_inv \<pi>))"
-*)
-
-lemma wtf: 
-fixes \<pi> :: "'a \<Rightarrow> 'a"
-assumes "bij \<pi>"
-shows "\<exists>(\<rho> :: 'b \<Rightarrow> 'b). bij \<rho> \<and> (\<forall> b. well_formed_ballot A b \<longrightarrow> (\<forall> B \<subseteq> A. limit_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_ballot B b)))"
-proof
-oops
+sublocale result
+by (simp add: result_axioms)
 
 end
 
+
 sublocale electoral_structure \<subseteq> ballot
 proof (unfold_locales)
-qed
+qed 
 
 sublocale electoral_structure \<subseteq> result
 proof (unfold_locales)
@@ -110,50 +96,7 @@ fix
   moreover have "(a1, a2) \<in> b" using as_in_b by auto
   thus "(a1, a2) \<in> limit_pref_to_alts R b" by (simp add: a1_in_R a2_in_R)
   next
-qed
-(*
-fix
-    A :: "'a set" and
-    \<pi> :: "'a \<Rightarrow> 'a"
-  assume bij: "bij \<pi>"
-  show "\<exists>\<rho>. bij \<rho> \<and> (\<forall>b. ballot_\<P>\<V> A b \<longrightarrow> (\<forall>B\<subseteq>A. limit_\<P>\<V>_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_\<P>\<V>_ballot B b)))"
-  proof (standard)
-    obtain \<rho> where *: "\<rho> = (\<lambda> b. (\<lambda> (a1, a2). (\<pi> a1, \<pi> a2)) ` b)" by simp
-    have "bij \<rho> \<and> (\<forall>b. ballot_\<P>\<V> A b \<longrightarrow> (\<forall>B\<subseteq>A. limit_\<P>\<V>_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_\<P>\<V>_ballot B b)))"
-    proof (standard)
-    have "bij \<rho>" 
-    proof (unfold bij_def inj_def surj_def, auto)
-    fix 
-      x y :: "('a \<times> 'a) set" and
-      a b :: 'a
-    assume 
-      eq: "\<rho> x = \<rho> y" and 
-      elem: "(a, b) \<in> x"
-    hence "(\<pi> a, \<pi> b) \<in> \<rho> x" using * by fast
-    hence "(\<pi> a, \<pi> b) \<in> \<rho> y" using eq by simp
-    hence "((the_inv \<pi>)(\<pi> a), (the_inv \<pi>)(\<pi> b)) \<in> y" using bij * by try
-
-    thus "(a, b) \<in> y" using bij by try
-    proof (auto)
-    fix
-   
-    qed      
-    next
-      fix B :: "'a set"
-      assume sub: "B \<subseteq> A"
-      have "bij \<rho> \<and> (\<forall>b. ballot_\<P>\<V> A b \<longrightarrow> (\<forall>B\<subseteq>A. limit_\<P>\<V>_ballot (\<pi> ` B) (\<rho> b) = \<rho> (limit_\<P>\<V>_ballot B b)))" sorry
-   thus ?thesis
-qed
-
-emma "EX x. P x"
-proof -
-obtain x where <...>
-<...>
-have "P x" <...>
-show ?thesis ..
-qed 
-*)
-
+  qed
 
 fun limit_app_to_alts :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
 "limit_app_to_alts A b = A \<inter> b"
@@ -168,8 +111,8 @@ global_interpretation \<A>\<V>_\<S>\<C>\<F>:
 
 sublocale committee_result \<subseteq> \<A>\<V>_committee:
   electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" "limit_\<A>\<V>_ballot" "committees"
-  "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs" "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"
-proof (unfold_locales, safe)
+  "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" affected_alts_committee "ballot_\<A>\<V>" "\<lambda> A r. disjoint3 r" "limit_app_to_comm"
+proof (unfold_locales, unfold affected_alts_committee.simps, safe)
     fix 
       A C :: "'a set" and
       a :: 'a
@@ -230,6 +173,6 @@ proof (unfold_locales, safe)
       b :: "'a Approval_Set"
     assume "a \<in> limit_\<A>\<V>_ballot (\<Union> R) b"
     thus "a \<in> limit_app_to_comm R b"  by fastforce
-qed
+qed   
 
 end
