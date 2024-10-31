@@ -109,12 +109,8 @@ subsubsection \<open>Electoral Module for Thiele Methods\<close>
 fun thiele_module :: "Thiele_Score \<Rightarrow> ('a Committee, 'v, 'a Thiele_Ballot) Electoral_Module" where
 "thiele_module s V C p = (max_eliminator (\<lambda> V r R p. score_sum s V r p)) V C p"
 
-fun (in committee_result) thiele_family :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where 
+fun (in committee_result) thiele_family :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where
 "thiele_family w V A p =
-	elect (thiele_module w) V (committees A) (thiele_agg_profile p)"
-
-fun (in committee_result) thiele_family' :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where
-"thiele_family' w V A p =
 	thiele_structure.elector\<^sub>d (thiele_module w) V (committees A) (thiele_agg_prof A p)"
 
 fun thiele_method :: "Thiele_Score \<Rightarrow> ('a, 'v, 'a Approval_Set, 'a Committee) Voting_Rule \<Rightarrow> bool" where
@@ -179,19 +175,11 @@ next
     by (metis (no_types, lifting) R_id)
 qed
 
-
 lemma (in committee_result) thiele_anonymous:
   fixes w :: "nat Aggregate_Evaluation"
   assumes w_valid: "thiele_score w"
   shows "\<A>\<V>_committee.vr_anonymity (thiele_family w)"
-proof (unfold \<A>\<V>_committee.vr_anonymity_def, simp add: Let_def)
-qed
-
-lemma (in committee_result) thiele'_anonymous:
-  fixes w :: "nat Aggregate_Evaluation"
-  assumes w_valid: "thiele_score w"
-  shows "\<A>\<V>_committee.vr_anonymity (thiele_family' w)"
-proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, safe)
+proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, clarify)
   fix 
     A A' :: "'a set" and
     V V' :: "'v set" and
@@ -203,8 +191,7 @@ proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, safe)
     rename: "\<A>\<V>_committee.rename \<pi> (A, V, p) = (A', V', q)" and
     fin_A: "finite A" and
     fin_V: "finite V" and
-    fin_V': "finite V'" and
-    win: "C \<in> thiele_family' w V A p"
+    fin_V': "finite V'"
   have A_eq: "A' = A" using rename by simp
   let ?R = "committees A"  
   let ?R' = "committees A'"
@@ -232,61 +219,8 @@ proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, safe)
     using bij thiele_structure.anonymity_prereq
     by (metis A_eq fin_V' id_apply thiele_aggregation.rename_sound)
   hence "(thiele_module w) V (id ?R) ?p_agg = (thiele_module w) V' (id ?R') ?q_agg"
-    using p_agg_eq q_agg_eq by simp
-  moreover have "C \<in> thiele_structure.elector\<^sub>d (thiele_module w) V ?R (thiele_agg_prof A p)"
-    using thiele_family'.elims win 
-    by blast
-  ultimately have "C \<in> thiele_structure.elector\<^sub>d (thiele_module w) V' ?R' (thiele_agg_prof A' q)"
-    by simp
-  thus "C \<in> thiele_family' w V' A' q" by simp
-next 
-  fix 
-    A A' :: "'a set" and
-    V V' :: "'v set" and
-    p q :: "('v, 'a Approval_Set) Profile" and
-    \<pi> :: "'v \<Rightarrow> 'v" and
-    C :: "'a Committee"
-  assume 
-    bij: "bij \<pi>" and
-    rename: "\<A>\<V>_committee.rename \<pi> (A, V, p) = (A', V', q)" and
-    fin_A: "finite A" and
-    fin_V: "finite V" and
-    fin_V': "finite V'" and
-    win: "C \<in> thiele_family' w V' A' q"
-  have A_eq: "A' = A" using rename by simp
-  let ?R = "committees A"  
-  let ?R' = "committees A'"
-  have fin_R: "finite ?R" using fin_A by simp  
-  have R_eq: "?R = ?R'" using A_eq by simp
-  let ?p_agg = "(\<lambda>b c. if c \<in> id ?R then b c else 0) \<circ> (thiele_agg_prof A p)"
-  let ?q_agg = "(\<lambda>b c. if c \<in> id ?R' then b c else 0) \<circ> (thiele_agg_prof A' q)"
-  have p_agg_eq: "?p_agg = (thiele_agg_prof A p)" by fastforce
-  have q_agg_eq: "?q_agg = (thiele_agg_prof A' q)" by fastforce
-  have mod_anon: "thiele_structure.anonymity (thiele_module w)"
-    using thiele_module_anonymous w_valid 
-    by auto
-  moreover have rename_res: "thiele_aggregation.rename \<pi> (?R, V, (thiele_agg_prof A p)) =
-      (?R', V', (thiele_agg_prof A' q))"
-    using rename thiele_aggregation.aggregate_preserves_permute 
-    by fastforce
-  moreover have fp_res: "thiele_aggregation.finite_profile V (id ?R) (thiele_agg_prof A p)"
-    using fin_V fin_R thiele_aggregation.preserve_valid
-    by (simp add: thiele_aggregation.well_formed_profile_def)
-  moreover have "thiele_aggregation.finite_profile V (id ?R') (thiele_agg_prof A' q)"
-    using fin_V fin_R R_eq thiele_aggregation.preserve_valid
-    by (simp add: thiele_aggregation.well_formed_profile_def)
-  ultimately have "(thiele_module w) V ?R (thiele_agg_prof A p) =
-    (thiele_module w) V' ?R' (thiele_agg_prof A' q)"
-    using bij thiele_structure.anonymity_prereq
-    by (metis A_eq fin_V' id_apply thiele_aggregation.rename_sound)
-  hence "(thiele_module w) V (id ?R) ?p_agg = (thiele_module w) V' (id ?R') ?q_agg"
-    using p_agg_eq q_agg_eq by simp
-  moreover have "C \<in> thiele_structure.elector\<^sub>d (thiele_module w) V' ?R' (thiele_agg_prof A' q)"
-    using thiele_family'.elims win 
-    by blast
-  ultimately have "C \<in> thiele_structure.elector\<^sub>d (thiele_module w) V ?R (thiele_agg_prof A p)"
-    by simp
-  thus "C \<in> thiele_family' w V A p" by simp
+  using p_agg_eq q_agg_eq by simp
+  thus " thiele_family w V A p =  thiele_family w V' A' q" by simp
 qed
 
 
@@ -355,7 +289,7 @@ qed
 lemma (in committee_result) thiele_neutral:
   fixes w :: "nat Aggregate_Evaluation"
   assumes "thiele_score w"
-  shows "\<A>\<V>_committee.vr_neutrality'(rename_alt_set \<pi>) (rename_alt_set \<pi>) (thiele_family' w)"
+  shows "\<A>\<V>_committee.vr_neutrality'(rename_alt_set \<pi>) (rename_alt_set \<pi>) (thiele_family w)"
 proof (unfold \<A>\<V>_committee.vr_neutrality'_def Let_def, safe)
 qed
 
