@@ -299,6 +299,9 @@ fun rename_committee :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a Committee) set 
 fun rename_alts_\<A>\<V> :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a, 'v, 'a Approval_Set) Election \<Rightarrow> ('a, 'v, 'a Approval_Set) Election" where
   "rename_alts_\<A>\<V> \<pi> (A, V, p) = (let q = (\<lambda>v. \<pi> ` (p v)) in (\<pi> ` A, V, q))"
 
+fun rename_alt_set :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
+  "rename_alt_set \<pi> C = \<pi> ` C"
+
 lemma (in committee_result) rename_distr:
   fixes 
     A :: "'a set" and
@@ -325,17 +328,36 @@ next
   thus "C \<in> committees (\<pi> ` A)" using card by simp
 qed
 
+(*
 definition neutrality_\<A>\<B>\<C> :: "('v, 'a, 'a Approval_Set, 'a Committee) Voting_Rule \<Rightarrow> bool" where 
   "neutrality_\<A>\<B>\<C> r \<equiv>
       (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
         bij \<pi> \<longrightarrow> (let (A', V', q) = (rename_alts_\<A>\<V> \<pi> (A, V, p)) in
             \<A>\<V>_profile.finite_profile V A p \<and> \<A>\<V>_profile.finite_profile V' A' q \<longrightarrow> r V A p = r V' A' q))"
+*)
+lemma  (in committee_result) bal_coinc:
+fixes 
+  \<pi> :: "'a \<Rightarrow> 'a" and
+  A :: "'a set"
+assumes bij: "bij \<pi>"
+shows "\<A>\<V>_committee.coinciding_bal_permute A \<pi> (rename_alt_set \<pi>)"
+proof (unfold \<A>\<V>_committee.coinciding_bal_permute_def, standard)
+show "bij (rename_alt_set \<pi>)"
+  unfolding rename_alt_set.simps 
+  using bij bij_betw_Pow 
+  by fastforce
+next
+  show "\<forall>S\<subseteq>A. \<forall>b. ballot_\<A>\<V> A b \<longrightarrow>
+    limit_\<A>\<V>_ballot (\<pi> ` S) (rename_alt_set \<pi> b) = rename_alt_set \<pi> (limit_\<A>\<V>_ballot S b)"
+  by (metis bij bij_def image_Int limit_\<A>\<V>_ballot.elims rename_alt_set.simps)
+qed
 
 lemma (in committee_result) thiele_neutral:
   fixes w :: "nat Aggregate_Evaluation"
   assumes "thiele_score w"
-  shows "neutrality_\<A>\<B>\<C> (thiele_family w)"
-  unfolding neutrality_\<A>\<B>\<C>_def by simp
+  shows "\<A>\<V>_committee.vr_neutrality'(rename_alt_set \<pi>) (rename_alt_set \<pi>) (thiele_family' w)"
+proof (unfold \<A>\<V>_committee.vr_neutrality'_def Let_def, safe)
+qed
 
 subsubsection \<open>Consistency\<close>
 

@@ -72,7 +72,7 @@ definition vr_anonymity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool" whe
         bij \<pi> \<longrightarrow> (let (A', V', q) = (rename \<pi> (A, V, p)) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> r V A p = r V' A' q))"
 
-
+            
 definition permute_bal :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a set \<Rightarrow> ('b \<Rightarrow> 'b)" where
    "permute_bal \<pi> A = (SOME \<rho>. bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> b. 
       well_formed_ballot A b \<longrightarrow> limit_ballot (\<pi> ` S) (\<rho> b) = \<rho> (limit_ballot S b)))"
@@ -87,6 +87,21 @@ definition vr_neutrality :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  w
         bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (permute_bal \<pi> A) \<circ> p) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow>  (permute_cont \<pi> A) ` (r V A p) = r V' A' q))"
 
+
+definition coinciding_bal_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+   "coinciding_bal_permute A \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> b. well_formed_ballot A b \<longrightarrow> 
+      limit_ballot (\<pi> ` S) (\<rho> b) = \<rho> (limit_ballot S b)))"
+
+definition coinciding_cont_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> bool" where
+   "coinciding_cont_permute A \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
+      limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c})))"
+            
+definition vr_neutrality' :: "('b \<Rightarrow> 'b) \<Rightarrow>('r \<Rightarrow> 'r) \<Rightarrow>('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
+  "vr_neutrality' \<beta> \<kappa> r \<equiv>
+      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a). bij \<pi> \<and> coinciding_bal_permute A \<pi> \<beta> \<and> coinciding_cont_permute A \<pi> \<kappa> 
+        \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, \<beta> \<circ> p) in
+            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> (\<kappa> `(r V A p)) = r V' A' q))"
+                     
 end
 
 subsection \<open>The Elector Voting Rule\<close>
@@ -281,16 +296,6 @@ assume
     qed
 qed
 
-lemma elector\<^sub>d_det:   
-fixes 
-  m :: "('r, 'v, 'b) Electoral_Module" and
-  A A' :: "'a set" and
-  V V' :: "'v set" and
-  p q :: "('v, 'b) Profile"
-assumes mod_eq: "m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p) = 
-  m V' (contenders A') ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> q)"
-shows "(elector\<^sub>d m) V A p = (elector\<^sub>d m) V' A' q"
-sorry
 
 end
 
