@@ -57,8 +57,9 @@ locale result =
     contenders :: "'a set \<Rightarrow> 'r set" and
     limit_contenders :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
     affected_alts :: "'r set \<Rightarrow> 'a set"
-  assumes 
+    assumes 
     conts_cover: "affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
+    no_conts: "A \<noteq> {} \<and> affected_alts (contenders A) = {} \<longrightarrow> contenders A = {}" and
     sub_coincide: "A \<subseteq> B \<longrightarrow> (affected_alts (contenders A)) \<subseteq> (affected_alts (contenders B))"
 begin
     

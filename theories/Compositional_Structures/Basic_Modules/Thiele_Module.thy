@@ -30,17 +30,19 @@ fun (in committee_result) thiele_agg_profile :: "('v, 'a Approval_Set, 'a Commit
 fun (in committee_result) thiele_agg_prof :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Profile_Aggregation'" where
 "thiele_agg_prof A p v W = (if W \<in> committees A then (card (W \<inter> (p v))) else 0)"
 
+fun limit_thiele_ballot :: "('a Committee) set \<Rightarrow> 'a Thiele_Ballot \<Rightarrow> 'a Thiele_Ballot" where
+"limit_thiele_ballot C b c = ( if c \<in> C then b c else 0)"
 
 sublocale committee_result \<subseteq> thiele_aggregation:
 aggregation
-"\<lambda> C. 0" (*empty ballot*) 
-"\<lambda> b C D. (b C > b D)" (*prefers*)
-"\<lambda> b C. (\<forall> D. b C \<ge> b D)" (*wins*)
-"\<lambda> C b c. if c \<in> C then b c else 0" (* limit_ballot"\<lambda> C b. b" *)
-thiele_ballot (*well formed ballot*)
-ballot_\<A>\<V> (*base ballot*)
-committees
-"\<lambda> A b C. if C \<in> committees A then (card (C \<inter> b)) else 0" (*agg*)
+  "\<lambda> C. 0" (*empty ballot*) 
+  "\<lambda> b C D. (b C > b D)" (*prefers*)
+  "\<lambda> b C. (\<forall> D. b C \<ge> b D)" (*wins*)
+  "\<lambda> C b c. if c \<in> C then b c else 0" (* limit_ballot"\<lambda> C b. b" *)
+  thiele_ballot (*well formed ballot*)
+  ballot_\<A>\<V> (*base ballot*)
+  committees
+  "\<lambda> A b C. if C \<in> committees A then (card (C \<inter> b)) else 0" (*agg*)
 proof (unfold_locales)
   fix 
     c1 c2 :: "'a Committee" and 
@@ -86,10 +88,59 @@ next
 qed
 
 sublocale committee_result \<subseteq> thiele_structure:
-  electoral_structure "\<lambda>C. 0" "\<lambda> b C D. (b C > b D)" "\<lambda> b C. (\<forall> D. b C \<ge> b D)" 
-  "\<lambda> C b c. if c \<in> C then b c else 0" id "\<lambda> R S. R \<inter> S" id "thiele_ballot" "\<lambda> A r. disjoint3 r" 
-  "\<lambda> C b c. if c \<in> C then b c else 0"
-proof (unfold_locales, auto)
+electoral_structure 
+  "\<lambda>C. 0" (* empty_ballot *)
+  "\<lambda> b C D. (b C > b D)" (* prefers *)
+  "\<lambda> b C. (\<forall> D. b C \<ge> b D)" (* wins *)
+  limit_thiele_ballot (* limit_ballot *)
+  "\<lambda> R S. R \<inter> S" (* limit_contenders *)
+  id (*  affected_alts *)
+  thiele_ballot (* well_formed_ballot *)
+  id (* contenders *)
+  limit_thiele_ballot (* limit_by_conts *)
+proof (unfold_locales, clarify)
+  fix 
+    b :: "'a Thiele_Ballot" and
+    C D :: "'a Committee"
+  assume  
+    "C \<noteq> D" and  
+    *: "b D < b C" and 
+    **: "\<forall>E. b E \<le> b D"
+  show "False"
+    using * ** linorder_not_less 
+    by blast
+next
+  fix 
+    C :: "('a Committee) set" and
+    b :: "'a Thiele_Ballot"
+  show "thiele_ballot C b \<Longrightarrow> limit_thiele_ballot C b = b" by auto
+next
+  fix 
+    C D :: "('a Committee) set" and
+    b :: "'a Thiele_Ballot"
+  assume "C \<subseteq> D"
+  thus "limit_thiele_ballot C b = limit_thiele_ballot C (limit_thiele_ballot D b)" by fastforce
+next
+  fix 
+    C D :: "('a Committee) set" and
+    b :: "'a Thiele_Ballot"
+  assume "thiele_ballot D b \<and> C \<subseteq> D"
+  thus "thiele_ballot C (limit_thiele_ballot C b)" by simp
+next
+  fix C :: "('a Committee) set"
+  show "id (id C) = C \<or> id (id C) = {}" by simp
+next
+  fix 
+    C D :: "('a Committee) set"
+  show "C \<subseteq> D \<longrightarrow> id (id C) \<subseteq> id (id D)" by simp
+next
+  fix 
+    C :: "('a Committee) set" and
+    b :: "'a Thiele_Ballot"
+  show "limit_thiele_ballot C b = limit_thiele_ballot (id C) b " by simp
+next
+  fix C :: "('a Committee) set"
+  show "C \<noteq> {} \<and> id (id C) = {} \<longrightarrow> id C = {}" by simp
 qed
 
 
@@ -145,7 +196,7 @@ lemma (in committee_result) thiele_module_anonymous:
   assumes "thiele_score w"
   shows "thiele_structure.anonymity (thiele_module w)"
 proof (unfold thiele_structure.anonymity_def Let_def, safe)
-  show "thiele_structure.electoral_module (thiele_module w)" by simp
+  show "thiele_structure.electoral_module (thiele_module w)" by auto
 next
   fix 
     R R' :: "('a Committee) set" and
@@ -184,8 +235,7 @@ proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, clarify)
     A A' :: "'a set" and
     V V' :: "'v set" and
     p q :: "('v, 'a Approval_Set) Profile" and
-    \<pi> :: "'v \<Rightarrow> 'v" and
-    C :: "'a Committee"
+    \<pi> :: "'v \<Rightarrow> 'v"
   assume 
     bij: "bij \<pi>" and
     rename: "\<A>\<V>_committee.rename \<pi> (A, V, p) = (A', V', q)" and
@@ -197,8 +247,8 @@ proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, clarify)
   let ?R' = "committees A'"
   have fin_R: "finite ?R" using fin_A by simp  
   have R_eq: "?R = ?R'" using A_eq by simp
-  let ?p_agg = "(\<lambda>b c. if c \<in> id ?R then b c else 0) \<circ> (thiele_agg_prof A p)"
-  let ?q_agg = "(\<lambda>b c. if c \<in> id ?R' then b c else 0) \<circ> (thiele_agg_prof A' q)"
+  let ?p_agg = "(limit_thiele_ballot ?R) \<circ> (thiele_agg_prof A p)"
+  let ?q_agg = "(limit_thiele_ballot ?R') \<circ> (thiele_agg_prof A' q)"
   have p_agg_eq: "?p_agg = (thiele_agg_prof A p)" by fastforce
   have q_agg_eq: "?q_agg = (thiele_agg_prof A' q)" by fastforce
   have mod_anon: "thiele_structure.anonymity (thiele_module w)"
@@ -218,11 +268,14 @@ proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, clarify)
     (thiele_module w) V' ?R' (thiele_agg_prof A' q)"
     using bij thiele_structure.anonymity_prereq
     by (metis A_eq fin_V' id_apply thiele_aggregation.rename_sound)
-  hence "(thiele_module w) V (id ?R) ?p_agg = (thiele_module w) V' (id ?R') ?q_agg"
+  hence "(thiele_module w) V ?R ?p_agg = (thiele_module w) V' ?R' ?q_agg"
   using p_agg_eq q_agg_eq by simp
-  thus " thiele_family w V A p =  thiele_family w V' A' q" by simp
+  thus "thiele_family w V A p =  thiele_family w V' A' q" 
+    by simp
 qed
 
+(* 	thiele_structure.elector\<^sub>d (thiele_module w) V (committees A) (thiele_agg_prof A p)"
+*)
 
 subsubsection \<open>Neutrality\<close>
 
@@ -284,13 +337,57 @@ next
   show "\<forall>S\<subseteq>A. \<forall>b. ballot_\<A>\<V> A b \<longrightarrow>
     limit_\<A>\<V>_ballot (\<pi> ` S) (rename_alt_set \<pi> b) = rename_alt_set \<pi> (limit_\<A>\<V>_ballot S b)"
   by (metis bij bij_def image_Int limit_\<A>\<V>_ballot.elims rename_alt_set.simps)
+  qed
+
+lemma  (in committee_result) cont_coinc:
+fixes 
+  \<pi> :: "'a \<Rightarrow> 'a" and
+  A :: "'a set"
+assumes bij: "bij \<pi>"
+shows "\<A>\<V>_committee.coinciding_cont_permute A \<pi> (rename_alt_set \<pi>)"
+proof (unfold \<A>\<V>_committee.coinciding_cont_permute_def, standard)
+show "bij (rename_alt_set \<pi>)"
+  unfolding rename_alt_set.simps 
+  using bij bij_betw_Pow 
+  by fastforce
+next
+  show "\<forall> S \<subseteq> A. \<forall> c \<in> committees A. {r \<inter> \<pi> ` S |r. r \<in> {rename_alt_set \<pi> c}} = 
+    rename_alt_set \<pi> ` {r \<inter> S |r. r \<in> {c}}" 
+  proof (clarify)
+    fix S C :: "'a set"
+    assume 
+      sub: "S \<subseteq> A" and 
+      comm: "C \<in> committees A"
+      have "rename_alt_set \<pi> C = \<pi> ` C" by simp
+      hence "{r \<inter> \<pi> ` S |r. r \<in> {rename_alt_set \<pi> C}} = {\<pi> ` S \<inter> \<pi> ` C}" by auto
+      moreover have "rename_alt_set \<pi> ` {r \<inter> S |r. r \<in> {C}} = {\<pi> ` (S \<inter> C)}" by auto
+      moreover have "\<pi> ` S \<inter> \<pi> ` C = \<pi> ` (S \<inter> C)" by (simp add: bij bij_is_inj image_Int)
+      ultimately show "{r \<inter> \<pi> ` S |r. r \<in> {rename_alt_set \<pi> C}} = 
+        rename_alt_set \<pi> ` {r \<inter> S |r. r \<in> {C}}" by simp
+  qed
 qed
 
 lemma (in committee_result) thiele_neutral:
   fixes w :: "nat Aggregate_Evaluation"
   assumes "thiele_score w"
-  shows "\<A>\<V>_committee.vr_neutrality'(rename_alt_set \<pi>) (rename_alt_set \<pi>) (thiele_family w)"
-proof (unfold \<A>\<V>_committee.vr_neutrality'_def Let_def, safe)
+  shows "\<A>\<V>_committee.vr_neutrality' rename_alt_set rename_alt_set (thiele_family w)"
+proof (unfold \<A>\<V>_committee.vr_neutrality'_def Let_def, clarify)
+  fix 
+    A A' :: "'a set" and
+    V V' :: "'v set" and
+    p q :: "('v, 'a Approval_Set) Profile" and
+    \<pi> :: "'a \<Rightarrow> 'a"
+  assume
+    bij: "bij \<pi>" and
+    coinc_bal: "\<A>\<V>_committee.coinciding_bal_permute A \<pi> (rename_alt_set \<pi>)" and
+    coinc_cont: "\<A>\<V>_committee.coinciding_cont_permute A \<pi> (rename_alt_set \<pi>)" and
+    fin_A: "finite A" and
+    "finite (\<pi> ` A)" and
+    fin_V: "finite V" and
+    wf: "\<A>\<V>_committee.well_formed_profile V A p" and
+    rename: "\<A>\<V>_committee.well_formed_profile V (\<pi> ` A) (rename_alt_set \<pi> \<circ> p)"
+    show "rename_alt_set \<pi> ` thiele_family w V A p =
+       thiele_family w V (\<pi> ` A) (rename_alt_set \<pi> \<circ> p)"
 qed
 
 subsubsection \<open>Consistency\<close>

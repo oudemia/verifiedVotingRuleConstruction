@@ -80,6 +80,9 @@ next
   moreover have "affected_alts_\<S>\<C>\<F> R = R" by simp
   moreover have "limit_\<P>\<V>_ballot (affected_alts_\<S>\<C>\<F> R) b = (R \<times> R) \<inter> b" by auto
   ultimately show "limit_pref_to_alts R b = limit_\<P>\<V>_ballot (affected_alts_\<S>\<C>\<F> R) b" by simp
+next
+  fix A :: "'a set"
+  show "A \<noteq> {} \<and> affected_alts_\<S>\<C>\<F> (id A) = {} \<longrightarrow> id A = {}" by simp
 qed
 
 fun limit_app_to_alts :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where

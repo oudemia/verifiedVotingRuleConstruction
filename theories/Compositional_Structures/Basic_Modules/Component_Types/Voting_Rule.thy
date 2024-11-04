@@ -52,14 +52,15 @@ definition vr_neutrality :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  w
 definition coinciding_cont_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> bool" where
    "coinciding_cont_permute A \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
       limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c})))"
-            
+
+(*      
 definition vr_neutrality' :: "(('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b)) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r)) \<Rightarrow>('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_neutrality' \<beta> \<kappa> r \<equiv>
       (\<forall> A V p \<pi>::('a \<Rightarrow> 'a). 
         bij \<pi> \<and> coinciding_bal_permute A \<pi> (\<beta> \<pi>) \<and> coinciding_cont_permute A \<pi> (\<kappa> \<pi>) 
           \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (\<beta> \<pi>) \<circ> p) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> ((\<kappa> \<pi>) `(r V A p)) = r V' A' q))"
-                     
+*)                     
 end
 
 subsection \<open>The Elector Voting Rule\<close>
@@ -101,7 +102,7 @@ fun elector\<^sub>d :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('a, 'v, 'b,
 "elector\<^sub>d m V A p = ((elect m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p))
         \<union> (defer m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p)))"
 
-  
+        
 lemma elector_inherits_anonymity:   
 fixes m :: "('r, 'v, 'b) Electoral_Module"
 assumes anon: "anonymity m"

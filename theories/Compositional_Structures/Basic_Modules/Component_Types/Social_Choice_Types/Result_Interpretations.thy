@@ -54,6 +54,12 @@ next
     a :: 'a
   assume "A \<subseteq> B" and "C \<subseteq> A" and  "a \<in> C"
   thus "a \<in>  \<Union> (Pow B)" by blast
+next
+  fix
+    A C :: "'a set" and
+    a :: 'a
+  assume "\<Union> (Pow A) = {}" and "a \<in> A" and "C \<subseteq> A"
+  thus "C \<in> {}" by auto  
 qed
 
 text \<open>
@@ -101,6 +107,17 @@ next
     hence "a \<in> B" using sub by blast
     thus "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> B UNIV)" by (metis res_surj_\<S>\<W>\<F>)
   qed
+next
+  fix
+    A :: "'a set" and
+    a :: 'a and
+    r :: "'a Preference_Relation"
+  assume 
+    "affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV) = {}" and 
+    "a \<in> A" and
+    "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
+  thus "r \<in> {}"
+    by (metis empty_iff res_surj_\<S>\<W>\<F>)
 qed
 
 
@@ -157,6 +174,25 @@ next
   have "affected_alts_committee (committees A) \<subseteq> affected_alts_committee (committees B)" 
     using sub by (metis affected_alts_committee.simps subset_committees)
   thus "a \<in> affected_alts_committee (committees B)" using elem by blast
+next
+  fix
+    A :: "'a set" and
+    a :: 'a and
+    C :: "'a Committee"
+  assume 
+    no_conts: "affected_alts_committee (committees A) = {}" and
+    elem: "a \<in> A" and 
+    comm: "C \<in> committees A"
+  have "\<Union> (committees A) = {}" 
+    using no_conts 
+    by simp
+  moreover have "\<forall>D \<in> committees A. card D \<ge> 1" 
+    using k_positive
+    by simp
+  ultimately have "committees A = {}" by auto
+  thus "C \<in> {}" 
+    using comm 
+    by auto
 qed
 
 setup Locale_Code.close_block
