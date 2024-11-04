@@ -85,12 +85,12 @@ text \<open>
 \<close>
 
 fun electoral_module :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
-    "electoral_module m = (\<forall> A R V p. well_formed_profile V A p \<and> R = contenders A \<longrightarrow> 
-        well_formed_result A (m V R p))"
+    "electoral_module m = (\<forall> R V p. well_formed_profile V (affected_alts R) p \<longrightarrow> 
+        well_formed_result R (m V R p))"
 
 lemma electoral_modI:
   fixes m :: "('r, 'v, 'b) Electoral_Module"
-  assumes "\<And> A R V p. well_formed_profile V A p \<and> R = contenders A \<Longrightarrow> well_formed_result A (m V R p)"
+  assumes "\<And> R V p. well_formed_profile V (affected_alts R) p \<Longrightarrow> well_formed_result R (m V R p)"
   shows "electoral_module m"
   unfolding electoral_module.simps
   using assms by simp
@@ -277,6 +277,19 @@ text \<open>
   candidates in the candidate set and election results.
 \<close>
 
+context electoral_structure
+begin
+
+definition coinciding_permutes :: "'r set \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+   "coinciding_permutes R \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> R. \<forall> b. well_formed_ballot (affected_alts R) b 
+    \<longrightarrow> limit_by_conts (\<pi> ` S) (\<rho> b) = \<rho> ( limit_by_conts S b)))"
+
+definition neutrality' :: "('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "neutrality' \<rho> \<beta> m \<equiv> electoral_module m \<and> bij \<rho> \<and> bij \<beta> \<and>
+      (\<forall> R V p. coinciding_permutes R \<rho> \<beta> \<longrightarrow> (let (R', V', q) = (\<rho> ` R, V, \<beta> \<circ> p) in
+            finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
+              m V R p = m V' R' q))"
+
 (*
 
 fun (in result_properties) neutrality :: "('a, 'v, 'a Preference_Relation) Election set
@@ -299,25 +312,14 @@ definition reversal_symmetry :: "('a, 'v, 'a Preference_Relation) Election set
           (\<phi>_rev X) (result_action \<psi>_rev))"
 
 *)
-subsection \<open>Social Choice Modules\<close>
-
-text \<open>
-  The following results require electoral modules to return social choice results,
-  i.e., sets of elected, rejected and deferred alternatives.
-  In order to export code, we use the hack provided by Locale-Code.
-\<close>
 
 text \<open>
   "defers n" is true for all electoral modules that defer exactly
   n alternatives, whenever there are n or more alternatives.
 \<close>
 
-context electoral_structure
-begin
-
 fun well_formed_partial :: "('r, 'v, 'b) Election \<Rightarrow> bool" where
-  "well_formed_partial (R, V, p) = (well_formed_profile V (affected_alts R) p \<and> 
-    finite (affected_alts R) \<and> well_formed_profile V (affected_alts R) p)"
+  "well_formed_partial (R, V, p) = (well_formed_profile V (affected_alts R) p \<and> finite R)"
 
 
 definition defers :: "nat \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
@@ -356,18 +358,28 @@ definition elects :: "nat \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarr
     electoral_module m \<and>
       (\<forall> R V p. (card R > n \<and> well_formed_partial (R, V, p)) \<longrightarrow> card (elect m V R p) = n)"
 
+end
+
+
+subsection \<open>Social Choice Modules\<close>
+
+text \<open>
+  The following results require electoral modules to return social choice results,
+  i.e., sets of elected, rejected and deferred alternatives.
+  In order to export code, we use the hack provided by Locale-Code.
+\<close>
+
 text \<open>
   An electoral module is independent of an alternative a iff
   a's ranking does not influence the outcome.
 \<close>
-
-end
-
-definition (in ballot) indep_of_alt :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set \<Rightarrow> 'r \<Rightarrow> bool" where
+definition indep_of_alt :: "('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> 
+                                        'v set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> bool" where
   "indep_of_alt m V A a \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m
+    \<P>\<V>_\<S>\<C>\<F>.electoral_module m
       \<and> (\<forall> p q. equiv_prof_except_a V A p q a \<longrightarrow> m V A p = m V A q)"
 
+(*
 definition unique_winner_if_profile_non_empty :: "('a, 'v, 'a Result) Electoral_Module
                                                       \<Rightarrow> bool" where
   "unique_winner_if_profile_non_empty m \<equiv>
@@ -455,69 +467,74 @@ lemma par_comp_result_sound:
   shows "well_formed_\<S>\<C>\<F> A (m V A p)"
   using assms
   by simp
+*)
 
-lemma result_presv_alts:
+context electoral_structure 
+begin
+
+lemma result_presv_conts:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "(elect m V A p) \<union> (reject m V A p) \<union> (defer m V A p) = A"
+    mod: "electoral_module m" and
+    wf: "well_formed_profile V (affected_alts R) p"
+  shows "(elect m V R p) \<union> (reject m V R p) \<union> (defer m V R p) = R"
 proof (safe)
-  fix a :: "'a"
+  fix r :: "'r"
   have
     partition_1:
-    "\<forall> p'. set_equals_partition A p'
-      \<longrightarrow> (\<exists> E R D. p' = (E, R, D) \<and> E \<union> R \<union> D = A)" and
+    "\<forall> p'. set_equals_partition R p'
+      \<longrightarrow> (\<exists> E R' D. p' = (E, R', D) \<and> E \<union> R' \<union> D = R)" and
     partition_2:
-    "set_equals_partition A (m V A p)"
+    "set_equals_partition R (m V R p)"
     using assms
     by (simp, simp)
   {
-    assume "a \<in> elect m V A p"
+    assume "r \<in> elect m V R p"
     with partition_1 partition_2
-    show "a \<in> A"
+    show "r \<in> R"
       using UnI1 fstI
       by (metis (no_types))
   }
   {
-    assume "a \<in> reject m V A p"
+    assume "r \<in> reject m V R p"
     with partition_1 partition_2
-    show "a \<in> A"
+    show "r \<in> R"
       using UnI1 fstI sndI subsetD sup_ge2
       by metis
   }
   {
-    assume "a \<in> defer m V A p"
+    assume "r \<in> defer m V R p"
     with partition_1 partition_2
-    show "a \<in> A"
+    show "r \<in> R"
       using sndI subsetD sup_ge2
       by metis
   }
   {
     assume
-      "a \<in> A" and
-      "a \<notin> defer m V A p" and
-      "a \<notin> reject m V A p"
+      "r \<in> R" and
+      "r \<notin> defer m V R p" and
+      "r \<notin> reject m V R p"
     with partition_1 partition_2
-    show "a \<in> elect m V A p"
+    show "r \<in> elect m V R p"
       using fst_conv snd_conv Un_iff
       by metis
   }
 qed
 
+(*
 lemma result_disj:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
+    p :: "('v, 'b) Profile" and
     V :: "'v set"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
+    mod: "electoral_module m" and
+    wf: "well_formed_profile V (affected_alts R) p"
   shows
     "(elect m V A p) \<inter> (reject m V A p) = {} \<and>
         (elect m V A p) \<inter> (defer m V A p) = {} \<and>
@@ -575,19 +592,21 @@ proof (safe)
       by (metis (no_types))
   }
 qed
+*)
 
 lemma elect_in_alts:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile"
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "elect m V A p \<subseteq> A"
-  using le_supI1 assms result_presv_alts sup_ge1
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "elect m V R p \<subseteq> R"
+  using le_supI1 assms result_presv_conts sup_ge1
   by metis
 
+(*
 lemma reject_in_alts:
   fixes
     m :: "('a, 'v, 'a Result) Electoral_Module" and
@@ -898,6 +917,7 @@ proof -
 qed
 
 *)
+
 subsection \<open>Non-Blocking\<close>
 
 text \<open>
@@ -905,14 +925,13 @@ text \<open>
   this module never rejects all alternatives.
 \<close>
 
-definition (in electoral_structure) non_blocking :: 
-  "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
+definition non_blocking :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "non_blocking m \<equiv>
     electoral_module m \<and>
       (\<forall> V A R p. ((R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p) 
       \<longrightarrow> reject m V R p \<noteq> R))"
 
-(*      
+    
 subsection \<open>Electing\<close>
 
 text \<open>
@@ -920,39 +939,41 @@ text \<open>
   it always elects at least one alternative.
 \<close>
 
-definition electing :: "('a, 'v, 'a Result) Electoral_Module \<Rightarrow> bool" where
+definition electing :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "electing m \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
-      (\<forall> A V p. (A \<noteq> {} \<and> finite A \<and> profile V A p) \<longrightarrow> elect m V A p \<noteq> {})"
+    electoral_module m \<and>
+      (\<forall> R V p. (R \<noteq> {} \<and> well_formed_partial (R, V, p)) \<longrightarrow> elect m V R p \<noteq> {})"
 
-lemma electing_for_only_alt:
+
+lemma electing_for_only_cont:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    one_alt: "card A = 1" and
+    one_cont: "card R = 1" and
     electing: "electing m" and
-    prof: "profile V A p"
-  shows "elect m V A p = A"
+    prof: "well_formed_profile V (affected_alts R) p"
+  shows "elect m V R p = R"
 proof (intro equalityI)
-  show elect_in_A: "elect m V A p \<subseteq> A"
+  show elect_in_R: "elect m V R p \<subseteq> R"
     using electing prof elect_in_alts
     unfolding electing_def
     by metis
-  show "A \<subseteq> elect m V A p"
+  show "R \<subseteq> elect m V R p"
   proof (intro subsetI)
-    fix a :: "'a"
-    assume "a \<in> A"
-    thus "a \<in> elect m V A p"
-      using one_alt electing prof elect_in_A IntD2 Int_absorb2 card_1_singletonE
+    fix r :: "'r"
+    assume "r \<in> R"
+    thus "r \<in> elect m V R p"
+      using one_cont electing prof elect_in_R IntD2 Int_absorb2 card_1_singletonE
             card_gt_0_iff equals0I zero_less_one singletonD
       unfolding electing_def
-      by (metis (no_types))
+      by (metis well_formed_partial.simps)
   qed
 qed
 
+(*
 theorem electing_imp_non_blocking:
   fixes m :: "('a, 'v, 'a Result) Electoral_Module"
   assumes "electing m"
@@ -983,6 +1004,7 @@ next
     using Diff_cancel Un_empty elec_and_def_not_rej
     by metis
 qed
+*)
 
 subsection \<open>Properties\<close>
 
@@ -991,11 +1013,12 @@ text \<open>
   it never elects an alternative.
 \<close>
 
-definition (in electoral_structure) non_electing :: "('v, 'b,'r) Electoral_Module \<Rightarrow> bool" where
+definition non_electing :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "non_electing m \<equiv>
     electoral_module m
-      \<and> (\<forall> A V p. well_formed_profile V A p \<longrightarrow> elect m V (limit_conts A UNIV) p = {})"
+      \<and> (\<forall> R V p. (R \<noteq> {} \<and> well_formed_partial (R, V, p)) \<longrightarrow> elect m V R p = {})"
 
+(*
 lemma single_rej_decr_def_card:
   fixes
     m :: "('a, 'v, 'a Result) Electoral_Module" and
@@ -1447,4 +1470,4 @@ definition (in electoral_structure) monotonicity :: "('r, 'v, 'b) Electoral_Modu
       (\<forall> A V p q a. a \<in> elect m V A p \<and> lifted V A p q a \<longrightarrow> a \<in> elect m V A q)"
 
 *)
-end
+end end

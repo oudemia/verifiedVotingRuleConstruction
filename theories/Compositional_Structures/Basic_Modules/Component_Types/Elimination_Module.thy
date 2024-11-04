@@ -89,15 +89,14 @@ lemma elim_mod_sound[simp]:
   shows "electoral_module (elimination_module e t r)"
 proof (unfold electoral_module.simps, safe)
 fix 
-A :: "'a set" and
+R :: "'r set" and
 V :: "'v set" and 
 p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-let ?r = "elimination_module e t r V (contenders A) p"
+assume "well_formed_profile V (affected_alts R) p"
+let ?r = "elimination_module e t r V R p"
 have "disjoint3 ?r" by simp
-moreover have "set_equals_partition (contenders A) ?r" by auto
-ultimately show "well_formed_result A (elimination_module e t r V (contenders A) p)" 
-  using min_wf 
+moreover have "set_equals_partition R ?r" by auto
+ultimately show "well_formed_result R (elimination_module e t r V R p)" 
   by simp
 qed 
 
@@ -107,12 +106,12 @@ lemma less_elim_sound[simp]:
     t :: "Threshold_Value"
   shows "electoral_module (less_eliminator e t)"
 proof (unfold electoral_module.simps less_eliminator.simps, safe)
-fix
-A :: "'a set" and
-V :: "'v set" and
-p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-thus "well_formed_result A (elimination_module e t (<) V (contenders A) p)"
+fix 
+  R :: "'r set" and
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile"
+assume "well_formed_profile V (affected_alts R) p"
+thus "well_formed_result R (elimination_module e t (<) V R p)"
   using electoral_module.simps elim_mod_sound
   by blast
 qed
@@ -124,11 +123,11 @@ lemma leq_elim_sound[simp]:
   shows "electoral_module (leq_eliminator e t)"
 proof (unfold electoral_module.simps leq_eliminator.simps, safe)
 fix
-A :: "'a set" and
-V :: "'v set" and
-p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-thus "well_formed_result A (elimination_module e t (\<le>) V (contenders A) p)"
+  R :: "'r set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile"
+assume "well_formed_profile V (affected_alts R) p"
+thus "well_formed_result R (elimination_module e t (\<le>) V R p)"
   using electoral_module.simps elim_mod_sound
   by blast
 qed
@@ -138,12 +137,12 @@ lemma max_elim_sound[simp]:
   shows "electoral_module (max_eliminator e)"
 proof (unfold electoral_module.simps max_eliminator.simps, safe)
 fix
-A :: "'a set" and
-V :: "'v set" and
-p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-thus "well_formed_result A 
-    (less_eliminator e (Max {e V x (contenders A) p |x. x \<in> contenders A}) V (contenders A) p)"
+  R :: "'r set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile"
+assume "well_formed_profile V (affected_alts R) p"
+thus "well_formed_result R
+    (less_eliminator e (Max {e V x R p |x. x \<in> R}) V R p)"
   using electoral_module.simps less_elim_sound
   by blast
 qed
@@ -153,12 +152,12 @@ lemma min_elim_sound[simp]:
   shows "electoral_module (min_eliminator e)"
 proof (unfold electoral_module.simps min_eliminator.simps, safe)
 fix
-A :: "'a set" and
-V :: "'v set" and
-p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-thus "well_formed_result A 
-    (leq_eliminator e (Min {e V x (contenders A) p |x. x \<in> contenders A}) V (contenders A) p)"
+  R :: "'r set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile"
+assume "well_formed_profile V (affected_alts R) p"
+thus "well_formed_result R 
+    (leq_eliminator e (Min {e V x R p |x. x \<in> R}) V R p)"
   using electoral_module.simps leq_elim_sound
   by blast
 qed
@@ -168,11 +167,11 @@ lemma less_avg_elim_sound[simp]:
   shows "electoral_module (less_average_eliminator e)"
 proof (unfold electoral_module.simps less_average_eliminator.simps, safe)
 fix
-A :: "'a set" and
-V :: "'v set" and
-p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-thus "well_formed_result A (less_eliminator e (average e V (contenders A) p) V (contenders A) p) "
+  R :: "'r set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile"
+assume "well_formed_profile V (affected_alts R) p"
+thus "well_formed_result R (less_eliminator e (average e V R p) V R p) "
   using electoral_module.simps less_elim_sound
   by blast
 qed
@@ -182,14 +181,14 @@ lemma leq_avg_elim_sound[simp]:
   shows "electoral_module (leq_average_eliminator e)"
 proof (unfold electoral_module.simps leq_average_eliminator.simps, safe)
 fix
-A :: "'a set" and
-V :: "'v set" and
-p :: "('v, 'b) Profile"
-assume "well_formed_profile V A p"
-thus "well_formed_result A (leq_eliminator e (average e V (contenders A) p) V (contenders A) p) "
+  R :: "'r set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile"
+assume "well_formed_profile V (affected_alts R) p"
+thus "well_formed_result R (leq_eliminator e (average e V R p) V R p) "
   using electoral_module.simps leq_elim_sound
   by blast
-  qed
+qed
   
 
 subsection \<open>Only participating voters impact the result\<close>
@@ -430,7 +429,7 @@ qed
     
   
 subsection \<open>Non-Electing\<close>
-(*
+
 lemma elim_mod_non_electing:
   fixes
     e :: "('r, 'v, 'b) Evaluation_Function" and
@@ -440,10 +439,10 @@ lemma elim_mod_non_electing:
   unfolding non_electing_def
   by force
 
-  
+ 
 lemma less_elim_non_electing:
   fixes
-    e :: "('a, 'v, 'b) Evaluation_Function" and
+    e :: "('r, 'v, 'b) Evaluation_Function" and
     t :: "Threshold_Value"
   shows "non_electing (less_eliminator e t)"
   using elim_mod_non_electing less_elim_sound
@@ -452,36 +451,37 @@ lemma less_elim_non_electing:
 
 lemma leq_elim_non_electing:
   fixes
-    e :: "('a, 'v, 'b) Evaluation_Function" and
+    e :: "('r, 'v, 'b) Evaluation_Function" and
     t :: "Threshold_Value"
   shows "non_electing (leq_eliminator e t)"
   unfolding non_electing_def
   by force
 
 lemma max_elim_non_electing:
-  fixes e :: "('a, 'v, 'b) Evaluation_Function"
+  fixes e :: "('r, 'v, 'b) Evaluation_Function"
   shows "non_electing (max_eliminator e)"
   unfolding non_electing_def
   by force
 
 lemma min_elim_non_electing:
-  fixes e :: "('a, 'v, 'b) Evaluation_Function"
+  fixes e :: "('r, 'v, 'b) Evaluation_Function"
   shows "non_electing (min_eliminator e)"
   unfolding non_electing_def
   by force
 
 lemma less_avg_elim_non_electing:
-  fixes e :: "('a, 'v, 'b) Evaluation_Function"
+  fixes e :: "('r, 'v, 'b) Evaluation_Function"
   shows "non_electing (less_average_eliminator e)"
   unfolding non_electing_def
   by auto
 
 lemma leq_avg_elim_non_electing:
-  fixes e :: "('a, 'v, 'b) Evaluation_Function"
+  fixes e :: "('r, 'v, 'b) Evaluation_Function"
   shows "non_electing (leq_average_eliminator e)"
   unfolding non_electing_def
   by force
 
+(*
 subsection \<open>Inference Rules\<close>
 
 text \<open>
@@ -490,7 +490,7 @@ text \<open>
 \<close>
 
 theorem cr_eval_imp_ccomp_max_elim[simp]:
-  fixes e :: "('a, 'v, 'b) Evaluation_Function"
+  fixes e :: "('r, 'v, 'b) Evaluation_Function"
   assumes "condorcet_rating e"
   shows "condorcet_compatibility (max_eliminator e)"
 proof (unfold condorcet_compatibility_def, safe)

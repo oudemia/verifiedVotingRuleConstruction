@@ -24,45 +24,7 @@ subsection \<open>Definition\<close>
 type_synonym ('a, 'v, 'b, 'r) Voting_Rule = "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r set"
 
 subsection \<open>Properties\<close>
-
-fun rename_pr :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a Preference_Relation \<Rightarrow> 'a Preference_Relation" where
-  "rename_pr \<pi> b = (\<lambda> (a1, a2). (\<pi> a1, \<pi> a2)) ` b"
-
-fun rename_comm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
-  "rename_comm \<pi> C = \<pi> ` C"
-  
-  
-definition vr_neutrality_swpb :: "('a, 'v, 'a Preference_Relation, 'a) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality_swpb r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
-        bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (rename_pr \<pi>) \<circ> p) in
-            \<P>\<V>_profile.finite_profile V A p \<and> \<P>\<V>_profile.finite_profile V' A' q \<longrightarrow> \<pi> ` (r V A p) = r V' A' q))"
-
-definition vr_neutrality_commpb :: "('a, 'v, 'a Preference_Relation, 'a Committee) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality_commpb r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
-        bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (rename_pr \<pi>) \<circ> p) in
-            \<P>\<V>_profile.finite_profile V A p \<and> \<P>\<V>_profile.finite_profile V' A' q \<longrightarrow>  (rename_comm \<pi>) ` (r V A p) = r V' A' q))"
-
-definition vr_neutrality_swab :: "('a, 'v, 'a Approval_Set, 'a) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality_swab r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
-        bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (rename_comm \<pi>) \<circ> p) in
-            \<A>\<V>_profile.finite_profile V A p \<and> \<A>\<V>_profile.finite_profile V' A' q \<longrightarrow> \<pi> ` (r V A p) = r V' A' q))"
-
-definition vr_neutrality_commab :: "('a, 'v, 'a Approval_Set, 'a Committee) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality_commab r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
-        bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (rename_comm \<pi>) \<circ> p) in
-            \<A>\<V>_profile.finite_profile V A p \<and> \<A>\<V>_profile.finite_profile V' A' q \<longrightarrow>  (rename_comm \<pi>) ` (r V A p) = r V' A' q))"
-
-definition vr_neutrality_relpb :: "('a, 'v, 'a Preference_Relation, 'a rel) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality_relpb r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
-        bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (rename_pr \<pi>) \<circ> p) in
-            \<P>\<V>_profile.finite_profile V A p \<and> \<P>\<V>_profile.finite_profile V' A' q \<longrightarrow>  (rename_pr \<pi>) ` (r V A p) = r V' A' q))"
-            
-            
+         
 context electoral_structure 
 begin
 
@@ -87,20 +49,16 @@ definition vr_neutrality :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  w
         bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (permute_bal \<pi> A) \<circ> p) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow>  (permute_cont \<pi> A) ` (r V A p) = r V' A' q))"
 
-
-definition coinciding_bal_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
-   "coinciding_bal_permute A \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> b. well_formed_ballot A b \<longrightarrow> 
-      limit_ballot (\<pi> ` S) (\<rho> b) = \<rho> (limit_ballot S b)))"
-
 definition coinciding_cont_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> bool" where
    "coinciding_cont_permute A \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
       limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c})))"
             
-definition vr_neutrality' :: "('b \<Rightarrow> 'b) \<Rightarrow>('r \<Rightarrow> 'r) \<Rightarrow>('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
+definition vr_neutrality' :: "(('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b)) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r)) \<Rightarrow>('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_neutrality' \<beta> \<kappa> r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a). bij \<pi> \<and> coinciding_bal_permute A \<pi> \<beta> \<and> coinciding_cont_permute A \<pi> \<kappa> 
-        \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, \<beta> \<circ> p) in
-            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> (\<kappa> `(r V A p)) = r V' A' q))"
+      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a). 
+        bij \<pi> \<and> coinciding_bal_permute A \<pi> (\<beta> \<pi>) \<and> coinciding_cont_permute A \<pi> (\<kappa> \<pi>) 
+          \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (\<beta> \<pi>) \<circ> p) in
+            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> ((\<kappa> \<pi>) `(r V A p)) = r V' A' q))"
                      
 end
 
