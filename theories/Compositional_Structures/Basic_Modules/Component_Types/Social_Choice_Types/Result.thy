@@ -55,21 +55,22 @@ text \<open>
 locale result =
   fixes
     contenders :: "'a set \<Rightarrow> 'r set" and
-    well_formed_result :: "'a set \<Rightarrow> 'r Result \<Rightarrow> bool" and
     limit_contenders :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
     affected_alts :: "'r set \<Rightarrow> 'a set"
-  assumes min_wf: "\<And> (A::('a set)) (r::('r Result)).
-    (set_equals_partition (contenders A) r \<and> disjoint3 r) \<Longrightarrow> well_formed_result A r" and
-    "\<And> (A::('a set)) (r::('r set)). (affected_alts (limit_contenders A r)) \<subseteq> A" and
-    "\<And> (A::('a set)). affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
-    "\<And> (A :: 'a set)(B :: 'a set). A \<subseteq> B  \<Longrightarrow> (affected_alts (contenders A)) \<subseteq> (affected_alts (contenders B))"
+  assumes 
+    conts_cover: "affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
+    sub_coincide: "A \<subseteq> B \<longrightarrow> (affected_alts (contenders A)) \<subseteq> (affected_alts (contenders B))"
+begin
+    
+fun limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
+  "limit_res A (e, r, d) = (limit_contenders A e, limit_contenders A r, limit_contenders A d)"
 
+fun well_formed_result :: "'r set \<Rightarrow> 'r Result \<Rightarrow> bool" where  
+  "well_formed_result R r = (set_equals_partition R r \<and> disjoint3 r)"
+end
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
 \<close>
-
-fun (in result) limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
-  "limit_res A (e, r, d) = (limit_contenders A e, limit_contenders A r, limit_contenders A d)"
 
 abbreviation elect_r :: "'r Result \<Rightarrow> 'r set" where
   "elect_r r \<equiv> fst r"

@@ -28,7 +28,7 @@ fun limit_set_\<S>\<W>\<F> ::
   "limit_set_\<S>\<W>\<F> A res = {limit A r | r. r \<in> res \<and> linear_order_on A (limit A r)}"
 
 fun affected_alts_\<S>\<W>\<F> :: "('a Preference_Relation) set \<Rightarrow> 'a set" where
-  "affected_alts_\<S>\<W>\<F> res =  \<Union> ((\<lambda>r. Domain r \<union> Range r) `res)"
+  "affected_alts_\<S>\<W>\<F> res = \<Union> ((\<lambda>r. Domain r \<union> Range r) `res)"
 
   
 lemma res_surj_\<S>\<W>\<F>:

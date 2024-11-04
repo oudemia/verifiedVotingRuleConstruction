@@ -321,20 +321,17 @@ lemma rename_inj:
   shows "inj (rename \<pi>)"
 proof (unfold inj_def split_paired_All rename.simps, safe)
   fix
-    A :: "'a set" and
-    A' :: "'a set" and
-    V :: "'v set" and
-    V' :: "'v set" and
-    p :: "('v, 'b) Profile" and
-    p' :: "('v, 'b) Profile" and
+    A A' :: "'x set" and
+    V V' :: "'v set" and
+    p q :: "('v, 'y) Profile" and
     v :: "'v"
   assume
-    "p \<circ> the_inv \<pi> = p' \<circ> the_inv \<pi>" and
+    "p \<circ> the_inv \<pi> = q \<circ> the_inv \<pi>" and
     "\<pi> ` V = \<pi> ` V'"
   thus
     "v \<in> V \<Longrightarrow> v \<in> V'" and
     "v \<in> V' \<Longrightarrow> v \<in> V" and
-    "p = p'"
+    "p = q"
     using assms
     by (metis bij_betw_imp_inj_on inj_image_eq_iff,
         metis bij_betw_imp_inj_on inj_image_eq_iff,
