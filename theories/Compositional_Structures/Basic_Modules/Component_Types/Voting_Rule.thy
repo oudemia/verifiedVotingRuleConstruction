@@ -49,18 +49,35 @@ definition vr_neutrality :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  w
         bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (permute_bal \<pi> A) \<circ> p) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow>  (permute_cont \<pi> A) ` (r V A p) = r V' A' q))"
 
-definition coinciding_cont_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> bool" where
-   "coinciding_cont_permute A \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
-      limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c})))"
+(*            
+definition coinciding_permutes :: "'r set \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+   "coinciding_permutes R \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> R. \<forall> b. well_formed_ballot (affected_alts R) b 
+    \<longrightarrow> limit_by_conts (\<pi> ` S) (\<rho> b) = \<rho> ( limit_by_conts S b)))"
 
-(*      
-definition vr_neutrality' :: "(('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b)) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r)) \<Rightarrow>('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
+definition neutrality' :: "('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "neutrality' \<rho> \<beta> m \<equiv> electoral_module m \<and> bij \<rho> \<and> bij \<beta> \<and>
+      (\<forall> R V p. coinciding_permutes R \<rho> \<beta> \<longrightarrow> (let (R', V', q) = (\<rho> ` R, V, \<beta> \<circ> p) in
+            finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
+              m V R p = m V' R' q))"
+*)
+
+definition coinciding_bal_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+   "coinciding_bal_permute A \<pi> \<beta> = (\<forall>S \<subseteq> A. \<forall> b. 
+      well_formed_ballot A b \<longrightarrow> limit_ballot (\<pi> ` S) (\<beta> b) = \<beta> (limit_ballot S b))"
+
+definition coinciding_cont_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> bool" where
+   "coinciding_cont_permute A \<pi> \<rho> = (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
+      limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c}))"          
+
+      
+definition vr_neutrality' :: "(('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b)) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r)) 
+                              \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_neutrality' \<beta> \<kappa> r \<equiv>
       (\<forall> A V p \<pi>::('a \<Rightarrow> 'a). 
         bij \<pi> \<and> coinciding_bal_permute A \<pi> (\<beta> \<pi>) \<and> coinciding_cont_permute A \<pi> (\<kappa> \<pi>) 
           \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (\<beta> \<pi>) \<circ> p) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> ((\<kappa> \<pi>) `(r V A p)) = r V' A' q))"
-*)                     
+                    
 end
 
 subsection \<open>The Elector Voting Rule\<close>
