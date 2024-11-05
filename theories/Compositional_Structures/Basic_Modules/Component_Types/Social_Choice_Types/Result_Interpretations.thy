@@ -61,12 +61,6 @@ next
     a :: 'a
   assume "C \<subseteq> D" and "A \<in> C" and  "a \<in> A"
   thus "a \<in> \<Union> D" by blast
-next
-  fix
-    A B C:: "'a set" and
-    a:: 'a
-  assume "A \<subseteq> B" and "C \<subseteq> A" and  "a \<in> C"
-  thus "a \<in> B" by blast
 qed
 
 text \<open>
@@ -102,19 +96,6 @@ next
       using assm
       by (metis res_surj_\<S>\<W>\<F>)
 next
- fix
-    A B :: "'a set" and
-    a :: 'a
-  assume 
-    sub: "A \<subseteq> B" and 
-    elem: "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A UNIV)"
-  show "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> B UNIV)"
-  proof -
-    have "a \<in> A" using elem by (metis res_surj_\<S>\<W>\<F>)
-    hence "a \<in> B" using sub by blast
-    thus "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> B UNIV)" by (metis res_surj_\<S>\<W>\<F>)
-  qed
-next
   fix
     A :: "'a set" and
     a :: 'a and
@@ -125,6 +106,20 @@ next
     "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
   thus "r \<in> {}"
     by (metis empty_iff res_surj_\<S>\<W>\<F>)
+next
+ fix
+    R S :: "('a Preference_Relation) set" and
+    a :: "'a"
+  assume 
+    sub: "R \<subseteq> S" and 
+    elem: "a \<in> affected_alts_\<S>\<W>\<F> R"
+  have "Domain ` R \<subseteq> Domain ` S" using sub by auto
+  moreover have "Range ` R \<subseteq> Range ` S" using sub by auto
+  ultimately have "affected_alts_\<S>\<W>\<F> R \<subseteq> affected_alts_\<S>\<W>\<F> S"
+    using sub 
+    by auto
+  thus "a \<in> affected_alts_\<S>\<W>\<F> S"
+    using elem by blast
 qed
 
 
@@ -173,16 +168,6 @@ next
     qed
 next
   fix
-    A B :: "'a set" and
-    a :: 'a
-  assume 
-    elem: "a \<in> affected_alts_committee (committees A)" and
-    sub: "A \<subseteq> B"
-  have "affected_alts_committee (committees A) \<subseteq> affected_alts_committee (committees B)" 
-    using sub by (metis affected_alts_committee.simps subset_committees)
-  thus "a \<in> affected_alts_committee (committees B)" using elem by blast
-next
-  fix
     A :: "'a set" and
     a :: 'a and
     C :: "'a Committee"
@@ -200,6 +185,14 @@ next
   thus "C \<in> {}" 
     using comm 
     by auto
+next
+  fix
+    C D :: "'a Committee set" and
+    a :: 'a
+  assume 
+    elem: "a \<in> affected_alts_committee C" and
+    sub: "C \<subseteq> D"
+    thus "a \<in> affected_alts_committee D" by auto
 qed
 
 setup Locale_Code.close_block

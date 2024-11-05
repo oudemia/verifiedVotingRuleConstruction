@@ -71,7 +71,7 @@ proof (unfold_locales, standard)
 next
   fix
     A B:: "'a set"
-  show " A \<subseteq> B \<longrightarrow> affected_alts_\<S>\<C>\<F> (id A) \<subseteq> affected_alts_\<S>\<C>\<F> (id B)" by simp
+  show " A \<subseteq> B \<longrightarrow> affected_alts_\<S>\<C>\<F> A \<subseteq> affected_alts_\<S>\<C>\<F> B" by simp
 next
   fix
     R :: "'a set" and
