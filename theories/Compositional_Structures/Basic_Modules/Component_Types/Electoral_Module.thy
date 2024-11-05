@@ -201,7 +201,6 @@ proof -
     using rename by auto
 qed
 
-
 end
 
 text \<open>
@@ -281,15 +280,21 @@ context electoral_structure
 begin
 
 definition coinciding_permutes :: "'r set \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
-   "coinciding_permutes R \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> R. \<forall> b. well_formed_ballot (affected_alts R) b 
-    \<longrightarrow> limit_by_conts (\<pi> ` S) (\<rho> b) = \<rho> ( limit_by_conts S b)))"
+   "coinciding_permutes R \<pi> \<rho> = (\<forall>S \<subseteq> R. \<forall> b. well_formed_ballot (affected_alts R) b 
+    \<longrightarrow> limit_by_conts (\<pi> ` S) (\<rho> b) = \<rho> ( limit_by_conts S b))"
 
 definition neutrality' :: "('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
-  "neutrality' \<rho> \<beta> m \<equiv> electoral_module m \<and> bij \<rho> \<and> bij \<beta> \<and>
+  "neutrality' \<rho> \<beta> m \<equiv> electoral_module m \<and> bij \<rho> \<and>
       (\<forall> R V p. coinciding_permutes R \<rho> \<beta> \<longrightarrow> (let (R', V', q) = (\<rho> ` R, V, \<beta> \<circ> p) in
             finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
-              m V R p = m V' R' q))"
+               m V' R' q = rename_result \<rho> (m V R p)))"
 
+definition neutrality'' :: "('r \<Rightarrow> 'r) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "neutrality'' \<rho> m \<equiv> electoral_module m \<and> bij \<rho> \<and>
+      (\<forall> R V \<beta> p. coinciding_permutes R \<rho> \<beta> \<longrightarrow> (let (R', V', q) = (\<rho> ` R, V, \<beta> \<circ> p) in
+            finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
+               m V' R' q = rename_result \<rho> (m V R p)))"
+          
 (*
 
 fun (in result_properties) neutrality :: "('a, 'v, 'a Preference_Relation) Election set
@@ -415,62 +420,63 @@ definition prof_geq_result :: "('a, 'v, 'a Result) Electoral_Module \<Rightarrow
     (a \<in> elect m V A p \<longrightarrow> a \<in> elect m V A q) \<and>
     (a \<in> defer m V A p \<longrightarrow> a \<notin> reject m V A q)"
 
-definition mod_contains_result :: "('a, 'v, 'a Result) Electoral_Module
-                                    \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'a set
-                                    \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "mod_contains_result m n V A p a \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
-    \<S>\<C>\<F>_result.electoral_module n \<and>
-    profile V A p \<and> a \<in> A \<and>
-    (a \<in> elect m V A p \<longrightarrow> a \<in> elect n V A p) \<and>
-    (a \<in> reject m V A p \<longrightarrow> a \<in> reject n V A p) \<and>
-    (a \<in> defer m V A p \<longrightarrow> a \<in> defer n V A p)"
+*)
 
-definition mod_contains_result_sym :: "('a, 'v, 'a Result) Electoral_Module
-                                    \<Rightarrow> ('a, 'v, 'a Result) Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'a set
-                                    \<Rightarrow> ('a, 'v) Profile \<Rightarrow> 'a \<Rightarrow> bool" where
-  "mod_contains_result_sym m n V A p a \<equiv>
-    \<S>\<C>\<F>_result.electoral_module m \<and>
-    \<S>\<C>\<F>_result.electoral_module n \<and>
-    profile V A p \<and> a \<in> A \<and>
-    (a \<in> elect m V A p \<longleftrightarrow> a \<in> elect n V A p) \<and>
-    (a \<in> reject m V A p \<longleftrightarrow> a \<in> reject n V A p) \<and>
-    (a \<in> defer m V A p \<longleftrightarrow> a \<in> defer n V A p)"
+context electoral_structure 
+begin
+
+definition mod_contains_result :: "('r, 'v, 'b) Electoral_Module
+                                    \<Rightarrow> ('r, 'v, 'b)  Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+                                    \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r \<Rightarrow> bool" where
+  "mod_contains_result m n V R p r \<equiv>
+    electoral_module m \<and>
+    electoral_module n \<and>
+    well_formed_profile V (affected_alts R) p \<and> r \<in> R \<and>
+    (r \<in> elect m V R p \<longrightarrow> r \<in> elect n V R p) \<and>
+    (r \<in> reject m V R p \<longrightarrow> r \<in> reject n V R p) \<and>
+    (r \<in> defer m V R p \<longrightarrow> r \<in> defer n V R p)"
+
+definition mod_contains_result_sym :: "('r, 'v, 'b) Electoral_Module
+                                    \<Rightarrow> ('r, 'v, 'b)  Electoral_Module \<Rightarrow> 'v set \<Rightarrow> 'r set
+                                    \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'r \<Rightarrow> bool" where
+  "mod_contains_result_sym m n V R p r \<equiv>
+    electoral_module m \<and>
+    electoral_module n \<and>
+    well_formed_profile V (affected_alts R) p \<and> r \<in> R \<and>
+    (r \<in> elect m V R p \<longleftrightarrow> r \<in> elect n V R p) \<and>
+    (r \<in> reject m V R p \<longleftrightarrow> r \<in> reject n V R p) \<and>
+    (r \<in> defer m V R p \<longleftrightarrow> r \<in> defer n V R p)"
+
 
 subsection \<open>Auxiliary Lemmas\<close>
 
+
 lemma elect_rej_def_combination:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
     V :: "'v set" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile" and
-    e :: "'a set" and
-    r :: "'a set" and
-    d :: "'a set"
+    R :: "'r set" and
+    p :: "('v, 'b) Profile" and
+    e r d:: "'r set"
   assumes
-    "elect m V A p = e" and
-    "reject m V A p = r" and
-    "defer m V A p = d"
-  shows "m V A p = (e, r, d)"
+    "elect m V R p = e" and
+    "reject m V R p = r" and
+    "defer m V R p = d"
+  shows "m V R p = (e, r, d)"
   using assms
   by auto
 
 lemma par_comp_result_sound:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile"
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "well_formed_\<S>\<C>\<F> A (m V A p)"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "well_formed_result R (m V R p)"
   using assms
   by simp
-*)
-
-context electoral_structure 
-begin
 
 lemma result_presv_conts:
   fixes
@@ -525,7 +531,7 @@ proof (safe)
   }
 qed
 
-(*
+
 lemma result_disj:
   fixes
     m :: "('r, 'v, 'b) Electoral_Module" and
@@ -536,65 +542,65 @@ lemma result_disj:
     mod: "electoral_module m" and
     wf: "well_formed_profile V (affected_alts R) p"
   shows
-    "(elect m V A p) \<inter> (reject m V A p) = {} \<and>
-        (elect m V A p) \<inter> (defer m V A p) = {} \<and>
-        (reject m V A p) \<inter> (defer m V A p) = {}"
+    "(elect m V R p) \<inter> (reject m V R p) = {} \<and>
+        (elect m V R p) \<inter> (defer m V R p) = {} \<and>
+        (reject m V R p) \<inter> (defer m V R p) = {}"
 proof (safe)
-  fix a :: "'a"
-  have wf: "well_formed_\<S>\<C>\<F> A (m V A p)"
+  fix r' :: "'r"
+  have wf: "well_formed_result R (m V R p)"
     using assms
-    unfolding \<S>\<C>\<F>_result.electoral_module.simps
+    unfolding electoral_module.simps
     by metis
-  have disj: "disjoint3 (m V A p)"
+  have disj: "disjoint3 (m V R p)"
     using assms
     by simp
   {
     assume
-      "a \<in> elect m V A p" and
-      "a \<in> reject m V A p"
+      "r' \<in> elect m V R p" and
+      "r' \<in> reject m V R p"
     with wf disj
-    show "a \<in> {}"
+    show "r' \<in> {}"
       using prod.exhaust_sel DiffE UnCI result_imp_rej
       by (metis (no_types))
   }
   {
     assume
-      elect_a: "a \<in> elect m V A p" and
-      defer_a: "a \<in> defer m V A p"
+      elect_r: "r' \<in> elect m V R p" and
+      defer_r: "r' \<in> defer m V R p"
     then obtain
-      e :: "'a Result \<Rightarrow> 'a set" and
-      r :: "'a Result \<Rightarrow> 'a set" and
-      d :: "'a Result \<Rightarrow> 'a set"
+      e :: "'r Result \<Rightarrow> 'r set" and
+      r :: "'r Result \<Rightarrow> 'r set" and
+      d :: "'r Result \<Rightarrow> 'r set"
       where
-        "m V A p =
-        (e (m V A p), r (m V A p), d (m V A p)) \<and>
-          e (m V A p) \<inter> r (m V A p) = {} \<and>
-          e (m V A p) \<inter> d (m V A p) = {} \<and>
-          r (m V A p) \<inter> d (m V A p) = {}"
+        "m V R p =
+        (e (m V R p), r (m V R p), d (m V R p)) \<and>
+          e (m V R p) \<inter> r (m V R p) = {} \<and>
+          e (m V R p) \<inter> d (m V R p) = {} \<and>
+          r (m V R p) \<inter> d (m V R p) = {}"
       using IntI emptyE prod.collapse disj disjoint3.simps
       by metis
-    hence "((elect m V A p) \<inter> (reject m V A p) = {}) \<and>
-          ((elect m V A p) \<inter> (defer m V A p) = {}) \<and>
-          ((reject m V A p) \<inter> (defer m V A p) = {})"
+    hence "((elect m V R p) \<inter> (reject m V R p) = {}) \<and>
+          ((elect m V R p) \<inter> (defer m V R p) = {}) \<and>
+          ((reject m V R p) \<inter> (defer m V R p) = {})"
       using eq_snd_iff fstI
       by metis
-    thus "a \<in> {}"
-      using elect_a defer_a disjoint_iff_not_equal
+    thus "r' \<in> {}"
+      using elect_r defer_r disjoint_iff_not_equal
       by (metis (no_types))
   }
   {
     assume
-      "a \<in> reject m V A p" and
-      "a \<in> defer m V A p"
+      "r' \<in> reject m V R p" and
+      "r' \<in> defer m V R p"
     with wf disj
-    show "a \<in> {}"
+    show "r' \<in> {}"
       using prod.exhaust_sel DiffE UnCI result_imp_rej
       by (metis (no_types))
   }
 qed
-*)
 
-lemma elect_in_alts:
+
+lemma elect_in_conts:
   fixes
     m :: "('r, 'v, 'b) Electoral_Module" and
     R :: "'r set" and
@@ -606,44 +612,56 @@ lemma elect_in_alts:
   using le_supI1 assms result_presv_conts sup_ge1
   by metis
 
-(*
-lemma reject_in_alts:
+
+lemma reject_in_conts:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "reject m V A p \<subseteq> A"
-  using le_supI1 assms result_presv_alts sup_ge2
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "reject m V R p \<subseteq> R"
+  using le_supI1 assms result_presv_conts sup_ge2
   by metis
 
-lemma defer_in_alts:
+lemma defer_in_conts:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "defer m V A p \<subseteq> A"
-  using assms result_presv_alts
-  by fastforce
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "defer m V R p \<subseteq> R"
+  using le_supI1 assms result_presv_conts
+  by blast
+
 
 lemma def_presv_prof:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile"
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
+    V :: "'v set" and
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "let new_A = defer m V A p in profile V new_A (limit_profile new_A p)"
-  using defer_in_alts limit_profile_sound assms
-  by metis
+    "electoral_module m" and
+    prof: "well_formed_profile V (affected_alts R) p"
+  shows "let new_R = defer m V R p in 
+    well_formed_profile V (affected_alts new_R) (limit_profile (affected_alts new_R) p)"
+proof -
+  have sub: "defer m V R p \<subseteq> R"
+    using assms defer_in_conts 
+    by blast
+  hence "affected_alts (defer m V R p) \<subseteq> affected_alts R"
+    using assms defer_in_conts sub_coincide1
+    by simp
+  thus ?thesis
+    using prof limit_profile_sound
+    by metis
+qed
 
 text \<open>
   An electoral module can never reject, defer or elect more than
@@ -652,36 +670,36 @@ text \<open>
 
 lemma upper_card_bounds_for_result:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p" and
-    "finite A"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p" and
+    "finite R"
   shows
-    upper_card_bound_for_elect: "card (elect m V A p) \<le> card A" and
-    upper_card_bound_for_reject: "card (reject m V A p) \<le> card A" and
-    upper_card_bound_for_defer: "card (defer m V A p) \<le> card A"
+    upper_card_bound_for_elect: "card (elect m V R p) \<le> card R" and
+    upper_card_bound_for_reject: "card (reject m V R p) \<le> card R" and
+    upper_card_bound_for_defer: "card (defer m V R p) \<le> card R"
   using assms card_mono
-  by (metis elect_in_alts,
-      metis reject_in_alts,
-      metis defer_in_alts)
+  by (metis elect_in_conts,
+      metis reject_in_conts,
+      metis defer_in_conts)
 
 lemma reject_not_elec_or_def:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "reject m V A p = A - (elect m V A p) - (defer m V A p)"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "reject m V R p = R - (elect m V R p) - (defer m V R p)"
 proof -
-  from assms have "(elect m V A p) \<union> (reject m V A p) \<union> (defer m V A p) = A"
-    using result_presv_alts
+  from assms have "(elect m V R p) \<union> (reject m V R p) \<union> (defer m V R p) = R"
+    using result_presv_conts
     by blast
   with assms show ?thesis
     using result_disj
@@ -690,17 +708,17 @@ qed
 
 lemma elec_and_def_not_rej:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile"
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "elect m V A p \<union> defer m V A p = A - (reject m V A p)"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "elect m V R p \<union> defer m V R p = R - (reject m V R p)"
 proof -
-  from assms have "(elect m V A p) \<union> (reject m V A p) \<union> (defer m V A p) = A"
-    using result_presv_alts
+  from assms have "(elect m V R p) \<union> (reject m V R p) \<union> (defer m V R p) = R"
+    using result_presv_conts
     by blast
   with assms show ?thesis
     using result_disj
@@ -709,16 +727,17 @@ qed
 
 lemma defer_not_elec_or_rej:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
-    p :: "('a, 'v) Profile"
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
+    V :: "'v set" and
+    p :: "('v, 'b) Profile"
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p"
-  shows "defer m V A p = A - (elect m V A p) - (reject m V A p)"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p"
+  shows "defer m V R p = R - (elect m V R p) - (reject m V R p)"
 proof -
-  from assms have "(elect m V A p) \<union> (reject m V A p) \<union> (defer m V A p) = A"
-    using result_presv_alts
+  from assms have "(elect m V R p) \<union> (reject m V R p) \<union> (defer m V R p) = R"
+    using result_presv_conts
     by simp
   with assms show ?thesis
     using result_disj
@@ -727,68 +746,68 @@ qed
 
 lemma electoral_mod_defer_elem:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a"
+    p :: "('v, 'b) Profile" and
+    r :: 'r
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p" and
-    "a \<in> A" and
-    "a \<notin> elect m V A p" and
-    "a \<notin> reject m V A p"
-  shows "a \<in> defer m V A p"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p" and
+    "r \<in> R" and
+    "r \<notin> elect m V R p" and
+    "r \<notin> reject m V R p"
+  shows "r \<in> defer m V R p"
   using DiffI assms reject_not_elec_or_def
   by metis
 
 lemma mod_contains_result_comm:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    n :: "('a, 'v, 'a Result)  Electoral_Module" and
-    A :: "'a set" and
+    m n :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a"
-  assumes "mod_contains_result m n V A p a"
-  shows "mod_contains_result n m V A p a"
+    p :: "('v, 'b) Profile" and
+    r :: 'r
+  assumes "mod_contains_result m n V R p r"
+  shows "mod_contains_result n m V R p r"
 proof (unfold mod_contains_result_def, safe)
   show
-    "\<S>\<C>\<F>_result.electoral_module n" and
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p" and
-    "a \<in> A"
+    "electoral_module n" and
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p" and
+    "r \<in> R"
     using assms
     unfolding mod_contains_result_def
     by safe
 next
   show
-    "a \<in> elect n V A p \<Longrightarrow> a \<in> elect m V A p" and
-    "a \<in> reject n V A p \<Longrightarrow> a \<in> reject m V A p" and
-    "a \<in> defer n V A p \<Longrightarrow> a \<in> defer m V A p"
+    "r \<in> elect n V R p \<Longrightarrow> r \<in> elect m V R p" and
+    "r \<in> reject n V R p \<Longrightarrow> r \<in> reject m V R p" and
+    "r \<in> defer n V R p \<Longrightarrow> r \<in> defer m V R p"
     using assms IntI electoral_mod_defer_elem empty_iff result_disj
     unfolding mod_contains_result_def
     by (metis (mono_tags, lifting),
         metis (mono_tags, lifting),
         metis (mono_tags, lifting))
 qed
+    
 
 lemma not_rej_imp_elec_or_defer:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a"
+    p :: "('v, 'b) Profile" and
+    r :: 'r
   assumes
-    "\<S>\<C>\<F>_result.electoral_module m" and
-    "profile V A p" and
-    "a \<in> A" and
-    "a \<notin> reject m V A p"
-  shows "a \<in> elect m V A p \<or> a \<in> defer m V A p"
+    "electoral_module m" and
+    "well_formed_profile V (affected_alts R) p" and
+    "r \<in> R" and
+    "r \<notin> reject m V R p"
+  shows "r \<in> elect m V R p \<or> r \<in> defer m V R p"
   using assms electoral_mod_defer_elem
   by metis
-
+(*
 lemma single_elim_imp_red_def_set:
   fixes
     m :: "('a, 'v, 'a Result) Electoral_Module" and
@@ -888,35 +907,37 @@ proof -
     by (metis (no_types))
 qed
 
+*)
+
 lemma eq_def_and_elect_imp_eq:
   fixes
-    m :: "('a, 'v, 'a Result) Electoral_Module" and
-    n :: "('a, 'v, 'a Result) Electoral_Module" and
-    A :: "'a set" and
+    m n :: "('r, 'v, 'b) Electoral_Module" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    q :: "('a, 'v) Profile"
+    p q :: "('v, 'b) Profile"
   assumes
-    mod_m: "\<S>\<C>\<F>_result.electoral_module m" and
-    mod_n: "\<S>\<C>\<F>_result.electoral_module n" and
-    fin_p: "profile V A p" and
-    fin_q: "profile V A q" and
-    elec_eq: "elect m V A p = elect n V A q" and
-    def_eq: "defer m V A p = defer n V A q"
-  shows "m V A p = n V A q"
+    mod_m: "electoral_module m" and
+    mod_n: "electoral_module n" and
+    fin_p: "well_formed_profile V (affected_alts R) p" and
+    fin_q: "well_formed_profile V (affected_alts R) q" and
+    elec_eq: "elect m V R p = elect n V R q" and
+    def_eq: "defer m V R p = defer n V R q"
+  shows "m V R p = n V R q"
 proof -
   have
-    "reject m V A p = A - ((elect m V A p) \<union> (defer m V A p))" and
-    "reject n V A q = A - ((elect n V A q) \<union> (defer n V A q))"
-    using elect_rej_def_combination result_imp_rej mod_m mod_n fin_p fin_q
-    unfolding \<S>\<C>\<F>_result.electoral_module.simps
-    by (metis, metis)
-  thus ?thesis
+    "reject m V R p = R - ((elect m V R p) \<union> (defer m V R p))" 
+    using elect_rej_def_combination result_imp_rej mod_m fin_p
+    by (metis electoral_module.elims(2))
+  moreover have
+    "reject n V R q = R - ((elect n V R q) \<union> (defer n V R q))"
+    using elect_rej_def_combination result_imp_rej mod_n fin_q
+    by (metis electoral_module.elims(2))
+  ultimately show ?thesis
     using prod_eqI elec_eq def_eq
     by metis
 qed
 
-*)
+
 
 subsection \<open>Non-Blocking\<close>
 
@@ -928,7 +949,7 @@ text \<open>
 definition non_blocking :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
   "non_blocking m \<equiv>
     electoral_module m \<and>
-      (\<forall> V A R p. ((R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p) 
+      (\<forall> V R p. ((R \<noteq> {} \<and> finite R \<and> well_formed_profile V (affected_alts R) p) 
       \<longrightarrow> reject m V R p \<noteq> R))"
 
     
@@ -958,7 +979,7 @@ lemma electing_for_only_cont:
   shows "elect m V R p = R"
 proof (intro equalityI)
   show elect_in_R: "elect m V R p \<subseteq> R"
-    using electing prof elect_in_alts
+    using electing prof elect_in_conts
     unfolding electing_def
     by metis
   show "R \<subseteq> elect m V R p"
@@ -973,38 +994,39 @@ proof (intro equalityI)
   qed
 qed
 
-(*
+
 theorem electing_imp_non_blocking:
-  fixes m :: "('a, 'v, 'a Result) Electoral_Module"
+  fixes m :: "('r, 'v, 'b) Electoral_Module"
   assumes "electing m"
   shows "non_blocking m"
 proof (unfold non_blocking_def, safe)
   from assms
-  show "\<S>\<C>\<F>_result.electoral_module m"
+  show "electoral_module m"
     unfolding electing_def
     by simp
 next
   fix
-    A :: "'a set" and
+    R :: "'r set" and
     V :: "'v set" and
-    p :: "('a, 'v) Profile" and
-    a :: "'a"
+    p :: "('v, 'b) Profile" and
+    r :: 'r
   assume
-    "profile V A p" and
-    "finite A" and
-    "reject m V A p = A" and
-    "a \<in> A"
+    "well_formed_profile V (affected_alts R) p" and
+    "finite R" and
+    "reject m V R p = R" and
+    "r \<in> R"
   moreover have
-    "\<S>\<C>\<F>_result.electoral_module m \<and>
-      (\<forall> A V q. A \<noteq> {} \<and> finite A \<and> profile V A q \<longrightarrow> elect m V A q \<noteq> {})"
+    "electoral_module m \<and>
+      (\<forall> R V p. (R \<noteq> {} \<and> well_formed_partial (R, V, p)) \<longrightarrow> elect m V R p \<noteq> {})"
     using assms
     unfolding electing_def
     by metis
-  ultimately show "a \<in> {}"
+  ultimately show "r \<in> {}"
+    unfolding well_formed_partial.simps
     using Diff_cancel Un_empty elec_and_def_not_rej
     by metis
 qed
-*)
+
 
 subsection \<open>Properties\<close>
 
