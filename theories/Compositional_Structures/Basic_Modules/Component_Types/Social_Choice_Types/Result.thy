@@ -60,7 +60,8 @@ locale result =
     assumes 
     conts_cover: "affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
     no_conts: "A \<noteq> {} \<and> affected_alts (contenders A) = {} \<longrightarrow> contenders A = {}" and
-    sub_coincide: "A \<subseteq> B \<longrightarrow> (affected_alts (contenders A)) \<subseteq> (affected_alts (contenders B))"
+    sub_coincide1: "C \<subseteq> D \<longrightarrow> (affected_alts C) \<subseteq> (affected_alts D)" and
+    sub_coincide2: "A \<subseteq> B \<longrightarrow> (contenders A) \<subseteq> (contenders B)"
 begin
     
 fun limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
@@ -68,6 +69,29 @@ fun limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
 
 fun well_formed_result :: "'r set \<Rightarrow> 'r Result \<Rightarrow> bool" where  
   "well_formed_result R r = (set_equals_partition R r \<and> disjoint3 r)"
+
+fun rename_result :: "('r \<Rightarrow> 'r) \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
+"rename_result \<pi> (e, r, d) = (\<pi> ` e, \<pi> ` r, \<pi> ` d)"
+
+lemma bij_preserves_result:
+  fixes \<pi> :: "'r \<Rightarrow> 'r" and R :: "'r set" and e r d :: "'r set"
+  assumes bij: "bij \<pi>" and wf: "well_formed_result R (e, r, d)"
+  shows "well_formed_result (\<pi> ` R) (rename_result \<pi> (e, r, d))"
+proof (unfold well_formed_result.simps, safe)
+  show "set_equals_partition (\<pi> ` R) (rename_result \<pi> (e, r, d))"
+    using assms 
+    by auto
+next
+  have "disjoint3 (e, r, d)" using wf by simp
+  hence 
+    "\<pi> ` e \<inter> \<pi> ` r = {}" and 
+    "\<pi> ` e \<inter> \<pi> ` d = {}" and
+    "\<pi> ` r \<inter> \<pi> ` d = {}"
+    using bij bij_betw_imp_inj_on disjoint3.simps image_Int image_empty
+    by (metis, metis, metis)
+  thus "disjoint3 (rename_result \<pi> (e, r, d))" by simp
+qed
+
 end
 text \<open>
   These three functions return the elect, reject, or defer set of a result.
@@ -215,4 +239,78 @@ proof cases
 qed
 
 
+subsection \<open>Auxiliary Lemmas\<close>
+
+context result 
+begin
+
+lemma result_imp_rej:
+  fixes R e r d:: "'r set"
+  assumes "well_formed_result R (e, r, d)"
+  shows "R - (e \<union> d) = r"
+proof (safe)
+  fix r' :: "'r"
+  assume
+    "r' \<in> R" and
+    "r' \<notin> r" and
+    "r' \<notin> d"
+  moreover have
+    "(e \<inter> r = {}) \<and> (e \<inter> d = {}) \<and> (r \<inter> d = {}) \<and> (e \<union> r \<union> d = R)"
+    using assms
+    by simp
+  ultimately show "r' \<in> e"
+    by blast
+next
+  fix r' :: "'r"
+  assume "r' \<in> r"
+  moreover have
+    "(e \<inter> r = {}) \<and> (e \<inter> d = {}) \<and> (r \<inter> d = {}) \<and> (e \<union> r \<union> d = R)"
+    using assms
+    by simp
+  ultimately show "r' \<in> R"
+    by blast
+next
+  fix r' :: "'r"
+  assume
+    "r' \<in> r" and
+    "r' \<in> e"
+  moreover have
+    "(e \<inter> r = {}) \<and> (e \<inter> d = {}) \<and> (r \<inter> d = {}) \<and> (e \<union> r \<union> d = R)"
+    using assms
+    by simp
+  ultimately show False
+    by auto
+next
+  fix r' :: "'r"
+  assume
+    "r' \<in> r" and
+    "r' \<in> d"
+  moreover have
+    "(e \<inter> r = {}) \<and> (e \<inter> d = {}) \<and> (r \<inter> d = {}) \<and> (e \<union> r \<union> d = R)"
+    using assms
+    by simp
+  ultimately show False
+    by blast
+qed
+
+lemma result_count:
+  fixes R e r d:: "'r set"
+  assumes 
+    wf_result: "well_formed_result R (e, r, d)" and
+    fin_R: "finite R"
+  shows "card R = card e + card r + card d"
+proof -
+  have "e \<union> r \<union> d = R"
+    using wf_result
+    by simp
+  moreover have "(e \<inter> r = {}) \<and> (e \<inter> d = {}) \<and> (r \<inter> d = {})"
+    using wf_result
+    by simp
+  ultimately show ?thesis
+    using fin_R Int_Un_distrib2 finite_Un card_Un_disjoint sup_bot.right_neutral
+    by metis
+qed  
+    
+end
+    
 end

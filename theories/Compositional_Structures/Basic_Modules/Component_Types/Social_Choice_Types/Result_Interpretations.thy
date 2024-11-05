@@ -50,16 +50,23 @@ next
   thus "a \<in> \<Union> (Pow A)" by blast
 next
   fix
-    A B C :: "'a set" and
-    a :: 'a
-  assume "A \<subseteq> B" and "C \<subseteq> A" and  "a \<in> C"
-  thus "a \<in>  \<Union> (Pow B)" by blast
-next
-  fix
     A C :: "'a set" and
     a :: 'a
   assume "\<Union> (Pow A) = {}" and "a \<in> A" and "C \<subseteq> A"
   thus "C \<in> {}" by auto  
+next
+  fix
+    A :: "'a set" and
+    C D :: "'a set set" and
+    a :: 'a
+  assume "C \<subseteq> D" and "A \<in> C" and  "a \<in> A"
+  thus "a \<in> \<Union> D" by blast
+next
+  fix
+    A B C:: "'a set" and
+    a:: 'a
+  assume "A \<subseteq> B" and "C \<subseteq> A" and  "a \<in> C"
+  thus "a \<in> B" by blast
 qed
 
 text \<open>
