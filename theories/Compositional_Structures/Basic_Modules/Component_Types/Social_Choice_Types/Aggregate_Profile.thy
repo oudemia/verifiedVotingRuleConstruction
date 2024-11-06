@@ -21,13 +21,9 @@ subsection \<open>Defintion\<close>
 
 type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v, ('r \<Rightarrow>'i)) Profile"
   
-type_synonym ('v, 'b, 'r, 'i) Profile_Aggregation = "('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
+type_synonym ('a, 'v, 'b, 'r, 'i) Profile_Aggregation = "'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
 
-type_synonym ('a, 'v, 'b, 'r, 'i) Profile_Aggregation' = "'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
-
-type_synonym ('b, 'r, 'i) Ballot_Aggregation = "'b \<Rightarrow> ('r \<Rightarrow> 'i)"
-
-type_synonym ('a, 'b, 'r, 'i) Ballot_Aggregation' = "'a set \<Rightarrow> 'b \<Rightarrow> ('r \<Rightarrow> 'i)"
+type_synonym ('a, 'b, 'r, 'i) Ballot_Aggregation = "'a set \<Rightarrow> 'b \<Rightarrow> ('r \<Rightarrow> 'i)"
 
 
 locale aggregation =
@@ -36,9 +32,9 @@ locale aggregation =
   fixes
     well_formed_base :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
     contenders :: "'a set \<Rightarrow> 'r set" and
-    aggregate :: "('a, 'b, 'r, 'i) Ballot_Aggregation'"
+    aggregate :: "('a, 'b, 'r, 'i) Ballot_Aggregation"
   assumes
-    preserve_valid: "\<And> (A :: 'a set) (b:: 'b). well_formed_base A b 
+    preserve_valid: "well_formed_base A b 
         \<Longrightarrow> well_formed_ballot (contenders A) (aggregate A b)" 
 (*
 and
@@ -47,7 +43,15 @@ and
 *)
 begin
 
-lemma aggregate_preserves_permute:
+definition well_formed_base_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
+  "well_formed_base_profile V A p \<equiv> (\<forall> v \<in> V. well_formed_base A (p v))"
+
+fun aggregate_profile :: "('a, 'v, 'b, 'r, 'i) Profile_Aggregation" where
+"aggregate_profile A p v = aggregate A (p v)"
+
+subsection \<open>Renaming Voters\<close>
+
+lemma agg_preserves_voter_rename:
 fixes 
   \<pi> :: "'v \<Rightarrow> 'v" and
   p q :: "('v, 'b) Profile" and 
@@ -76,49 +80,80 @@ assumes
         by simp
   qed
 qed
-  
+
+subsection \<open>Renaming Alternatives\<close>
+
+
+fun permute_agg_ballot :: "('r \<Rightarrow> 'r) \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> ('r \<Rightarrow> 'i)" where
+"permute_agg_ballot \<pi> b c =  b (\<pi> c)"
+
+fun coinciding_permutes' :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"coinciding_permutes' V A p \<alpha> \<kappa> \<beta> = 
+    (\<forall>v \<in> V. aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) = (aggregate A (p v)) \<circ> \<kappa>)"
+
+fun coinciding_permutes :: "'v set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"coinciding_permutes V \<alpha> \<kappa> \<beta> = (\<forall> A p. (well_formed_base_profile V A p \<longrightarrow>
+      (\<forall>v \<in> V. aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) = (aggregate A (p v)) \<circ> \<kappa>)))"
+
+lemma agg_preserves_alt_rename':
+fixes 
+  \<pi> :: "'a \<Rightarrow> 'a" and
+  \<rho> :: "'r \<Rightarrow> 'r" and
+  \<beta> :: "'b \<Rightarrow> 'b" and
+  p :: "('v, 'b) Profile" and 
+  V :: "'v set" and 
+  A :: "'a set"
+assumes
+  coinc: "coinciding_permutes' V A p \<pi> \<rho> \<beta>"
+shows "\<forall>v \<in> V. aggregate_profile (\<pi> ` A) (\<beta> \<circ> p) v = (permute_agg_ballot \<rho> \<circ> aggregate_profile A p) v"
+proof
+  fix v :: 'v
+  assume elem: "v \<in> V"
+  let ?q = "((the_inv \<beta>) \<circ> p)"
+  let ?p_agg = "aggregate_profile A p"
+  let ?q_agg = "aggregate_profile (\<pi> ` A) (\<beta> \<circ> p)"
+  have "?p_agg v = aggregate A (p v)" by simp
+  hence "(permute_agg_ballot \<rho> \<circ> ?p_agg) v = aggregate A (p v) \<circ> \<rho>" by auto
+  moreover have  "aggregate (\<pi> ` A) ((\<beta> \<circ> p) v) = aggregate A (p v) \<circ> \<rho>"
+    using elem coinc
+    by fastforce
+  ultimately show "?q_agg v = (permute_agg_ballot \<rho> \<circ> ?p_agg) v" by simp
+qed 
+
+lemma agg_preserves_alt_rename:
+fixes 
+  \<pi> :: "'a \<Rightarrow> 'a" and
+  \<rho> :: "'r \<Rightarrow> 'r" and
+  \<beta> :: "'b \<Rightarrow> 'b" and
+  p :: "('v, 'b) Profile" and 
+  V :: "'v set" and 
+  A :: "'a set"
+assumes
+  wf: "well_formed_base_profile V A p" and
+  coinc: "coinciding_permutes V \<pi> \<rho> \<beta>"
+shows "\<forall>v \<in> V. aggregate_profile (\<pi> ` A) (\<beta> \<circ> p) v = (permute_agg_ballot \<rho> \<circ> aggregate_profile A p) v"
+proof
+  fix v :: 'v
+  assume elem: "v \<in> V"
+  let ?q = "((the_inv \<beta>) \<circ> p)"
+  let ?p_agg = "aggregate_profile A p"
+  let ?q_agg = "aggregate_profile (\<pi> ` A) (\<beta> \<circ> p)"
+  have "?p_agg v = aggregate A (p v)" by simp
+  hence "(permute_agg_ballot \<rho> \<circ> ?p_agg) v = aggregate A (p v) \<circ> \<rho>" by auto
+  moreover have  "aggregate (\<pi> ` A) ((\<beta> \<circ> p) v) = aggregate A (p v) \<circ> \<rho>"
+    using elem coinc wf
+    by fastforce
+  ultimately show "?q_agg v = (permute_agg_ballot \<rho> \<circ> ?p_agg) v" by simp
+qed 
+
 end
-
-
-
-locale aggregate_ballot =
-  base: ballot well_formed_ballot +
-  ballot ballot_agg empty_agg prefers_agg wins_agg limit_agg  for
-    well_formed_ballot :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
-    ballot_agg :: "'r set \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> bool" and
-    empty_agg :: "('r \<Rightarrow> 'i)" and
-    prefers_agg :: "('r \<Rightarrow> 'i) \<Rightarrow> 'r \<Rightarrow> 'r \<Rightarrow> bool" and
-    wins_agg :: "('r \<Rightarrow> 'i) \<Rightarrow> 'r \<Rightarrow> bool" and
-    limit_agg :: "'r set \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> ('r \<Rightarrow> 'i)" +
-  fixes
-    contenders :: "'a set \<Rightarrow> 'r set" and
-    aggregate :: "('b, 'r, 'i) Ballot_Aggregation"
-  assumes
-    preserve_valid: "\<And> (A :: 'a set) (b:: 'b). well_formed_ballot A b 
-        \<Longrightarrow> ballot_agg (contenders A) (aggregate b)" and
-    preserve_empty: "aggregate empty_ballot = empty_agg" and
-    valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> well_formed_ballot A b 
-        \<Longrightarrow> ballot_agg (contenders B) (aggregate (limit_ballot B b))"
 
 text \<open>
  Aggregate ballots are ballots. This is important because it allows us to use them in
  electoral structures later on.
 \<close>
+
 sublocale aggregation \<subseteq> ballot
   by (simp add: ballot_axioms)
 
-sublocale aggregate_ballot \<subseteq> ballot
-  by (simp add: base.ballot_axioms)
-  
-subsection \<open>Contenders\<close>
-text \<open>
-  Contenders are of the same type as election results and represent possible or incomplete
-  results that are part of the computation of a final result.
-\<close>
-
-fun single_contenders :: "'a set \<Rightarrow> 'a set" where
-"single_contenders A = A"
-
-fun (in committee_result) committee_contenders :: "'a set \<Rightarrow> ('a Committee) set" where
-"committee_contenders A = committees A"
 end

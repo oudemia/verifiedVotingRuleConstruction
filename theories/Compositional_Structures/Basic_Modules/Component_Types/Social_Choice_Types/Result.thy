@@ -22,6 +22,11 @@ text \<open>
   alternatives.
 \<close>
 
+text \<open>
+  Contenders are of the same type as election results and represent possible or incomplete
+  results that are part of the computation of a final result.
+\<close>
+
 subsection \<open>Auxiliary Functions\<close>
 
 type_synonym 'r Result = "'r set * 'r set * 'r set"
