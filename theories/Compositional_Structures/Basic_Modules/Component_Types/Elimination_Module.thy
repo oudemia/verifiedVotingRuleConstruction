@@ -357,7 +357,7 @@ lemma elim_mod_non_blocking:
 proof (unfold non_blocking_def, standard)
   show " electoral_module (elimination_module e t r)" using elim_mod_sound by blast
 next
-  show "\<forall>V A R p. R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p \<longrightarrow>
+  show "\<forall>V R p. R \<noteq> {} \<and> finite R \<and>  well_formed_profile V (affected_alts R) p \<longrightarrow>
        reject (elimination_module e t r) V R p \<noteq> R" 
     by auto
 qed
@@ -389,7 +389,7 @@ lemma max_elim_non_blocking:
 proof (unfold non_blocking_def, standard)
   show " electoral_module (max_eliminator e)" using max_elim_sound by blast
 next
-  show "\<forall>V A R p. R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p \<longrightarrow>
+  show "\<forall>V R p. R \<noteq> {} \<and> finite R \<and>  well_formed_profile V (affected_alts R) p \<longrightarrow>
        reject (max_eliminator e) V R p \<noteq> R" 
     by auto
 qed
@@ -400,7 +400,7 @@ lemma min_elim_non_blocking:
 proof (unfold non_blocking_def, standard)
   show " electoral_module (min_eliminator e)" using min_elim_sound by blast
 next
-  show "\<forall>V A R p. R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p \<longrightarrow>
+  show "\<forall>V R p. R \<noteq> {} \<and> finite R \<and>  well_formed_profile V (affected_alts R) p \<longrightarrow>
        reject (min_eliminator e) V R p \<noteq> R" 
     by auto
 qed
@@ -411,7 +411,7 @@ lemma less_avg_elim_non_blocking:
 proof (unfold non_blocking_def, standard)
   show " electoral_module (less_average_eliminator e)" using less_avg_elim_sound by blast
 next
-  show "\<forall>V A R p. R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p \<longrightarrow>
+  show "\<forall>V R p. R \<noteq> {} \<and> finite R \<and>  well_formed_profile V (affected_alts R) p \<longrightarrow>
        reject (less_average_eliminator e) V R p \<noteq> R" 
     by auto
 qed
@@ -422,7 +422,7 @@ lemma leq_avg_elim_non_blocking:
 proof (unfold non_blocking_def, standard)
   show " electoral_module (leq_average_eliminator e)" using leq_avg_elim_sound by blast
 next
-  show "\<forall>V A R p. R \<noteq> {} \<and> finite R \<and> R = contenders A \<and> well_formed_profile V A p \<longrightarrow>
+  show "\<forall>V R p. R \<noteq> {} \<and> finite R \<and>  well_formed_profile V (affected_alts R) p \<longrightarrow>
        reject (leq_average_eliminator e) V R p \<noteq> R" 
     by auto
 qed
@@ -657,7 +657,91 @@ proof -
   qed
 qed
 
- 
+(*
+fun voters_determine_evaluation :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> bool" where
+  "voters_determine_evaluation f =
+    (\<forall> A V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (\<forall> a \<in> A. f V a A p = f V a A p'))"
+
+fun voters_determine_election :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
+  "voters_determine_election m =
+    (\<forall> R V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (m V R p = m V R p'))"
+*)
+
+lemma eval_determine_max_elim[simp]:
+fixes 
+  e :: "('r, 'v, 'b) Evaluation_Function" and
+  R :: "'r set" and
+  V :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<pi> :: "'r \<Rightarrow> 'r"
+assumes 
+  bij: "bij \<pi>" and
+  eval_eq: "\<forall>r \<in> R. (e V r R p) = (e V (\<pi> r) (\<pi> ` R) q)" and
+  wf: "well_formed_profile V (affected_alts R) p" 
+shows "rename_result \<pi> (max_eliminator e V R p) = max_eliminator e V (\<pi> ` R) q"
+proof -
+  let ?max = "(Max {e V x R p | x. x \<in> R})"
+  let ?max' = "(Max {e V x (\<pi> ` R) q | x. x \<in> (\<pi> ` R)})"
+  let ?renamed = "rename_result \<pi> (max_eliminator e V R p)"
+  have max_eq: "?max = ?max'"
+    using eval_eq
+    by (metis (no_types, opaque_lifting) imageE imageI)
+  hence set_eq: "\<pi> `(elimination_set e ?max (<) V R p) = 
+    elimination_set e ?max' (<) V (\<pi> ` R) q" 
+    using eval_eq
+    by auto
+  have elect_eq: "elect (max_eliminator e) V (\<pi> ` R) q = elect_r ?renamed" by simp
+  have defer_eq: "defer (max_eliminator e) V (\<pi> ` R) q = defer_r ?renamed"
+  proof (cases)
+    assume *:"(elimination_set e ?max (<) V R p) = R"
+    hence "(elimination_set e ?max' (<) V (\<pi> ` R) q) = (\<pi> ` R)"
+      using set_eq
+      by presburger
+    hence "defer (max_eliminator e) V (\<pi> ` R) q = (\<pi> ` R)" 
+      using result_presv_conts max_elim_non_electing 
+      by simp
+    moreover have "defer (max_eliminator e) V R p = R" 
+      using result_presv_conts max_elim_non_electing *
+      by simp
+    ultimately show ?thesis
+      by (metis prod.collapse snd_eqD rename_result.simps)
+  next
+    assume *:"(elimination_set e ?max (<) V R p) \<noteq> R"
+    hence def: "defer (max_eliminator e) V R p = R - (elimination_set e ?max (<) V R p)"
+    by simp
+    hence "\<pi> `(elimination_set e ?max (<) V R p) \<noteq> (\<pi> ` R)" 
+      using * bij 
+      by (metis (no_types, lifting) bij_betw_imp_inj_on bij_betw_imp_surj_on inj_imp_bij_betw_inv)
+    hence "(elimination_set e ?max' (<) V (\<pi> ` R) q) \<noteq> (\<pi> ` R)" 
+      using set_eq 
+      by argo
+    hence "defer (max_eliminator e) V (\<pi> ` R) q = (\<pi> ` R) - (elimination_set e ?max' (<) V (\<pi> ` R) q)"
+      by simp
+    moreover have "\<pi> ` (R - (elimination_set e ?max (<) V R p)) =
+      (\<pi> ` R) - (elimination_set e ?max' (<) V (\<pi> ` R) q)" 
+      using set_eq bij 
+      by (metis (no_types, lifting) bij_betw_imp_inj_on image_set_diff)
+    thus ?thesis by auto
+    qed
+  have "well_formed_result R (max_eliminator e V R p)" 
+    using max_elim_sound wf
+    by auto
+  hence "well_formed_result (\<pi> ` R) ?renamed"
+    using bij bij_preserves_result
+    by (metis rename_result.elims)
+  hence "reject_r ?renamed = (\<pi> ` R) -(elect_r ?renamed \<union> defer_r ?renamed)"
+    using result_imp_rej
+    by (metis prod.collapse)
+  moreover have "reject (max_eliminator e) V (\<pi> ` R) q = (\<pi> ` R) - 
+    (elect (max_eliminator e) V (\<pi> ` R) q \<union> defer (max_eliminator e) V (\<pi> ` R) q)" by auto
+  ultimately have "reject (max_eliminator e) V (\<pi> ` R) q = reject_r ?renamed"
+    using elect_eq defer_eq 
+    by simp
+  thus "?renamed = (max_eliminator e) V (\<pi> ` R) q" 
+    using elect_eq defer_eq
+    by (metis prod.expand)
+qed
+
 end
 
 end
