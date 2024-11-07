@@ -34,21 +34,6 @@ definition vr_anonymity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool" whe
         bij \<pi> \<longrightarrow> (let (A', V', q) = (rename \<pi> (A, V, p)) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> r V A p = r V' A' q))"
 
-            
-definition permute_bal :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a set \<Rightarrow> ('b \<Rightarrow> 'b)" where
-   "permute_bal \<pi> A = (SOME \<rho>. bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> b. 
-      well_formed_ballot A b \<longrightarrow> limit_ballot (\<pi> ` S) (\<rho> b) = \<rho> (limit_ballot S b)))"
-
-definition permute_cont :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a set \<Rightarrow> ('r \<Rightarrow> 'r)" where
-   "permute_cont \<pi> A = (SOME \<rho>. bij \<rho> \<and> (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
-      limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c})))"
-
-definition vr_neutrality :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a).
-        bij \<pi> \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (permute_bal \<pi> A) \<circ> p) in
-            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow>  (permute_cont \<pi> A) ` (r V A p) = r V' A' q))"
-
 (*            
 definition coinciding_permutes :: "'r set \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
    "coinciding_permutes R \<pi> \<rho> = (bij \<rho> \<and> (\<forall>S \<subseteq> R. \<forall> b. well_formed_ballot (affected_alts R) b 
@@ -68,16 +53,15 @@ definition coinciding_bal_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a)
 definition coinciding_cont_permute :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> bool" where
    "coinciding_cont_permute A \<pi> \<rho> = (\<forall>S \<subseteq> A. \<forall> c \<in> contenders A.
       limit_contenders (\<pi> ` S) {\<rho> c} = \<rho> ` (limit_contenders S {c}))"          
-
       
-definition vr_neutrality' :: "(('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b)) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r)) 
+definition vr_neutrality :: "('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b)
                               \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
-  "vr_neutrality' \<beta> \<kappa> r \<equiv>
-      (\<forall> A V p \<pi>::('a \<Rightarrow> 'a). 
-        bij \<pi> \<and> coinciding_bal_permute A \<pi> (\<beta> \<pi>) \<and> coinciding_cont_permute A \<pi> (\<kappa> \<pi>) 
-          \<longrightarrow> (let (V', A', q) =  (V, \<pi> ` A, (\<beta> \<pi>) \<circ> p) in
-            finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> ((\<kappa> \<pi>) `(r V A p)) = r V' A' q))"
-                    
+  "vr_neutrality \<pi> \<kappa> \<beta> r \<equiv>
+      (\<forall> A V p. 
+        bij \<pi> \<and> coinciding_bal_permute A \<pi> \<beta> \<and> coinciding_cont_permute A \<pi> \<kappa>
+          \<longrightarrow> well_formed_profile V A p \<and> well_formed_profile V (\<pi> ` A) (\<beta> \<circ> p) \<longrightarrow> 
+            (\<kappa> `(r V A p)) = r V (\<pi> ` A) (\<beta> \<circ> p))"
+           
 end
 
 subsection \<open>The Elector Voting Rule\<close>
@@ -109,15 +93,15 @@ context electoral_structure
 begin
 
 fun elector :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule" where
-"elector m V A p = elect m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p)"
+"elector m V A p = elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p)"
 
 text \<open>
   The following variant of the  elector voting rule elects elected and deferred contenders,
   therefore discarding exactly the rejected contenders.
 \<close>
 fun elector\<^sub>d :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule" where
-"elector\<^sub>d m V A p = ((elect m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p))
-        \<union> (defer m V (contenders A) ((\<lambda>b. limit_by_conts (contenders A) b ) \<circ> p)))"
+"elector\<^sub>d m V A p = ((elect m V (contenders A) (limit_by_conts (contenders A) \<circ> p))
+        \<union> (defer m V (contenders A) (limit_by_conts (contenders A) \<circ> p)))"
 
         
 lemma elector_inherits_anonymity:   
@@ -272,6 +256,19 @@ assume
     qed
 qed
 
+lemma elector\<^sub>d_simp [simp]:
+fixes 
+  m :: "('r, 'v, 'b) Electoral_Module" and
+  A :: "'a set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile"
+assumes 
+  mod: "electoral_module m" and 
+  p_id: "p = (limit_by_conts (contenders A)) \<circ> p"
+shows "(elector\<^sub>d m) V A p = (elect m V (contenders A) p) \<union> (defer m V (contenders A) p)" 
+using mod p_id 
+by  simp
+   
 
 end
 
