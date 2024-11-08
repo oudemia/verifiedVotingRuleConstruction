@@ -82,11 +82,32 @@ fixes
   using assms vr_neutrality_def
   by blast
 
-subsubsection \<open>Consistency\<close>
+text \<open>
+  Intuitively, continuity states that a large group of voters should be able to enforce that 
+  some of its desired outcomes are chosen. More precisely, a voting rule is continuous 
+  if for two election instances E, E' over the same set of alternatives there is a natural number n 
+  such that the outcome of the election instance consisting of n copies of E together with E'
+  contains the election outcome of E.
+\<close>
 
-subsubsection \<open>Continuity\<close>
+definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
+  "vr_continuity r \<equiv>
+      (\<forall> A V V' p q. well_formed_profile V A p \<and> well_formed_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
+        (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  (r V A p \<subseteq> r (W \<union> V') A (joint_profile V W q s))))"
+
+text \<open>
+  Consistency states that if some contenders are chosen for two disjoint elections, then precisely 
+  those contenders are chosen in the joint election.
+\<close>
+
+definition vr_consistency :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
+  "vr_consistency r \<equiv> (\<forall> A V V' p q. 
+    well_formed_profile V A p \<and> well_formed_profile V' A q \<and> V \<inter> V' = {} \<and> (r V A p \<inter> r V' A q \<noteq> {})
+      \<longrightarrow> (r (V \<union> V') A (joint_profile V V' p q) = r V A p \<inter> r V' A q))"
 
 subsubsection \<open>Independence of Losers\<close>
+
+text \<open>TODO, maybe\<close>
 
 end
 

@@ -599,6 +599,15 @@ lemma empty_prof_imp_zero_pref_count:
 
 end
 
+subsection \<open>Combintions of Profiles\<close>
+
+fun n_copy :: "nat \<Rightarrow> 'v set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
+"n_copy n V W p q = (\<forall>b. card {w | w. w \<in> W \<and> q w = b} = n * card {v | v. v \<in> V \<and> p v = b})"
+
+fun (in ballot) joint_profile :: "'v set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
+"joint_profile V W p q v = (if v \<in> V then p v else (if v \<in> W then q v else empty_ballot))"
+
+
 subsection \<open>List Representation for Ordered Voters\<close>
 
 text \<open>

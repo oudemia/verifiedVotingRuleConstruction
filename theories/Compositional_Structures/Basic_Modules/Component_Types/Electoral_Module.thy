@@ -328,6 +328,35 @@ definition reversal_symmetry :: "('a, 'v, 'a Preference_Relation) Election set
 
 *)
 
+subsubsection \<open>Continuity\<close>
+
+text \<open>
+  Intuitively, continuity states that a large group of voters should be able to enforce that 
+  some of its desired outcomes are chosen. More precisely, a voting rule is continuous 
+  if for two election instances E, E' over the same set of alternatives there is a natural number n 
+  such that the outcome of the election instance consisting of n copies of E together with E'
+  contains the election outcome of E.
+\<close>
+
+definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "continuity m \<equiv> (\<forall> R V V' p q. 
+    well_formed_profile V (affected_alts R) p \<and> well_formed_profile V' (affected_alts R) q \<and> 
+      V \<inter> V' = {} \<longrightarrow> (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  
+        (defer m V R p \<subseteq> defer m (W \<union> V') R (joint_profile V W q s))))"
+
+text \<open>
+  Consistency states that if some contenders are chosen for two disjoint elections, then precisely 
+  those contenders are chosen in the joint election.
+\<close>
+
+definition consistency :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "consistency m \<equiv> (\<forall> R V V' p q. 
+    well_formed_profile V (affected_alts R) p \<and> well_formed_profile V' (affected_alts R) q \<and> 
+      V \<inter> V' = {} \<and> (reject m V R p \<union> reject m V' R q \<noteq> R) \<longrightarrow> 
+        (reject m (V \<union> V') R (joint_profile V V' p q) = reject m V R p \<union> reject m V' R q))"
+
+subsubsection \<open>Neutrality\<close>
+
 text \<open>
   "defers n" is true for all electoral modules that defer exactly
   n alternatives, whenever there are n or more alternatives.
