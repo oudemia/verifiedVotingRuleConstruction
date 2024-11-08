@@ -31,6 +31,31 @@ fun permute_agg_ballot :: "('r \<Rightarrow> 'r) \<Rightarrow> ('r \<Rightarrow>
 fun permute_agg_profile :: "('r \<Rightarrow> 'r) \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile" where
 "permute_agg_profile \<pi> p v = permute_agg_ballot \<pi> (p v)"
 
+lemma agg_bij:
+fixes 
+  \<alpha> :: "'a \<Rightarrow> 'a" and
+  \<kappa> :: "'r \<Rightarrow> 'r" and
+  \<beta> :: "'b \<Rightarrow> 'b" and
+  p q:: "('v, 'r, 'i) Aggregate_Profile" 
+assumes
+  coinc: "q = permute_agg_profile \<kappa> p" and
+  bij: "bij \<kappa>"
+shows "p = permute_agg_profile (the_inv \<kappa>) q"
+proof
+fix v :: 'v
+have "q v =  p v \<circ> \<kappa>"
+  using coinc
+  by auto
+hence "p v =  q v \<circ> (the_inv \<kappa>)"
+  using bij
+  by (metis (no_types, lifting) bij_id comp_assoc comp_id)
+hence "p v = permute_agg_profile (the_inv \<kappa>) q v"
+  by fastforce
+hence "p v = (permute_agg_ballot (the_inv \<kappa>) \<circ> q) v"
+  by fastforce
+thus "p v = permute_agg_profile (the_inv \<kappa>) q v" by simp
+qed
+
 locale aggregation =
   ballot well_formed_ballot for
     well_formed_ballot :: "'r set \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> bool" +
@@ -94,7 +119,7 @@ fun coinciding_with_agg :: "'v set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightar
       (\<forall>v \<in> V. aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) \<circ> \<kappa> = (aggregate A (p v)))))"
 
 fun coinciding_with_agg' :: "('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
-"coinciding_with_agg' \<alpha> \<kappa> \<beta> = ((\<lambda>A b. aggregate (\<alpha> ` A) (\<beta> b) \<circ> \<kappa>) = (\<lambda>A b. aggregate A b))"
+"coinciding_with_agg' \<alpha> \<kappa> \<beta> = (\<forall> A b. (aggregate (\<alpha> ` A) (\<beta> b) \<circ> \<kappa>) = aggregate A b)"
 
 
 lemma agg_preserves_alt_rename:
@@ -154,29 +179,21 @@ proof
 qed 
 
 (*
- have *: "?q_agg = (rename_thiele_ballot \<pi> \<circ> ?p_agg)"
-  proof (unfold thiele_aggregation.aggregate_profile.simps, standard)
-    fix v :: 'v
-    have "\<forall>C. thiele_aggregate A (p v) ((the_inv \<pi>) ` (\<pi> ` C)) = (thiele_aggregate A (p v) C)" 
-      using bij
-      by (metis bij_def inv_rename rename_alt_set.simps rename_inherits_bij the_inv_f_f)
-    hence "\<forall>C. thiele_aggregate (\<pi> ` A) (((rename_alt_set (the_inv \<pi>)) \<circ> p) v) (\<pi> ` C) =
-    (thiele_aggregate A (p v) C)" sorry
-
-  moreover have "\<forall>C. C \<in> committees A \<longleftrightarrow> \<pi> ` C \<in> committees (\<pi> ` A)"
-    by (metis Pow_UNIV R_eq bij bij_betw_Pow bij_def image_cong inj_image_mem_iff rename_alt_set.simps)
-    moreover have "\<forall>S T. S \<subseteq> A \<and> T \<subseteq> A \<longrightarrow> (card (S \<inter> T) = card ((\<pi> ` S) \<inter> \<pi> ` T))"
-    using bij
-    by (metis bij_betw_imp_inj_on bij_betw_same_card image_Int inj_imp_bij_betw_inv)
-  ultimately have "\<forall>C. thiele_aggregate (\<pi> ` A) (?q v) (\<pi> ` C) = thiele_aggregate A (p v) C"
-    using bij rename_inherits_bij by simp
-  hence "\<forall>D. thiele_aggregate (\<pi> ` A) (?q v) D = (thiele_aggregate A (p v) (the_inv \<pi> ` D))" 
-    using bij
-    by (metis Voting_Rule.bij_id bij_betw_id_iff bij_betw_imp_surj_on image_comp)
-  hence "thiele_aggregate (\<pi> ` A) (?q v) = rename_thiele_ballot \<pi> (thiele_aggregate A (p v))" by auto
-  thus "thiele_aggregate (\<pi> ` A) (?q v) =
-         (rename_thiele_ballot \<pi> \<circ> (\<lambda>v. thiele_aggregate A (p v))) v" by simp
-  qed
+ have "?p_agg = permute_agg_profile (rename_alt_set \<pi>) ?q_agg"
+    using thiele_permutes_coinc_with_agg p_agg_eq q_agg_eq bij rename_inherits_bij thiele_aggregation.agg_preserves_alt_rename_v2 
+    by blast
+  hence "\<forall>v. ?p_agg v =  ?q_agg v \<circ> (rename_alt_set \<pi>)"
+    by auto
+  hence "\<forall>v. ?q_agg v =  ?p_agg v \<circ> (the_inv (rename_alt_set \<pi>))"
+    using bij rename_inherits_bij
+    by (metis (no_types, lifting) bij_id comp_assoc comp_id)
+  hence "\<forall>v. ?q_agg v =  ?p_agg v \<circ> (rename_alt_set (the_inv \<pi>))"
+    using bij inv_rename 
+    by metis
+  hence "?q_agg = permute_agg_profile (rename_alt_set (the_inv \<pi>)) ?p_agg"
+    by fastforce
+  hence "?q_agg = rename_thiele_ballot \<pi> \<circ> ?p_agg"
+    by fastforce
 *)
 end
 

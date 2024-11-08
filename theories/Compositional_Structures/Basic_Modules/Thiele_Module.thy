@@ -554,18 +554,12 @@ proof (unfold \<A>\<V>_committee.vr_neutrality_def, clarify)
   have p_agg_eq: "?p_agg = thiele_agg_profile A p" by fastforce
   have q_agg_eq: "?q_agg = thiele_agg_profile (\<pi> ` A) (rename_alt_set \<pi> \<circ> p)" by fastforce
   have "?p_agg = permute_agg_profile (rename_alt_set \<pi>) ?q_agg"
-    using thiele_permutes_coinc_with_agg p_agg_eq q_agg_eq bij rename_inherits_bij thiele_aggregation.agg_preserves_alt_rename_v2 
+    using thiele_permutes_coinc_with_agg p_agg_eq q_agg_eq bij rename_inherits_bij 
+          thiele_aggregation.agg_preserves_alt_rename_v2 
     by blast
-  hence "\<forall>v. ?p_agg v =  ?q_agg v \<circ> (rename_alt_set \<pi>)"
-    by auto
-  hence "\<forall>v. ?q_agg v =  ?p_agg v \<circ> (the_inv (rename_alt_set \<pi>))"
-    using bij rename_inherits_bij
-    by (metis (no_types, lifting) bij_id comp_assoc comp_id)
-  hence "\<forall>v. ?q_agg v =  ?p_agg v \<circ> (rename_alt_set (the_inv \<pi>))"
-    using bij inv_rename 
-    by metis
   hence "?q_agg = permute_agg_profile (rename_alt_set (the_inv \<pi>)) ?p_agg"
-    by fastforce
+    using agg_bij  bij inv_rename rename_inherits_bij
+    by metis
   hence "?q_agg = rename_thiele_ballot \<pi> \<circ> ?p_agg"
     by fastforce
   moreover have "committees (\<pi> ` A) = (rename_alt_set \<pi>) ` (committees A)" 
@@ -575,7 +569,8 @@ proof (unfold \<A>\<V>_committee.vr_neutrality_def, clarify)
     "thiele_structure.neutrality (rename_alt_set \<pi>) (rename_thiele_ballot \<pi>) (thiele_module w)"
     using thiele_module_neutral w_valid bij
     by auto
-  moreover have "thiele_structure.coinciding_permutes (committees A) (rename_alt_set \<pi>) (rename_thiele_ballot \<pi>)"
+    moreover have "thiele_structure.coinciding_permutes (committees A) 
+      (rename_alt_set \<pi>) (rename_thiele_ballot \<pi>)"
     using thiele_permutes_coinc bij
     by blast
   moreover have "thiele_structure.well_formed_profile V (committees A) ?p_agg" 
