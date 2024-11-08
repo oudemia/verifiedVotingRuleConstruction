@@ -8,7 +8,9 @@ chapter \<open>Social-Choice Types\<close>
 section \<open>Auxiliary Lemmas\<close>
 
 theory Auxiliary_Lemmas
-  imports Main
+imports 
+  Main 
+  "../Extended_Rationals/Extended_Rat"
 begin
 
 lemma sum_comp:
@@ -130,6 +132,26 @@ proof -
   have "\<forall>x. the_inv (the_inv \<pi>) x = \<pi> x"
     by (metis (no_types) assms bij_betw_the_inv_into bij_is_inj the_inv_f_f)
   thus ?thesis by presburger
+  qed
+  
+lemma sum_bij:
+fixes 
+  \<pi> :: "'x \<Rightarrow> 'x" and 
+  f :: "'x \<Rightarrow> erat" and
+  X X' :: "'x set"
+assumes 
+  bij: "bij \<pi>" and
+  perm: "X' = \<pi> ` X"
+shows "(\<Sum>x\<in>X. f x) = (\<Sum>x\<in>X'. (f \<circ> the_inv \<pi>) x)"
+  proof -
+  have "(\<Sum>x\<in>X. f x) = (\<Sum>x\<in>X. (f \<circ> the_inv \<pi>) (\<pi> x))" 
+    using bij
+    by (metis bij_betw_imp_inj_on comp_eq_dest_lhs id_apply the_inv_f_o_f_id)
+  hence "(\<Sum>x\<in>X. f x) = (\<Sum>x\<in>(\<pi> ` X). (f \<circ> the_inv \<pi>) x)"
+    by (metis (no_types, lifting) bij bij_betw_def bij_betw_subset sum.reindex_cong top_greatest)
+  thus ?thesis 
+    using perm 
+    by simp
 qed
 
 end

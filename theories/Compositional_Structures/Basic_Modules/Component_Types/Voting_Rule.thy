@@ -81,7 +81,13 @@ fixes
   shows "(\<kappa> `(r V A p)) = r V (\<pi> ` A) (\<beta> \<circ> p)"
   using assms vr_neutrality_def
   by blast
-  
+
+subsubsection \<open>Consistency\<close>
+
+subsubsection \<open>Continuity\<close>
+
+subsubsection \<open>Independence of Losers\<close>
+
 end
 
 subsection \<open>The Elector Voting Rule\<close>

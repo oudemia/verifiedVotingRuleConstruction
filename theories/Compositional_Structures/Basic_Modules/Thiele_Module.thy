@@ -1,7 +1,7 @@
 section \<open>Thiele Module\<close>
 
 theory Thiele_Module
-  imports 
+imports 
       "Component_Types/Voting_Rule"      
       "Component_Types/Elimination_Module"
       "Component_Types/Social_Choice_Types/Aggregate_Profile"
@@ -14,21 +14,32 @@ subsubsection \<open>Aggregated Profiles for Thiele Methods\<close>
 
 type_synonym 'a Thiele_Ballot = "'a Committee \<Rightarrow> nat"
 
+type_synonym Thiele_Score = "nat Aggregate_Evaluation"
+
 fun thiele_ballot :: "('a Committee) set \<Rightarrow> 'a Thiele_Ballot \<Rightarrow> bool" where
 "thiele_ballot R b = (\<forall> r. r \<notin> R \<longrightarrow> b r = 0)"
-
-fun (in committee_result) thiele_aggregate :: 
-  "('a, 'a Approval_Set, 'a Committee, nat) Ballot_Aggregation" where
-"thiele_aggregate A b C = (if C \<in> committees A then (card (C \<inter> b)) else 0)"
-
-fun (in committee_result) thiele_agg_profile :: 
-  "('a, 'v, 'a Approval_Set, 'a Committee, nat) Profile_Aggregation" where
-"thiele_agg_profile A p v C = thiele_aggregate A (p v) C"
 
 fun limit_thiele_ballot :: "('a Committee) set \<Rightarrow> 'a Thiele_Ballot \<Rightarrow> 'a Thiele_Ballot" where
 "limit_thiele_ballot C b c = (if c \<in> C then b c else 0)"
 
-sublocale committee_result \<subseteq> thiele_aggregation:
+fun thiele_score :: "Thiele_Score \<Rightarrow> bool" where
+"thiele_score w = (w 0 = 0 \<and> mono w)"
+
+fun score_sum :: "Thiele_Score \<Rightarrow> 'v set \<Rightarrow> 'a Committee \<Rightarrow> ('v, 'a Thiele_Ballot) Profile \<Rightarrow> erat" where
+"score_sum s V C p = (\<Sum> v \<in> V. s (p v C))"
+
+context committee_result
+begin
+
+fun thiele_aggregate ::
+  "('a, 'a Approval_Set, 'a Committee, nat) Ballot_Aggregation" where
+"thiele_aggregate A b C = (if C \<in> committees A then (card (C \<inter> b)) else 0)"
+
+fun thiele_agg_profile :: 
+  "('a, 'v, 'a Approval_Set, 'a Committee, nat) Profile_Aggregation" where
+"thiele_agg_profile A p v C = thiele_aggregate A (p v) C"
+
+sublocale thiele_aggregation:
 aggregation
   "\<lambda> C. 0" (*empty ballot*) 
   "\<lambda> b C D. (b C > b D)" (*prefers*)
@@ -82,7 +93,7 @@ next
   qed
 qed
 
-sublocale committee_result \<subseteq> thiele_structure:
+sublocale thiele_structure:
 electoral_structure 
   "\<lambda>C. 0" (* empty_ballot *)
   "\<lambda> b C D. (b C > b D)" (* prefers *)
@@ -139,23 +150,12 @@ next
 qed
 
 
-subsubsection \<open>Evaluation of Aggregated Profiles\<close>
-
-type_synonym Thiele_Score = "nat Aggregate_Evaluation"
-
-fun thiele_score :: "Thiele_Score \<Rightarrow> bool" where
-"thiele_score w = (w 0 = 0 \<and> mono w)"
-
-fun score_sum :: "Thiele_Score \<Rightarrow> 'v set \<Rightarrow> 'a Committee \<Rightarrow> ('v, 'a Thiele_Ballot) Profile \<Rightarrow> erat" where
-"score_sum s V C p = (\<Sum> v \<in> V. s (p v C))"
-
-
 subsubsection \<open>Electoral Module for Thiele Methods\<close>
 
 fun thiele_module :: "Thiele_Score \<Rightarrow> ('a Committee, 'v, 'a Thiele_Ballot) Electoral_Module" where
 "thiele_module s V C p = (max_eliminator (\<lambda> V r R p. score_sum s V r p)) V C p"
 
-fun (in committee_result) thiele_family :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where
+fun thiele_family :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where
 "thiele_family w V A p =
 	thiele_structure.elector\<^sub>d (thiele_module w) V (committees A) (thiele_agg_profile A p)"
 
@@ -165,14 +165,13 @@ fun thiele_method :: "Thiele_Score \<Rightarrow> ('a, 'v, 'a Approval_Set, 'a Co
 
 subsection \<open>Properties\<close>
 
-lemma (in committee_result) thiele_mod_sound[simp]:
+lemma thiele_mod_sound[simp]:
   fixes w :: "nat Aggregate_Evaluation"
   assumes "thiele_score w"
   shows "thiele_structure.electoral_module (thiele_module w)"
 by auto
 
-
-lemma (in committee_result) thiele_family_simp [simp]:
+lemma thiele_family_simp [simp]:
 fixes 
   w :: "Thiele_Score" and
   A :: "'a set" and
@@ -197,25 +196,6 @@ qed
 
 subsubsection \<open>Anonymity\<close>
 
-lemma sum_bij:
-fixes 
-  \<pi> :: "'v \<Rightarrow> 'v" and 
-  f :: "'v \<Rightarrow> erat" and
-  V V' :: "'v set"
-assumes 
-  bij: "bij \<pi>" and
-  perm: "V' = \<pi> ` V"
-shows "(\<Sum>v\<in>V. f v) = (\<Sum>v\<in>V'. (f \<circ> the_inv \<pi>) v)"
-  proof -
-  have "(\<Sum>v\<in>V. f v) = (\<Sum>v\<in>V. (f \<circ> the_inv \<pi>) (\<pi> v))" 
-    using bij
-    by (metis bij_betw_imp_inj_on comp_eq_dest_lhs id_apply the_inv_f_o_f_id)
-  hence "(\<Sum>v\<in>V. f v) = (\<Sum>v\<in>(\<pi> ` V). (f \<circ> the_inv \<pi>) v)"
-    by (metis (no_types, lifting) bij bij_betw_def bij_betw_subset sum.reindex_cong top_greatest)
-  thus ?thesis using perm by simp
-qed
-
-(*
 lemma (in committee_result) thiele_module_anonymous:
   fixes w :: "nat Aggregate_Evaluation"
   assumes "thiele_score w"
@@ -299,14 +279,11 @@ proof (unfold \<A>\<V>_committee.vr_anonymity_def Let_def, clarify)
     by simp
 qed
 
-*)
+
 subsubsection \<open>Neutrality\<close>
 
 fun rename_committee :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a Committee) set => ('a Committee) set" where
 "rename_committee \<pi> R = (`) ((`) \<pi>) R"
-
-fun rename_alts_\<A>\<V> :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a, 'v, 'a Approval_Set) Election \<Rightarrow> ('a, 'v, 'a Approval_Set) Election" where
-  "rename_alts_\<A>\<V> \<pi> (A, V, p) = (let q = (\<lambda>v. \<pi> ` (p v)) in (\<pi> ` A, V, q))"
 
 fun rename_alt_set :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a set \<Rightarrow> 'a set" where
   "rename_alt_set \<pi> C = \<pi> ` C"
@@ -354,9 +331,19 @@ qed
 
 lemma inv_rename:
   fixes \<pi> :: "'a \<Rightarrow> 'a"
-  assumes "bij \<pi>"
+  assumes bij: "bij \<pi>"
   shows "the_inv (rename_alt_set \<pi>) = (rename_alt_set (the_inv \<pi>))" 
-  sorry
+proof (unfold rename_alt_set.simps, standard)
+fix C :: "'a Committee"  
+have "id = \<pi> \<circ> the_inv \<pi>"
+  using bij f_the_inv_into_f_bij_betw 
+  by fastforce
+hence "C = ( \<pi> ` (the_inv \<pi> ` C))" 
+  by (simp add: image_comp)
+thus "the_inv ((`) \<pi>) C = the_inv \<pi> ` C"
+  using bij
+  by (metis Pow_UNIV bij_betw_Pow bij_def the_inv_f_f)
+qed
 
 
 lemma (in committee_result) thiele_permutes_coinc:
@@ -408,9 +395,6 @@ show "?permute_then_limit C = ?limit_then_permute C"
     ultimately show ?thesis by simp  
   qed         
 qed
-
-
-
 
 lemma (in committee_result) thiele_module_neutral:
 fixes 
@@ -558,7 +542,7 @@ proof (unfold \<A>\<V>_committee.vr_neutrality_def, clarify)
           thiele_aggregation.agg_preserves_alt_rename_v2 
     by blast
   hence "?q_agg = permute_agg_profile (rename_alt_set (the_inv \<pi>)) ?p_agg"
-    using agg_bij  bij inv_rename rename_inherits_bij
+    using agg_bij bij inv_rename rename_inherits_bij
     by metis
   hence "?q_agg = rename_thiele_ballot \<pi> \<circ> ?p_agg"
     by fastforce
@@ -569,7 +553,7 @@ proof (unfold \<A>\<V>_committee.vr_neutrality_def, clarify)
     "thiele_structure.neutrality (rename_alt_set \<pi>) (rename_thiele_ballot \<pi>) (thiele_module w)"
     using thiele_module_neutral w_valid bij
     by auto
-    moreover have "thiele_structure.coinciding_permutes (committees A) 
+  moreover have "thiele_structure.coinciding_permutes (committees A) 
       (rename_alt_set \<pi>) (rename_thiele_ballot \<pi>)"
     using thiele_permutes_coinc bij
     by blast
@@ -586,7 +570,7 @@ proof (unfold \<A>\<V>_committee.vr_neutrality_def, clarify)
   thus "rename_alt_set \<pi> ` thiele_family w V A p = thiele_family w V (\<pi> ` A) (rename_alt_set \<pi> \<circ> p)" 
     using thiele_family_simp p_agg_eq q_agg_eq rename_result.simps w_valid
     by (metis image_Un split_pairs)
-oops
+qed
     
 subsubsection \<open>Consistency\<close>
 
