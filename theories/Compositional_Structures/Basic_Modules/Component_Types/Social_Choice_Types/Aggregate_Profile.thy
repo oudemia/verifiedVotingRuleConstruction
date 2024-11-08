@@ -25,6 +25,11 @@ type_synonym ('a, 'v, 'b, 'r, 'i) Profile_Aggregation = "'a set \<Rightarrow> ('
 
 type_synonym ('a, 'b, 'r, 'i) Ballot_Aggregation = "'a set \<Rightarrow> 'b \<Rightarrow> ('r \<Rightarrow> 'i)"
 
+fun permute_agg_ballot :: "('r \<Rightarrow> 'r) \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> ('r \<Rightarrow> 'i)" where
+"permute_agg_ballot \<pi> b c =  b (\<pi> c)"
+
+fun permute_agg_profile :: "('r \<Rightarrow> 'r) \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile" where
+"permute_agg_profile \<pi> p v = permute_agg_ballot \<pi> (p v)"
 
 locale aggregation =
   ballot well_formed_ballot for
@@ -84,68 +89,95 @@ qed
 subsection \<open>Renaming Alternatives\<close>
 
 
-fun permute_agg_ballot :: "('r \<Rightarrow> 'r) \<Rightarrow> ('r \<Rightarrow> 'i) \<Rightarrow> ('r \<Rightarrow> 'i)" where
-"permute_agg_ballot \<pi> b c =  b (\<pi> c)"
+fun coinciding_with_agg :: "'v set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"coinciding_with_agg V \<alpha> \<kappa> \<beta> = (\<forall> A p. (well_formed_base_profile V A p \<longrightarrow>
+      (\<forall>v \<in> V. aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) \<circ> \<kappa> = (aggregate A (p v)))))"
 
-fun coinciding_permutes' :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
-"coinciding_permutes' V A p \<alpha> \<kappa> \<beta> = 
-    (\<forall>v \<in> V. aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) = (aggregate A (p v)) \<circ> \<kappa>)"
+fun coinciding_with_agg' :: "('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
+"coinciding_with_agg' \<alpha> \<kappa> \<beta> = ((\<lambda>A b. aggregate (\<alpha> ` A) (\<beta> b) \<circ> \<kappa>) = (\<lambda>A b. aggregate A b))"
 
-fun coinciding_permutes :: "'v set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
-"coinciding_permutes V \<alpha> \<kappa> \<beta> = (\<forall> A p. (well_formed_base_profile V A p \<longrightarrow>
-      (\<forall>v \<in> V. aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) = (aggregate A (p v)) \<circ> \<kappa>)))"
-
-lemma agg_preserves_alt_rename':
-fixes 
-  \<pi> :: "'a \<Rightarrow> 'a" and
-  \<rho> :: "'r \<Rightarrow> 'r" and
-  \<beta> :: "'b \<Rightarrow> 'b" and
-  p :: "('v, 'b) Profile" and 
-  V :: "'v set" and 
-  A :: "'a set"
-assumes
-  coinc: "coinciding_permutes' V A p \<pi> \<rho> \<beta>"
-shows "\<forall>v \<in> V. aggregate_profile (\<pi> ` A) (\<beta> \<circ> p) v = (permute_agg_ballot \<rho> \<circ> aggregate_profile A p) v"
-proof
-  fix v :: 'v
-  assume elem: "v \<in> V"
-  let ?q = "((the_inv \<beta>) \<circ> p)"
-  let ?p_agg = "aggregate_profile A p"
-  let ?q_agg = "aggregate_profile (\<pi> ` A) (\<beta> \<circ> p)"
-  have "?p_agg v = aggregate A (p v)" by simp
-  hence "(permute_agg_ballot \<rho> \<circ> ?p_agg) v = aggregate A (p v) \<circ> \<rho>" by auto
-  moreover have  "aggregate (\<pi> ` A) ((\<beta> \<circ> p) v) = aggregate A (p v) \<circ> \<rho>"
-    using elem coinc
-    by fastforce
-  ultimately show "?q_agg v = (permute_agg_ballot \<rho> \<circ> ?p_agg) v" by simp
-qed 
 
 lemma agg_preserves_alt_rename:
 fixes 
-  \<pi> :: "'a \<Rightarrow> 'a" and
-  \<rho> :: "'r \<Rightarrow> 'r" and
+  \<alpha> :: "'a \<Rightarrow> 'a" and
+  \<kappa> :: "'r \<Rightarrow> 'r" and
   \<beta> :: "'b \<Rightarrow> 'b" and
   p :: "('v, 'b) Profile" and 
   V :: "'v set" and 
   A :: "'a set"
 assumes
   wf: "well_formed_base_profile V A p" and
-  coinc: "coinciding_permutes V \<pi> \<rho> \<beta>"
-shows "\<forall>v \<in> V. aggregate_profile (\<pi> ` A) (\<beta> \<circ> p) v = (permute_agg_ballot \<rho> \<circ> aggregate_profile A p) v"
+  coinc: "coinciding_with_agg V \<alpha> \<kappa> \<beta>" and
+  bij: "bij \<kappa>"
+shows "\<forall>v \<in> V. (aggregate_profile (\<alpha> ` A) (\<beta> \<circ> p) v) = 
+  permute_agg_ballot (the_inv \<kappa>) ((aggregate_profile A p) v)"
 proof
   fix v :: 'v
   assume elem: "v \<in> V"
-  let ?q = "((the_inv \<beta>) \<circ> p)"
   let ?p_agg = "aggregate_profile A p"
-  let ?q_agg = "aggregate_profile (\<pi> ` A) (\<beta> \<circ> p)"
-  have "?p_agg v = aggregate A (p v)" by simp
-  hence "(permute_agg_ballot \<rho> \<circ> ?p_agg) v = aggregate A (p v) \<circ> \<rho>" by auto
-  moreover have  "aggregate (\<pi> ` A) ((\<beta> \<circ> p) v) = aggregate A (p v) \<circ> \<rho>"
+  let ?q_agg = "aggregate_profile (\<alpha> ` A) (\<beta> \<circ> p)"
+  have "aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) \<circ> \<kappa> = aggregate A (p v)"
     using elem coinc wf
-    by fastforce
-  ultimately show "?q_agg v = (permute_agg_ballot \<rho> \<circ> ?p_agg) v" by simp
+    by simp
+  hence "aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) \<circ> \<kappa> \<circ> (the_inv \<kappa>) = aggregate A (p v) \<circ> (the_inv \<kappa>)" 
+    by simp
+  hence "aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) = aggregate A (p v) \<circ> (the_inv \<kappa>)"
+    using bij
+    by (simp add: comp_def f_the_inv_into_f_bij_betw)
+  moreover  have "(permute_agg_ballot (the_inv \<kappa>) \<circ> ?p_agg) v = aggregate A (p v) \<circ> (the_inv \<kappa>)" 
+    by auto
+  ultimately show "?q_agg v = permute_agg_ballot (the_inv \<kappa>) (?p_agg v)" by simp
 qed 
 
+lemma agg_preserves_alt_rename_v2:
+fixes 
+  \<alpha> :: "'a \<Rightarrow> 'a" and
+  \<kappa> :: "'r \<Rightarrow> 'r" and
+  \<beta> :: "'b \<Rightarrow> 'b" and
+  p :: "('v, 'b) Profile" and 
+  V :: "'v set" and 
+  A :: "'a set"
+assumes
+  coinc: "coinciding_with_agg' \<alpha> \<kappa> \<beta>" and
+  bij: "bij \<kappa>"
+shows "aggregate_profile A p = permute_agg_profile \<kappa> (aggregate_profile (\<alpha> ` A) (\<beta> \<circ> p))"
+proof
+  fix v :: 'v
+  let ?p_agg = "aggregate_profile A p"
+  let ?q_agg = "aggregate_profile (\<alpha> ` A) (\<beta> \<circ> p)"
+  have "aggregate A (p v) = (aggregate (\<alpha> ` A) (\<beta> (p v))) \<circ> \<kappa>"
+    using coinc
+    by (metis coinciding_with_agg'.simps)
+  hence "aggregate A (p v) = aggregate (\<alpha> ` A) ((\<beta> \<circ> p) v) \<circ> \<kappa>" by simp
+  hence "?p_agg v =permute_agg_ballot \<kappa> (?q_agg v)" by auto
+  thus "?p_agg v = permute_agg_profile \<kappa> ?q_agg v" by simp
+qed 
+
+(*
+ have *: "?q_agg = (rename_thiele_ballot \<pi> \<circ> ?p_agg)"
+  proof (unfold thiele_aggregation.aggregate_profile.simps, standard)
+    fix v :: 'v
+    have "\<forall>C. thiele_aggregate A (p v) ((the_inv \<pi>) ` (\<pi> ` C)) = (thiele_aggregate A (p v) C)" 
+      using bij
+      by (metis bij_def inv_rename rename_alt_set.simps rename_inherits_bij the_inv_f_f)
+    hence "\<forall>C. thiele_aggregate (\<pi> ` A) (((rename_alt_set (the_inv \<pi>)) \<circ> p) v) (\<pi> ` C) =
+    (thiele_aggregate A (p v) C)" sorry
+
+  moreover have "\<forall>C. C \<in> committees A \<longleftrightarrow> \<pi> ` C \<in> committees (\<pi> ` A)"
+    by (metis Pow_UNIV R_eq bij bij_betw_Pow bij_def image_cong inj_image_mem_iff rename_alt_set.simps)
+    moreover have "\<forall>S T. S \<subseteq> A \<and> T \<subseteq> A \<longrightarrow> (card (S \<inter> T) = card ((\<pi> ` S) \<inter> \<pi> ` T))"
+    using bij
+    by (metis bij_betw_imp_inj_on bij_betw_same_card image_Int inj_imp_bij_betw_inv)
+  ultimately have "\<forall>C. thiele_aggregate (\<pi> ` A) (?q v) (\<pi> ` C) = thiele_aggregate A (p v) C"
+    using bij rename_inherits_bij by simp
+  hence "\<forall>D. thiele_aggregate (\<pi> ` A) (?q v) D = (thiele_aggregate A (p v) (the_inv \<pi> ` D))" 
+    using bij
+    by (metis Voting_Rule.bij_id bij_betw_id_iff bij_betw_imp_surj_on image_comp)
+  hence "thiele_aggregate (\<pi> ` A) (?q v) = rename_thiele_ballot \<pi> (thiele_aggregate A (p v))" by auto
+  thus "thiele_aggregate (\<pi> ` A) (?q v) =
+         (rename_thiele_ballot \<pi> \<circ> (\<lambda>v. thiele_aggregate A (p v))) v" by simp
+  qed
+*)
 end
 
 text \<open>

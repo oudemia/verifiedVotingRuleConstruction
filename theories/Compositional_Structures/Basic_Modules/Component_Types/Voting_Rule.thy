@@ -30,7 +30,7 @@ begin
 
 definition vr_anonymity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool" where 
   "vr_anonymity r \<equiv>
-      (\<forall> A V p \<pi>::('v \<Rightarrow> 'v).
+      (\<forall> A V p \<pi>.
         bij \<pi> \<longrightarrow> (let (A', V', q) = (rename \<pi> (A, V, p)) in
             finite_profile V A p \<and> finite_profile V' A' q \<longrightarrow> r V A p = r V' A' q))"
 
@@ -61,7 +61,27 @@ definition vr_neutrality :: "('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarro
         bij \<pi> \<and> coinciding_bal_permute A \<pi> \<beta> \<and> coinciding_cont_permute A \<pi> \<kappa>
           \<longrightarrow> well_formed_profile V A p \<and> well_formed_profile V (\<pi> ` A) (\<beta> \<circ> p) \<longrightarrow> 
             (\<kappa> `(r V A p)) = r V (\<pi> ` A) (\<beta> \<circ> p))"
-           
+
+lemma vr_neutrality_prereq:
+fixes 
+  r :: "('a, 'v, 'b, 'r) Voting_Rule" and
+  A :: "'a set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile" and
+  \<alpha> :: "'a \<Rightarrow> 'a"  and
+  \<kappa> :: "'r \<Rightarrow> 'r"  and
+  \<beta> :: "'b \<Rightarrow> 'b" 
+  assumes 
+  "bij \<pi>" and
+  "vr_neutrality \<pi> \<kappa> \<beta> r" and
+  "coinciding_bal_permute A \<pi> \<beta>" and
+  "coinciding_cont_permute A \<pi> \<kappa>" and
+  "well_formed_profile V A p" and
+  "well_formed_profile V (\<pi> ` A) (\<beta> \<circ> p)"
+  shows "(\<kappa> `(r V A p)) = r V (\<pi> ` A) (\<beta> \<circ> p)"
+  using assms vr_neutrality_def
+  by blast
+  
 end
 
 subsection \<open>The Elector Voting Rule\<close>
@@ -70,24 +90,6 @@ text \<open>
   The elector voting rule elects exactly those contenders that a given electoral module elects.
   It therefore discards all deferred and rejected contenders.
 \<close>
-
-lemma bij_id:
-fixes 
-  \<pi> :: "'x \<Rightarrow>'x"
-assumes "bij \<pi>"
-shows "\<pi> \<circ> (the_inv \<pi>) = id" 
-by (metis DEADID.in_rel assms comp_def eq_id_iff f_the_inv_into_f_bij_betw)
-
-lemma bij_inv_inv:
-fixes 
-  \<pi> :: "'x \<Rightarrow>'x"
-assumes "bij \<pi>"
-shows "the_inv (the_inv \<pi>) = \<pi>"
-proof -
-  have "\<forall>x. the_inv (the_inv \<pi>) x = \<pi> x"
-    by (metis (no_types) assms bij_betw_the_inv_into bij_is_inj the_inv_f_f)
-  thus ?thesis by presburger
-qed
 
 context electoral_structure 
 begin

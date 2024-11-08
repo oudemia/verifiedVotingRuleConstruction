@@ -281,22 +281,32 @@ begin
 
 definition coinciding_permutes :: "'r set \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
    "coinciding_permutes R \<pi> \<rho> = (\<forall>S \<subseteq> R. \<forall> b. well_formed_ballot (affected_alts R) b 
-    \<longrightarrow> limit_by_conts (\<pi> ` S) (\<rho> b) = \<rho> ( limit_by_conts S b))"
+    \<longrightarrow> limit_by_conts (\<pi> ` S) (\<rho> b) = \<rho> (limit_by_conts S b))"
 
-definition neutrality' :: "('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
-  "neutrality' \<rho> \<beta> m \<equiv> electoral_module m \<and> bij \<rho> \<and>
-      (\<forall> R V p. coinciding_permutes R \<rho> \<beta> \<longrightarrow> (let (R', V', q) = (\<rho> ` R, V, \<beta> \<circ> p) in
-            finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
-               m V' R' q = rename_result \<rho> (m V R p)))"
-
-definition neutrality'' :: "('r \<Rightarrow> 'r) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
-  "neutrality'' \<rho> m \<equiv> electoral_module m \<and> bij \<rho> \<and>
-      (\<forall> R V \<beta> p. coinciding_permutes R \<rho> \<beta> \<longrightarrow> (let (R', V', q) = (\<rho> ` R, V, \<beta> \<circ> p) in
-            finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R') q \<longrightarrow> 
-               m V' R' q = rename_result \<rho> (m V R p)))"
+definition neutrality :: "('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "neutrality \<rho> \<beta> m \<equiv> electoral_module m \<and>
+    (\<forall> R V p. coinciding_permutes R \<rho> \<beta> \<and> well_formed_profile V (affected_alts R) p \<and> 
+      well_formed_profile V (affected_alts (\<rho> ` R)) (\<beta> \<circ> p) \<longrightarrow> 
+        m V (\<rho> ` R) (\<beta> \<circ> p) = rename_result \<rho> (m V R p))"
           
+lemma neutrality_prereq:
+fixes 
+  m :: "('r, 'v, 'b) Electoral_Module" and
+  R R' :: "'r set" and
+  V V' :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  \<rho> :: "'r \<Rightarrow> 'r"  and
+  \<beta> :: "'b \<Rightarrow> 'b" 
+assumes 
+  "neutrality \<rho> \<beta> m" and
+  "coinciding_permutes R \<rho> \<beta>" and
+  "well_formed_profile V (affected_alts R) p" and
+  "well_formed_profile V (affected_alts (\<rho> ` R)) (\<beta> \<circ> p)"
+  shows "m V (\<rho> ` R) (\<beta> \<circ> p) = rename_result \<rho> (m V R p)"
+  using assms neutrality_def 
+  by blast
+  
 (*
-
 fun (in result_properties) neutrality :: "('a, 'v, 'a Preference_Relation) Election set
         \<Rightarrow> ('a, 'v, 'a Preference_Relation) Electoral_Module \<Rightarrow> bool" where
   "neutrality X m =
@@ -656,7 +666,7 @@ proof -
     using assms defer_in_conts 
     by blast
   hence "affected_alts (defer m V R p) \<subseteq> affected_alts R"
-    using assms defer_in_conts sub_coincide1
+    using assms defer_in_conts sub_coincide
     by simp
   thus ?thesis
     using prof limit_profile_sound

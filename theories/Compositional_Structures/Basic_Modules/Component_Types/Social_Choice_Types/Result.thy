@@ -75,8 +75,6 @@ fun limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
 fun well_formed_result :: "'r set \<Rightarrow> 'r Result \<Rightarrow> bool" where  
   "well_formed_result R r = (set_equals_partition R r \<and> disjoint3 r)"
 
-fun rename_result :: "('r \<Rightarrow> 'r) \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
-"rename_result \<pi> (e, r, d) = (\<pi> ` e, \<pi> ` r, \<pi> ` d)"
 
 lemma bij_preserves_result:
   fixes \<pi> :: "'r \<Rightarrow> 'r" and R :: "'r set" and e r d :: "'r set"
@@ -110,6 +108,10 @@ abbreviation reject_r :: "'r Result \<Rightarrow> 'r set" where
 
 abbreviation defer_r :: "'r Result \<Rightarrow> 'r set" where
   "defer_r r \<equiv> snd (snd r)"
+
+  
+fun rename_result :: "('r \<Rightarrow> 'r) \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
+"rename_result \<pi> (e, r, d) = (\<pi> ` e, \<pi> ` r, \<pi> ` d)"
 
 
 subsection \<open>Committee Results\<close>

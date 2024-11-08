@@ -112,4 +112,24 @@ proof (unfold comp_def)
     by presburger
 qed
 
+subsection \<open>Bijections\<close>
+
+lemma bij_id:
+fixes 
+  \<pi> :: "'x \<Rightarrow>'x"
+assumes "bij \<pi>"
+shows "\<pi> \<circ> (the_inv \<pi>) = id" 
+by (metis DEADID.in_rel assms comp_def eq_id_iff f_the_inv_into_f_bij_betw)
+
+lemma bij_inv_inv:
+fixes 
+  \<pi> :: "'x \<Rightarrow>'x"
+assumes "bij \<pi>"
+shows "the_inv (the_inv \<pi>) = \<pi>"
+proof -
+  have "\<forall>x. the_inv (the_inv \<pi>) x = \<pi> x"
+    by (metis (no_types) assms bij_betw_the_inv_into bij_is_inj the_inv_f_f)
+  thus ?thesis by presburger
+qed
+
 end
