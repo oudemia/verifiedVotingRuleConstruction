@@ -1,7 +1,7 @@
 section \<open>Thiele Module\<close>
 
 theory Thiele_Module
-imports 
+imports HOL.Finite_Set
       "Component_Types/Voting_Rule"      
       "Component_Types/Elimination_Module"
       "Component_Types/Social_Choice_Types/Aggregate_Profile"
@@ -23,10 +23,28 @@ fun limit_thiele_ballot :: "('a Committee) set \<Rightarrow> 'a Thiele_Ballot \<
 "limit_thiele_ballot C b c = (if c \<in> C then b c else 0)"
 
 fun thiele_score :: "Thiele_Score \<Rightarrow> bool" where
-"thiele_score w = (w 0 = 0 \<and> mono w)"
+"thiele_score w = (w 0 = 0 \<and> mono w \<and> (\<forall>n. \<bar>w n\<bar> \<noteq> \<infinity>))"
 
 fun score_sum :: "Thiele_Score \<Rightarrow> 'v set \<Rightarrow> 'a Committee \<Rightarrow> ('v, 'a Thiele_Ballot) Profile \<Rightarrow> erat" where
-"score_sum s V C p = (\<Sum> v \<in> V. s (p v C))"
+"score_sum s V c p = (\<Sum> v \<in> V. s (p v c))"
+
+
+lemma score_sum_is_rat:
+fixes 
+  w :: "Thiele_Score" and 
+  V :: "'v set" and 
+  p :: "('v, 'a Thiele_Ballot) Profile" and 
+  c :: "'a Committee"
+assumes valid_w: "thiele_score w"
+shows "\<bar>score_sum w V c p\<bar> \<noteq> \<infinity>"
+proof (unfold score_sum.simps)
+have "\<forall>v \<in> V. \<bar>w (p v c)\<bar> \<noteq> \<infinity>" using valid_w by simp
+moreover have "\<forall>S \<subseteq> V. \<forall> v \<in> V - S. \<bar>\<Sum>s\<in>S. w (p s c)\<bar> \<noteq> \<infinity> \<longrightarrow> \<bar>\<Sum>s\<in>S\<union>{v}. w (p s c)\<bar> \<noteq> \<infinity> " 
+  using valid_w
+  by (simp add: sum_Inf)
+ultimately show "\<bar>\<Sum>v\<in>V. w (p v c)\<bar> \<noteq> \<infinity>" by (meson sum_Inf)
+qed
+
 
 context committee_result
 begin
@@ -576,9 +594,305 @@ subsubsection \<open>Consistency\<close>
 
 subsubsection \<open>Continuity\<close>
 
+(*
+definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "continuity m \<equiv> (\<forall> R V V' p q. 
+    finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R) q \<and> 
+      V \<inter> V' = {} \<longrightarrow> (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  
+        (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
+          (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )))"
+
+
+definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
+  "vr_continuity r \<equiv>
+      (\<forall> A V V' p q. well_formed_profile V A p \<and> well_formed_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
+        (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  (r (W \<union> V') A (joint_profile V W q s) \<subseteq> r V A p)))"
+*)
+
+(* Idee:
+  Für Thiele: Zeige Aufteilung von scores
+  show continuity of aggregation (which is the score / profile separaion)
+  show continuity of score
+  choose lambda accordingly
+*)
+
+
+lemma erat_of_sum:
+  fixes
+    X :: "'a set" and
+    f :: "'a \<Rightarrow> nat"
+  shows "(\<Sum>x\<in>X. (erat_of (f x))) = erat_of (\<Sum>x\<in>X. (f x))"
+proof (unfold erat_of.simps, simp)
+  have "\<forall>x\<in>X. Fract (int (f x)) 1 = f x" by (simp add: of_rat_rat)
+  hence *: "(\<Sum>x\<in>X. Fract (int (f x)) 1) = (\<Sum>x\<in>X. f x)"
+    by (metis (mono_tags, lifting) Fract_of_nat_eq of_nat_sum of_rat_of_nat_eq sum.cong)
+  have "Fract (\<Sum>x\<in>X. int (f x)) 1 = (\<Sum>x\<in>X. f x)"
+    by (metis of_int_of_nat_eq of_int_rat of_nat_sum of_rat_of_int_eq)
+  thus "(\<Sum>x\<in>X. Fract (int (f x)) 1) = Fract (\<Sum>x\<in>X. int (f x)) 1" using *
+    by (metis of_rat_eq_iff)
+qed
+
+lemma erat_of_leq: "(x \<le> y) \<longleftrightarrow> (erat_of x \<le> erat_of y)"
+proof
+  assume "x \<le> y"
+  thus "erat_of x \<le> erat_of y" by simp
+next
+  assume "erat_of x \<le> erat_of y"
+  hence "Fract x 1 \<le> Fract y 1" using erat_of.simps by simp
+  thus "x \<le> y" by simp
+  qed
+
+(*
+next
+  case (Cons a l)
+  fix
+    a :: "'a set" and
+    l :: "'a set list"
+  assume "\<forall> i::nat < length (a#l). finite ((a#l)!i)"
+  hence
+    "finite a" and
+    "\<forall> i < length l. finite (l!i)"
+    by auto
+  moreover assume
+    "\<forall> i::nat < length l. finite (l!i) \<Longrightarrow> finite (listset l)"
+  ultimately have
+    "finite (listset l)" and
+    "finite {a'#l' | a' l'. a' \<in> a \<and> l' \<in> (listset l)}"
+    using list_cons_presv_finiteness
+    by (blast, blast)
+  thus "finite (listset (a#l))"
+    by (simp add: set_Cons_def)
+qed
+*)
+
+lemma rat_erat_simp: 
+fixes e :: erat
+assumes rational: "\<bar>e\<bar> \<noteq> \<infinity>"
+shows "e = erat (rat_of_erat e)"
+using assms 
+by auto
+
+lemma disjoint_erat_sum:
+fixes 
+  P :: "'x set set" and
+  f :: "'x \<Rightarrow> erat"
+shows "finite P \<Longrightarrow> disjoint P \<Longrightarrow> (\<forall>p \<in> P. finite p) \<Longrightarrow> sum f (\<Union> P) = sum (sum f) P"
+proof (induct P arbitrary: f  rule: finite_induct)
+case empty
+then show ?case by simp
+next
+case (insert p X)
+fix
+  p :: "'x set" and
+  X :: "'x set set"
+assume 
+  fin: "finite X" and
+  new: "p \<notin> X" and
+  disj_ins: "disjoint (insert p X)" and
+  elems_fin: "Ball (insert p X) finite"
+show "sum f (\<Union> (insert p X)) = sum (sum f) (insert p X)"
+  proof -
+  have disj_u: "p \<inter> \<Union> X = {}" 
+    using disj_ins insert.hyps(2) insert_partition
+    by (metis disjoint_def new)
+  have fin_p: "finite p" 
+    using elems_fin insert.prems(2) 
+    by simp
+  have fin_u: "finite (\<Union> X)" 
+    using fin finite_Union elems_fin 
+    by simp
+  have sum_u: "sum f (\<Union> (insert p X)) = sum f (p \<union> \<Union> X)" by simp
+  also have "... = sum f p + sum f (\<Union> X)"
+    using disj_u fin_u fin_p sum.union_disjoint sum_Un 
+    by blast
+  also have "... = sum (sum f) (insert p X)"
+    using Sup_insert disjoint_def disjoint_sum disj_ins fin fin_p fin_u
+    by (metis calculation finite.insertI finite_UnI partitionI)
+  finally show ?thesis by simp
+  qed
+qed
+
+
+(*proof -
+have "\<forall>p \<in> P. \<forall>p' \<in> P.  p \<noteq> p' \<longrightarrow> p \<inter> p' = {}"
+  using disj 
+  by (simp add: disjointD)
+hence "\<forall>x \<in> \<Union>P. \<exists>p \<in> P. x \<in> p \<and> (\<forall>p' \<in> P. p \<noteq> p' \<longrightarrow> (x \<notin> p'))"
+  using disj 
+  by auto
+thus ?thesis by try
+oops *)
+
+lemma score_sum_by_bal:
+fixes 
+  w :: "Thiele_Score" and 
+  V :: "'v set" and 
+  p :: "('v, 'a Thiele_Ballot) Profile" and 
+  c :: "'a Committee"
+assumes valid_w: "thiele_score w"
+shows "score_sum w V c p = (\<Sum>b\<in>range p. ((erat_of (card (bal_votes b p V)) * (w (b c)))))"
+proof (unfold score_sum.simps)
+have "V = \<Union>{bal_voters b p V| b. b \<in> p ` V}"
+  using ballots_partitions_voters 
+  by auto
+hence "score_sum w V c p = (\<Sum>v \<in> (\<Union>{bal_voters b p V| b. b \<in> p ` V}). w (p v c))"
+  using ballots_partitions_voters 
+  by fastforce
+  let ?f = "\<lambda>v. w (p v c)"
+  have "\<forall>b \<in> {bal_voters b p V| b. b \<in> p ` V}. finite b" 
+  using ballots_partitions_voters partition_on_def disjoint_erat_sum by try
+moreover have "(\<Sum>v \<in> (\<Union>{bal_voters b p V| b. b \<in> p ` V}). w (p v c)) = 
+  (\<Sum> b \<in> p ` V. (\<Sum>v \<in> bal_voters b p V. w (p v c)))" 
+  
+  proof -
+    have "disjoint {bal_voters b p V| b. b \<in> p ` V}" 
+    using ballots_partitions_voters partition_on_def 
+    by blast
+    hence "\<forall>v \<in> V. \<exists>b \<in> p ` V. v \<in> bal_voters b p V \<and> (\<forall>b' \<in> p ` V. b \<noteq> b' \<longrightarrow> (v \<notin> bal_voters b' p V))"
+    by simp
+    moreover have "\<forall>b \<in> p` V. \<Sum>v \<in> bal_voters b p V. w (p v c)"
+    hence ?thesis sorry
+  oops
+  oops
+
+lemma score_sum_by_bal:
+fixes 
+  w :: "Thiele_Score" and 
+  V :: "'v set" and 
+  p :: "('v, 'a Thiele_Ballot) Profile" and 
+  c :: "'a Committee"
+assumes valid_w: "thiele_score w"
+shows "score_sum w V c p = (\<Sum>b\<in>range p. ((of_nat (card (bal_votes b p V)) * (w (b c)))))"
+proof (unfold score_sum.simps)
+have "(\<Sum>v\<in>V. w (p v c)) = (\<Sum>v\<in>(\<Union>{bal_votes b p V | b. b \<in> range p}). w (p v c))" 
+  using profile_partitions_voters 
+  by metis
+have "\<forall>b \<in> range p. \<bar>\<Sum>v\<in>(bal_votes b p V). (w (p v c))\<bar> \<noteq> \<infinity>" 
+proof
+  fix b :: "'a Thiele_Ballot"
+  have "\<forall>v \<in> V. \<bar>w (p v c)\<bar> \<noteq> \<infinity>" using valid_w by simp
+  moreover have "\<forall>S \<subseteq> V. \<forall> v \<in> V - S. \<bar>\<Sum>s\<in>S. w (p s c)\<bar> \<noteq> \<infinity> \<longrightarrow> \<bar>\<Sum>s\<in>S\<union>{v}. w (p s c)\<bar> \<noteq> \<infinity> " 
+    using valid_w
+    by (simp add: sum_Inf)
+  ultimately have "\<forall>S \<subseteq> V. \<bar>\<Sum>s\<in>S. w (p s c)\<bar> \<noteq> \<infinity>" by (meson in_mono sum_Inf)
+  moreover have "bal_votes b p V \<subseteq> V" by simp
+  ultimately show "\<bar>\<Sum>v\<in>(bal_votes b p V). (w (p v c))\<bar> \<noteq> \<infinity>" by metis
+qed
+moreover have "\<forall>b \<in> range p. (\<Sum>v\<in>(bal_votes b p V). (w (p v c))) =  (\<Sum>v\<in>bal_votes b p V. (w (b c)))"
+by simp
+ultimately have "\<forall>b \<in> range p. rat_of_erat (\<Sum>v\<in>(bal_votes b p V). (w (p v c))) = 
+    (card (bal_votes b p V)) * rat_of_erat (w (b c))"
+proof (safe)
+  fix b :: "'a Thiele_Ballot"
+  have "\<forall>v \<in> bal_votes b p V. w (p v c) = rat_of_erat (w (p v c))" 
+  using valid_w assms erat_rat
+  by simp
+  hence "\<forall>v \<in> bal_votes b p V. w (p v c) = 1 * rat_of_erat (w (b c))" by simp
+  moreover have "(\<Sum>v\<in>(bal_votes b p V). rat_of_erat (w (b c))) = 
+      (card (bal_votes b p V)) *  rat_of_erat (w (b c))" 
+      by (simp add: of_rat_mult)
+  ultimately have "(\<Sum>v\<in>(bal_votes b p V). rat_of_erat (w (p v c))) = 
+    (card (bal_votes b p V)) * rat_of_erat (w (b c))" sorry
+    thus "rat_of_erat (\<Sum>v\<in>(bal_votes b p V). (w (p v c))) = 
+    (card (bal_votes b p V)) * rat_of_erat (w (b c))" sorry
+oops
+
+(*
+lemma copy_score_simp:
+fixes 
+  V W :: "'v set" and
+  C :: "('a Committee) set" and
+  p q :: "('v, 'a Thiele_Ballot) Profile" and
+  n :: nat and
+  c :: "'a Committee"
+assumes copy: "n_copy n V W p q"
+shows "score_sum w W c q = erat_of n * score_sum w V c p"
+proof (unfold erat_of.simps)
+have "\<forall>b. card {v | v. v \<in> W \<and> q v = b} = n * card {v | v. v \<in> V \<and> p v = b}" using copy by simp
+moreover have "score_sum w W c q = (\<Sum> b \<in> range q. (\<Sum> v \<in> {x | x. x \<in> W \<and> q x = b}. w (q v c)))"
+proof (unfold score_sum.simps)
+let ?b_votes = "\<lambda>b. {x |x. x \<in> W \<and> q x = b}"
+have "\<forall>b \<in> range q. (\<Sum>v\<in> ?b_votes b. w (q v c)) =  (\<Sum>v\<in> ?b_votes b. w (b c))" by simp
+hence "\<forall>b \<in> range q. (\<Sum>v\<in> ?b_votes b. w (q v c)) = erat_of (card (?b_votes b)) *  w (b c)" sorry
+oops
+oops
+*)
+
+
+lemma (in committee_result) thiele_module_continous:
+fixes 
+  w :: "nat Aggregate_Evaluation" 
+assumes 
+  w_valid: "thiele_score w"
+shows "thiele_structure.continuity (thiele_module w)"
+proof (unfold thiele_structure.continuity_def, clarify)
+fix 
+R :: "('a Committee) set" and
+V V' :: "'v set" and
+p q :: "('v, 'a Thiele_Ballot) Profile"
+assume
+wf: "thiele_structure.well_formed_profile V (id R) p" and
+wf': "thiele_structure.well_formed_profile V' (id R) q" and
+fin_R: "finite (id R)" and
+fin_V: "finite V" and
+fin_V': "finite V'" and
+disjoint: "V \<inter> V' = {}"
+let ?n = "4"
+have " \<forall>W s. n_copy ?n V W p s \<longrightarrow>
+          defer (thiele_module w) (W \<union> V') R (thiele_structure.joint_profile V' W q s)
+          \<subseteq> defer (thiele_module w) V R p \<union> elect (thiele_module w) V R p \<and>
+          elect (thiele_module w) (W \<union> V') R (thiele_structure.joint_profile V' W q s)
+          \<subseteq> elect (thiele_module w) V R p"
+  proof(safe)
+    fix 
+      W :: "'v set" and
+      s :: "('v, 'a Thiele_Ballot) Profile" and
+      c :: "'a Committee"
+    assume 
+      copy: "n_copy ?n V W p s" and
+      def: "c \<in> defer (thiele_module w) (W \<union> V') R (thiele_structure.joint_profile V' W q s)" and
+      not_elect: "c  \<notin> elect (thiele_module w) V R p"
+      let ?e = "\<lambda> V r R p. score_sum w V r p"
+      have "c \<in> defer (max_eliminator ?e) V R p" 
+      using def thiele_module.elims
+      by try
+    moreover have "c \<in> R" 
+      using thiele_mod_sound w_valid wf def thiele_structure.defer_in_conts
+      sorry
+    ultimately have "?e V c R p < Max {?e V x R p | x. x \<in> R}"
+      using thiele_structure.defer_of_max_elim wf
+      sorry
+    have "score_sum w W c s = ?n * score_sum w V c p" 
+      using copy 
+      sorry
+    moreover have "Max {?e W x R s | x. x \<in> R} = ?n * Max {?e V x R p | x. x \<in> R}" 
+      using copy 
+      sorry
+    ultimately show "c \<in> defer (thiele_module w) V R p" 
+    sorry
+
+  next
+    fix 
+      W :: "'v set" and
+      s :: "('v, 'a Thiele_Ballot) Profile" and
+      c :: "'a Committee"
+    assume 
+      copy: "n_copy ?n V W p s" and
+      elect: "c \<in> elect (thiele_module w) (W \<union> V') R (thiele_structure.joint_profile V' W q s)" and
+      let ?e = "\<lambda> V r R p. score_sum w V r p"
+      show "c \<in> elect (thiele_module w) V R p" sorry
+  qed
+thus "\<exists>n. \<forall>W s. n_copy n V W p s \<longrightarrow>
+  defer (thiele_module w) (W \<union> V') R (thiele_structure.joint_profile V' W q s)
+  \<subseteq> defer (thiele_module w) V R p \<union> elect (thiele_module w) V R p \<and>
+  elect (thiele_module w) (W \<union> V') R (thiele_structure.joint_profile V' W q s)
+  \<subseteq> elect (thiele_module w) V R p"
+  by blast  
+oops
+
 subsubsection \<open>Independence of Losers\<close>
 
 subsubsection \<open>Axiomatic Characterization of Thiele Methods\<close>
 
-
+end
 end
