@@ -1,5 +1,6 @@
 theory Aggregate_Profile
-  imports
+
+imports
     Profile_Interpretations
     Result
 begin
@@ -65,12 +66,9 @@ locale aggregation =
     aggregate :: "('a, 'b, 'r, 'i) Ballot_Aggregation"
   assumes
     preserve_valid: "well_formed_base A b 
-        \<Longrightarrow> well_formed_ballot (contenders A) (aggregate A b)" 
-(*
-and
-    valid_trans: "\<And> (A :: 'a set)(B :: 'a set) (b :: 'b). A \<subseteq> B \<and> well_formed_base A b 
-        \<Longrightarrow> well_formed_ballot (contenders B) (limit_ballot (contenders B) (aggregate b))"
-*)
+        \<Longrightarrow> well_formed_ballot (contenders A) (aggregate A b)" and
+    unique: "well_formed_base A b \<Longrightarrow> well_formed_base A b' 
+        \<Longrightarrow> b \<noteq> b' \<Longrightarrow> aggregate A b \<noteq> aggregate A b'"
 begin
 
 definition well_formed_base_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
@@ -167,7 +165,7 @@ assumes
   bij: "bij \<kappa>"
 shows "aggregate_profile A p = permute_agg_profile \<kappa> (aggregate_profile (\<alpha> ` A) (\<beta> \<circ> p))"
 proof
-  fix v :: 'v
+fix v :: 'v
   let ?p_agg = "aggregate_profile A p"
   let ?q_agg = "aggregate_profile (\<alpha> ` A) (\<beta> \<circ> p)"
   have "aggregate A (p v) = (aggregate (\<alpha> ` A) (\<beta> (p v))) \<circ> \<kappa>"
@@ -195,6 +193,82 @@ qed
   hence "?q_agg = rename_thiele_ballot \<pi> \<circ> ?p_agg"
     by fastforce
 *)
+
+lemma aggregate_bal_voters:
+fixes 
+  V :: "'v set" and 
+  A :: "'a set" and
+  p :: "('v, 'b) Profile" and 
+  p_agg :: "('v, 'r, 'i) Aggregate_Profile"
+assumes wf_p: "well_formed_base_profile V A p"
+shows "\<forall>b \<in> p ` V. bal_voters b p V = bal_voters (aggregate A b) (aggregate_profile A p) V"
+proof (clarify)
+fix v :: 'v
+assume elem: "v \<in> V"
+have "\<forall>b \<in> p ` V. well_formed_base A b" 
+  using wf_p well_formed_base_profile_def
+  by blast
+hence "\<forall>b \<in> p ` V. b \<noteq> p v \<longrightarrow> aggregate A b \<noteq> aggregate A (p v)" 
+  using unique elem
+  by simp
+moreover have "\<forall>b \<in> p ` V. b \<noteq> p v \<longrightarrow> bal_voters b p V \<inter> bal_voters (p v) p V = {}"
+  using bal_voters_disjoint 
+  by auto
+ultimately show "bal_voters (p v) p V = bal_voters (aggregate A (p v)) (aggregate_profile A p) V" 
+using assms unique by auto
+qed
+
+lemma copy_aggregate_commute:
+fixes 
+  V W :: "'v set" and 
+  A :: "'a set" and
+  p q :: "('v, 'b) Profile" and 
+  p_agg q_agg:: "('v, 'r, 'i) Aggregate_Profile"
+assumes 
+  wf_p: "well_formed_base_profile V A p" and
+  copy: "n_copy n V W p q" and (* copy first *)
+  p_agg_def: "p_agg = aggregate_profile A p" and (* aggregate before copy *)
+  q_agg_def: "q_agg = aggregate_profile A q" (* aggregate after copy *)
+shows "n_copy n V W p_agg q_agg"
+proof (unfold n_copy.simps, standard)
+show "p_agg ` V = q_agg ` W" using assms by force
+next 
+show "\<forall>b \<in> p_agg ` V. card (bal_voters b q_agg W) = n * card (bal_voters b p_agg V)"
+proof (clarify)
+  fix v :: 'v
+  assume elem: "v \<in> V"
+  have "\<forall>b \<in> p ` V. well_formed_base A b"
+    using wf_p well_formed_base_profile_def 
+    by fast
+  hence "\<forall>b \<in> q ` W. well_formed_base A b"
+    using copy copy_preserves_bal_props 
+    by metis
+  hence "well_formed_base_profile W A q" 
+    using  well_formed_base_profile_def
+    by auto
+  hence "bal_voters (p v) q W = bal_voters (p_agg v) q_agg W"
+    using p_agg_def q_agg_def aggregate_bal_voters elem aggregate_profile.simps copy
+    by (metis  imageI n_copy.elims(2))
+  moreover have "bal_voters (p v) p V = bal_voters (p_agg v) p_agg V"
+    using p_agg_def wf_p aggregate_bal_voters elem 
+    by fastforce
+  moreover have "card (bal_voters (p v) q W) = n * card (bal_voters (p v) p V)"
+    using copy elem 
+    by simp
+  ultimately show "card (bal_voters (p_agg v) q_agg W) = n * card (bal_voters (p_agg v) p_agg V)"
+    by simp
+  qed
+qed
+  
+lemma agg_profile_partition:
+fixes 
+  V :: "'v set" and 
+  A :: "'a set" and
+  p :: "('v, 'b) Profile" and 
+  c :: "'a Committee"
+shows "V = \<Union>{bal_votes b (aggregate_profile A p) V| b. b \<in> range (aggregate_profile A p)}"
+by auto
+
 end
 
 text \<open>
