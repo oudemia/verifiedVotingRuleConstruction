@@ -53,8 +53,7 @@ locale family_structure =
   empty_ballot :: "'b" + 
 fixes
   family_evaluation :: "'i Aggregate_Evaluation \<Rightarrow> bool" and (*thiele_score :: Thiele_Score \<Rightarrow> bool*)
-  family_module :: "'i Aggregate_Evaluation \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"  
-assumes agg_empty: "empty_agg = aggregate A empty_ballot"
+  family_module :: "'i Aggregate_Evaluation \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"
 begin
 
 fun family_member :: "('a, 'v, 'b, 'r, 'i) Voting_Rule_Family" where
@@ -158,6 +157,7 @@ case notin_V: False
   qed
 qed
 
+
 lemma family_continous:
   fixes eval :: "'i Aggregate_Evaluation"
   assumes 
@@ -203,14 +203,18 @@ ultimately have "(defer ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)
   using mod_cont agg_structure.continuity_prereq disj id_apply 
   by metis
 hence *: "elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> elect ?m V ?R ?p_agg" by simp
-have "c \<in> elect ?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))"
-using win by simp
-moreover have "?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))
-  = ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)"
-  using aggregate_join_commute vde agg_empty 
+have "\<forall>v \<in> (W \<union> V'). (aggregate_profile A (base_struct.joint_profile V' W q s)) v = 
+  (joint_profile V' W ?q_agg ?s_agg) v" 
+  using aggregate_join_commute 
   by auto
-ultimately have "c \<in> elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)"
-by simp
+hence "?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))
+  = ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)"
+  using vde
+  by simp
+moreover have "c \<in> elect ?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))"
+  using win 
+  by simp
+ultimately have "c \<in> elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)" by simp
 hence "c \<in> elect ?m V ?R ?p_agg" using win * by auto
 thus "c \<in> family_member eval V A p" by simp
 qed
