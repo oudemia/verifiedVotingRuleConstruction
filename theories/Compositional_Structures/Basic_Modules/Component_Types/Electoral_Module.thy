@@ -339,11 +339,29 @@ text \<open>
 \<close>
 
 definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
-  "continuity m \<equiv> (\<forall> R V V' p q. 
-    well_formed_profile V (affected_alts R) p \<and> well_formed_profile V' (affected_alts R) q \<and> 
-      V \<inter> V' = {} \<longrightarrow> (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  
-        (defer m V R p \<subseteq> defer m (W \<union> V') R (joint_profile V W q s))))"
+  "continuity m \<equiv> (\<forall> R V V' W p q s. 
+    finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R) q \<and> 
+      V \<inter> V' = {} \<longrightarrow> (\<exists>n. n_copy n V W p s) \<longrightarrow>  
+        (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
+          (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p ))"
 
+lemma continuity_prereq:
+fixes 
+  m :: "('r, 'v, 'b) Electoral_Module" and
+  R :: "'r set" and
+  V V' W :: "'v set" and
+  p q s:: "('v, 'b) Profile"
+assumes 
+  "continuity m" and
+  "finite_profile V (affected_alts R) p" and
+  "finite_profile V' (affected_alts R) q" and
+  "V \<inter> V' = {}" and
+  "n_copy n V W p s"
+shows "(defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
+       (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )"
+using assms continuity_def 
+by blast
+          
 text \<open>
   Consistency states that if some contenders are chosen for two disjoint elections, then precisely 
   those contenders are chosen in the joint election.

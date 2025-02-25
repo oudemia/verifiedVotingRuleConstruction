@@ -68,7 +68,9 @@ locale aggregation =
     preserve_valid: "well_formed_base A b 
         \<Longrightarrow> well_formed_ballot (contenders A) (aggregate A b)" and
     unique: "well_formed_base A b \<Longrightarrow> well_formed_base A b' 
-        \<Longrightarrow> b \<noteq> b' \<Longrightarrow> aggregate A b \<noteq> aggregate A b'"
+        \<Longrightarrow> b \<noteq> b' \<Longrightarrow> aggregate A b \<noteq> aggregate A b'" and
+    limit_valid: "limit_agg (contenders A) (aggregate A b) = aggregate A b" and
+    fin_preserve: "finite A \<Longrightarrow> finite (contenders A)"
 begin
 
 definition well_formed_base_profile :: "'v set \<Rightarrow> 'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
@@ -118,6 +120,16 @@ fun coinciding_with_agg :: "'v set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightar
 
 fun coinciding_with_agg' :: "('a \<Rightarrow> 'a) \<Rightarrow> ('r \<Rightarrow> 'r) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> bool" where
 "coinciding_with_agg' \<alpha> \<kappa> \<beta> = (\<forall> A b. (aggregate (\<alpha> ` A) (\<beta> b) \<circ> \<kappa>) = aggregate A b)"
+
+ 
+lemma agg_profile_partition:
+fixes 
+  V :: "'v set" and 
+  A :: "'a set" and
+  p :: "('v, 'b) Profile" and 
+  c :: "'a Committee"
+shows "V = \<Union>{bal_voters b (aggregate_profile A p) V| b. b \<in> range (aggregate_profile A p)}"
+by auto
 
 
 lemma agg_preserves_alt_rename:
@@ -218,6 +230,7 @@ ultimately show "bal_voters (p v) p V = bal_voters (aggregate A (p v)) (aggregat
 using assms unique by auto
 qed
 
+
 lemma copy_aggregate_commute:
 fixes 
   V W :: "'v set" and 
@@ -226,14 +239,16 @@ fixes
   p_agg q_agg:: "('v, 'r, 'i) Aggregate_Profile"
 assumes 
   wf_p: "well_formed_base_profile V A p" and
-  copy: "n_copy n V W p q" and (* copy first *)
-  p_agg_def: "p_agg = aggregate_profile A p" and (* aggregate before copy *)
-  q_agg_def: "q_agg = aggregate_profile A q" (* aggregate after copy *)
-shows "n_copy n V W p_agg q_agg"
+  copy: "n_copy n V W p q"
+shows "n_copy n V W (aggregate_profile A p) (aggregate_profile A q)"
 proof (unfold n_copy.simps, standard)
-show "p_agg ` V = q_agg ` W" using assms by force
+let ?p_agg = "aggregate_profile A p" (* p_agg = aggregate before copy *)
+let ?q_agg = "aggregate_profile A q" (* q_agg = aggregate after copy *)
+show "?p_agg ` V = ?q_agg ` W" using assms by force
 next 
-show "\<forall>b \<in> p_agg ` V. card (bal_voters b q_agg W) = n * card (bal_voters b p_agg V)"
+let ?p_agg = "aggregate_profile A p" (* p_agg = aggregate before copy *)
+let ?q_agg = "aggregate_profile A q" (* q_agg = aggregate after copy *)
+show "\<forall>b \<in> ?p_agg ` V. card (bal_voters b ?q_agg W) = n * card (bal_voters b ?p_agg V)"
 proof (clarify)
   fix v :: 'v
   assume elem: "v \<in> V"
@@ -246,28 +261,35 @@ proof (clarify)
   hence "well_formed_base_profile W A q" 
     using  well_formed_base_profile_def
     by auto
-  hence "bal_voters (p v) q W = bal_voters (p_agg v) q_agg W"
-    using p_agg_def q_agg_def aggregate_bal_voters elem aggregate_profile.simps copy
+  hence "bal_voters (p v) q W = bal_voters (?p_agg v) ?q_agg W"
+    using aggregate_bal_voters elem aggregate_profile.simps copy
     by (metis  imageI n_copy.elims(2))
-  moreover have "bal_voters (p v) p V = bal_voters (p_agg v) p_agg V"
-    using p_agg_def wf_p aggregate_bal_voters elem 
+  moreover have "bal_voters (p v) p V = bal_voters (?p_agg v) ?p_agg V"
+    using wf_p aggregate_bal_voters elem 
     by fastforce
   moreover have "card (bal_voters (p v) q W) = n * card (bal_voters (p v) p V)"
     using copy elem 
     by simp
-  ultimately show "card (bal_voters (p_agg v) q_agg W) = n * card (bal_voters (p_agg v) p_agg V)"
+  ultimately show "card (bal_voters (?p_agg v) ?q_agg W) = n * card (bal_voters (?p_agg v) ?p_agg V)"
     by simp
   qed
 qed
-  
-lemma agg_profile_partition:
+
+ 
+lemma n_copy_multiplies_sum:
 fixes 
-  V :: "'v set" and 
-  A :: "'a set" and
-  p :: "('v, 'b) Profile" and 
-  c :: "'a Committee"
-shows "V = \<Union>{bal_votes b (aggregate_profile A p) V| b. b \<in> range (aggregate_profile A p)}"
-by auto
+  V W :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  f :: "'i \<Rightarrow> erat" and
+  n :: nat and
+  C :: "'r set" and
+  c :: 'r
+  assumes 
+  wf: "well_formed_profile V R p" and
+  copy: "n_copy n V W p q"
+shows "sum (\<lambda>w. f (q w c)) W = erat_of n * (sum (\<lambda>v. f (p v c)) V)" 
+proof -
+oops
 
 end
 

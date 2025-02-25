@@ -70,14 +70,14 @@ fixes
   \<alpha> :: "'a \<Rightarrow> 'a"  and
   \<kappa> :: "'r \<Rightarrow> 'r"  and
   \<beta> :: "'b \<Rightarrow> 'b" 
-  assumes 
+assumes 
   "bij \<pi>" and
   "vr_neutrality \<pi> \<kappa> \<beta> r" and
   "coinciding_bal_permute A \<pi> \<beta>" and
   "coinciding_cont_permute A \<pi> \<kappa>" and
   "well_formed_profile V A p" and
   "well_formed_profile V (\<pi> ` A) (\<beta> \<circ> p)"
-  shows "(\<kappa> `(r V A p)) = r V (\<pi> ` A) (\<beta> \<circ> p)"
+shows "(\<kappa> `(r V A p)) = r V (\<pi> ` A) (\<beta> \<circ> p)"
   using assms vr_neutrality_def
   by blast
 
@@ -100,8 +100,27 @@ definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  whe
 
 definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_continuity r \<equiv>
-      (\<forall> A V V' p q. well_formed_profile V A p \<and> well_formed_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
-        (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  (r (W \<union> V') A (joint_profile V W q s) \<subseteq> r V A p)))"
+      (\<forall> A V V' W p q s. finite_profile V A p \<and> finite_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
+        (\<exists>n. n_copy n V W p s) \<longrightarrow> (r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p))"
+
+
+lemma vr_continuity_prereq:
+fixes 
+  r :: "('a, 'v, 'b, 'r) Voting_Rule" and
+  A :: "'a set" and
+  V V' W :: "'v set" and
+  p q s :: "('v, 'b) Profile" and
+  n :: nat
+assumes 
+  cont: "vr_continuity r" and
+  fp: "finite_profile V A p" and
+  fq: "finite_profile V' A q" and
+  disj: "V \<inter> V' = {}" and
+  nonempty: "V \<noteq> {}" and
+  copy: "n_copy n V W p s"
+shows "r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p" 
+using vr_continuity_def assms 
+by blast
 
 text \<open>
   Consistency states that if some contenders are chosen for two disjoint elections, then precisely 
