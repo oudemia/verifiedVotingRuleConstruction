@@ -5,7 +5,6 @@ theory Voting_Rule
 imports
     Electoral_Module
     Evaluation_Function
-    "Social_Choice_Types/Aggregate_Profile"
 begin
 
 text \<open>
@@ -90,10 +89,19 @@ text \<open>
   contains the election outcome of E.
 \<close>
 
+(*
+definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
+  "continuity m \<equiv> (\<forall> R V V' p q. 
+    finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R) q \<and> 
+      V \<inter> V' = {} \<longrightarrow> (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  
+        (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
+          (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )))"
+*)
+
 definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_continuity r \<equiv>
       (\<forall> A V V' p q. well_formed_profile V A p \<and> well_formed_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
-        (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  (r V A p \<subseteq> r (W \<union> V') A (joint_profile V W q s))))"
+        (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  (r (W \<union> V') A (joint_profile V W q s) \<subseteq> r V A p)))"
 
 text \<open>
   Consistency states that if some contenders are chosen for two disjoint elections, then precisely 
@@ -298,16 +306,5 @@ shows "(elector\<^sub>d m) V A p = (elect m V (contenders A) p) \<union> (defer 
 using mod p_id 
 by  simp
    
-
 end
-
-subsection \<open>Voting Rule Families\<close>
-
-type_synonym 'i Aggregate_Evaluation = "'i \<Rightarrow> erat"
-
-type_synonym ('a, 'v, 'b, 'r, 'i) Voting_Rule_Family = "'i Aggregate_Evaluation \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule"
-
-fun voting_rule_family :: "('v, 'a, 'b, 'r, 'i) Voting_Rule_Family => bool" where
-"voting_rule_family f = True"
-
 end
