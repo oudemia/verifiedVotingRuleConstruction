@@ -849,12 +849,21 @@ fixes
   f :: "'b \<Rightarrow> erat"
 assumes 
   fin_V: "finite V" and
-  fin_W: "finite W" and
-  copy: "n_copy n V W p q" and
   bal: "b \<in> p ` V" and
-  f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)"
+  f_pos: "\<forall>b \<in> p ` V. f b > 0"
 shows "0 \<le> (erat_of (card (bal_voters b p V)) * f b)"
-sorry
+proof -
+have "bal_voters b p V \<noteq> {}" 
+  using bal_voters_witness bal
+  by metis
+hence "card (bal_voters b p V) > 0"
+  using fin_V 
+  by fastforce
+hence "0 \<le> erat_of (card (bal_voters b p V))" by (simp add: Zero_rat_def)
+thus ?thesis
+  using f_pos bal erat_zero_le_0_iff order_le_less 
+  by blast
+qed
 
 lemma copy_multiplies_sum:
 fixes 
@@ -866,38 +875,34 @@ assumes
   fin_V: "finite V" and
   fin_W: "finite W" and
   copy: "n_copy n V W p q" and
-  f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)"
+  f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)" and
+  f_pos: "\<forall>b \<in> p ` V. f b > 0"
 shows "sum (f \<circ> q) W = erat_of n * (sum (f \<circ> p) V)"
 proof -
-
 have *: "\<forall>b \<in> p ` V. 0 \<le> (erat_of (card (bal_voters b p V)) * f b)"
-using hope assms
-by metis
-
-moreover 
+  using hope f_pos fin_V
+  by metis
 have "sum (f \<circ> q) W = (\<Sum>b \<in> q ` W. erat_of (card (bal_voters b q W)) * f b)"
-using disjoint_prof_sum_alt fin_W by blast
-
+  using disjoint_prof_sum_alt fin_W 
+  by blast
 moreover have "p ` V = q ` W"
-using copy n_copy.simps by simp
-
+  using copy n_copy.simps 
+  by simp
 moreover have "\<forall>b \<in> p ` V. card (bal_voters b q W) = n * card (bal_voters b p V)" 
-using copy by fastforce
-
+  using copy 
+  by fastforce
 ultimately have "sum (f \<circ> q) W = (\<Sum>b \<in> p ` V. erat_of (n * card (bal_voters b p V)) * f b)"
-by (metis (mono_tags, lifting) sum.cong)
-
+  by (metis (mono_tags, lifting) sum.cong)
 moreover have "... = (\<Sum>b \<in> p ` V. erat_of n * erat_of (card (bal_voters b p V)) * f b)" by simp
 moreover have "... = (\<Sum>b \<in> p ` V. erat_of n * (erat_of (card (bal_voters b p V)) * f b))" 
-using  mult.assoc by meson
-
+  using  mult.assoc 
+  by meson
 moreover have "erat_of n * (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b) = ..."
-using sum_erat_right_distrib * assms
-by fast
-
+  using sum_erat_right_distrib * assms
+  by fast
 moreover have "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b)"
-using disjoint_prof_sum_alt fin_V by blast
-
+  using disjoint_prof_sum_alt fin_V 
+  by blast
 ultimately show ?thesis by argo
 qed
 
