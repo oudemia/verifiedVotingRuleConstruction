@@ -188,23 +188,6 @@ fix v :: 'v
   thus "?p_agg v = permute_agg_profile \<kappa> ?q_agg v" by simp
 qed 
 
-(*
- have "?p_agg = permute_agg_profile (rename_alt_set \<pi>) ?q_agg"
-    using thiele_permutes_coinc_with_agg p_agg_eq q_agg_eq bij rename_inherits_bij thiele_aggregation.agg_preserves_alt_rename_v2 
-    by blast
-  hence "\<forall>v. ?p_agg v =  ?q_agg v \<circ> (rename_alt_set \<pi>)"
-    by auto
-  hence "\<forall>v. ?q_agg v =  ?p_agg v \<circ> (the_inv (rename_alt_set \<pi>))"
-    using bij rename_inherits_bij
-    by (metis (no_types, lifting) bij_id comp_assoc comp_id)
-  hence "\<forall>v. ?q_agg v =  ?p_agg v \<circ> (rename_alt_set (the_inv \<pi>))"
-    using bij inv_rename 
-    by metis
-  hence "?q_agg = permute_agg_profile (rename_alt_set (the_inv \<pi>)) ?p_agg"
-    by fastforce
-  hence "?q_agg = rename_thiele_ballot \<pi> \<circ> ?p_agg"
-    by fastforce
-*)
 
 lemma aggregate_bal_voters:
 fixes 
@@ -275,21 +258,6 @@ proof (clarify)
   qed
 qed
 
- 
-lemma n_copy_multiplies_sum:
-fixes 
-  V W :: "'v set" and 
-  p q :: "('v, 'r, 'i) Aggregate_Profile" and
-  f :: "'i \<Rightarrow> erat" and
-  n :: nat and
-  C :: "'r set" and
-  c :: 'r
-  assumes 
-  wf: "well_formed_profile V R p" and
-  copy: "n_copy n V W p q"
-shows "sum (\<lambda>w. f (q w c)) W = erat_of n * (sum (\<lambda>v. f (p v c)) V)" 
-proof -
-oops
 
 end
 

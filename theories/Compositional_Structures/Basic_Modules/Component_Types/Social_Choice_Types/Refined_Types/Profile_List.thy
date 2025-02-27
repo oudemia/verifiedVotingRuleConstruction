@@ -42,13 +42,13 @@ text \<open>
 definition profile_l :: "'a set \<Rightarrow> 'a Profile_List \<Rightarrow> bool" where
   "profile_l A p \<equiv> \<forall> i < length p. ballot_on A (p!i)"
 
-lemma refinement:
+lemma (in ballot) refinement:
   fixes
     A :: "'a set" and
     p :: "'a Profile_List"
   assumes "profile_l A p"
-  shows "profile {0 ..< length p} A (pl_to_pr_\<alpha> p)"
-proof (unfold profile_def, safe)
+  shows "well_formed_profile {0 ..< length p} A (pl_to_pr_\<alpha> p)"
+proof (unfold well_formed_profile_def, safe)
   fix i :: "nat"
   assume in_range: "i \<in> {0 ..< length p}"
   moreover have "well_formed_l (p!i)"

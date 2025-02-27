@@ -46,6 +46,10 @@ fun disjoint3 :: "'r Result \<Rightarrow> bool" where
 fun set_equals_partition :: "'r set \<Rightarrow>'r Result \<Rightarrow> bool" where
   "set_equals_partition X (e, r, d) = (e \<union> r \<union> d = X)"
 
+  
+fun rename_result :: "('r \<Rightarrow> 'r) \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
+"rename_result \<pi> (e, r, d) = (\<pi> ` e, \<pi> ` r, \<pi> ` d)"
+
 subsection \<open>Definition\<close>
 
 text \<open>
@@ -62,10 +66,11 @@ locale result =
     contenders :: "'a set \<Rightarrow> 'r set" and
     limit_contenders :: "'a set \<Rightarrow> 'r set \<Rightarrow> 'r set" and
     affected_alts :: "'r set \<Rightarrow> 'a set"
-    assumes 
+  assumes 
     conts_cover: "affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
     no_conts: "A \<noteq> {} \<and> affected_alts (contenders A) = {} \<longrightarrow> contenders A = {}" and
-    sub_coincide: "C \<subseteq> D \<longrightarrow> (affected_alts C) \<subseteq> (affected_alts D)" 
+    sub_coincide: "C \<subseteq> D \<longrightarrow> (affected_alts C) \<subseteq> (affected_alts D)" and
+    limit_is_superset: "affected_alts (limit_contenders A R) \<subseteq> A"
 begin
 
 (*     limit_conts_sound: "A \<subseteq> B \<longrightarrow> (contenders A) = limit_contenders A (contenders B)" *)
@@ -108,10 +113,6 @@ abbreviation reject_r :: "'r Result \<Rightarrow> 'r set" where
 
 abbreviation defer_r :: "'r Result \<Rightarrow> 'r set" where
   "defer_r r \<equiv> snd (snd r)"
-
-  
-fun rename_result :: "('r \<Rightarrow> 'r) \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
-"rename_result \<pi> (e, r, d) = (\<pi> ` e, \<pi> ` r, \<pi> ` d)"
 
 
 subsection \<open>Committee Results\<close>

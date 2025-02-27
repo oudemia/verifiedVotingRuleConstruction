@@ -602,10 +602,134 @@ end
 subsection \<open>Combintions of Profiles\<close>
 
 fun bal_voters :: "'b \<Rightarrow> ('v, 'b) Profile \<Rightarrow> 'v set \<Rightarrow> 'v set" where
-"bal_voters b p V = {v | v. v \<in> V \<and> p v = b}"
+"bal_voters b p V = V \<inter> (p -` {b})"
 
 fun n_copy :: "nat \<Rightarrow> 'v set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile \<Rightarrow> bool" where
 "n_copy n V W p q = (p ` V = q ` W \<and> (\<forall>b \<in> p ` V. card (bal_voters b q W) = n * card (bal_voters b p V)))"
+
+
+lemma bal_voters_complete:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile"
+shows "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V" 
+by auto
+
+
+lemma bal_voters_disjoint:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile" and
+  b b' :: 'b
+assumes "b \<noteq> b'"
+shows "bal_voters b p V \<inter> bal_voters b' p V = {}" 
+using assms 
+by auto
+
+
+lemma bal_voters_witness:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile" and
+  b :: 'b
+assumes "b \<in> p ` V"
+shows "bal_voters b p V \<noteq> {}" 
+using assms 
+by auto
+
+
+lemma ballots_partition_voters:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile"
+shows "partition_on V {bal_voters b p V| b. b \<in> p ` V}"
+proof (unfold partition_on_def, standard)
+  show "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V" by auto
+next
+  show "disjoint {bal_voters b p V |b. b \<in> p ` V} \<and> {} \<notin> {bal_voters b p V |b. b \<in> p ` V}"
+  proof (unfold disjoint_def, standard)
+    show "\<forall>a\<in>{bal_voters b p V |b. b \<in> p ` V}. \<forall>b\<in>{bal_voters b p V |b. b \<in> p ` V}. a \<noteq> b 
+      \<longrightarrow> a \<inter> b = {}"
+      using bal_voters_disjoint disjoint_def
+      by auto
+  next
+    show "{} \<notin> {bal_voters b p V |b. b \<in> p ` V}"
+      using bal_voters_witness 
+      by auto
+  qed
+qed
+
+
+lemma fin_bal_voters:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile" and
+  b :: 'b
+assumes 
+  fin: "finite V" and
+  ex_bal: "b \<in> p ` V"
+shows "finite (bal_voters b p V)" 
+using assms 
+by auto
+
+
+lemma voters_card_is_sum:
+fixes  
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile"
+assumes fin: "finite V"
+shows "card V = sum card {bal_voters b p V |b. b \<in> p ` V}"
+proof -
+have "partition_on V {bal_voters b p V |b. b \<in> p ` V}"
+  using ballots_partition_voters 
+  by auto
+moreover have "\<forall>b \<in> p ` V. finite (bal_voters b p V)" 
+  using fin
+  by simp
+ultimately show ?thesis 
+  using product_partition 
+  by blast
+qed
+
+
+lemma n_copy_unique:
+fixes
+  V W :: "'v set" and
+  p q :: "('v, 'b) Profile" and
+  n :: nat
+assumes 
+  copy: "n_copy n V W p q" and
+  fin: "finite V" and
+  nonempty: "V \<noteq> {}"
+shows "\<forall>m. n_copy m V W p q \<longrightarrow> n = m"
+proof (unfold n_copy.simps, clarify)
+fix m :: nat
+assume 
+  img_eq: "p ` V = q ` W" and
+  cards: "\<forall>b\<in>p ` V. card (bal_voters b q W) = m * card (bal_voters b p V)"
+have "\<forall>b\<in>p ` V. card (bal_voters b q W) = n * card (bal_voters b p V)"
+using copy by fastforce
+moreover have "\<forall>b\<in>p ` V. card (bal_voters b p V) > 0" 
+  using bal_voters_witness fin_bal_voters fin card_gt_0_iff
+  by metis
+moreover have "p ` V \<noteq> {}" using nonempty by simp
+ultimately show "n = m" by (metis cards ex_in_conv mult_cancel_right not_less0)
+qed
+
+
+lemma n_copy_per_ballot:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'b) Profile" and
+  n :: nat and
+  b :: 'b
+assumes 
+  copy: "n_copy n V W p q" and
+  ex_bal: "b \<in> p ` V"
+shows "card (bal_voters b q W) = n * card (bal_voters b p V)" 
+using assms 
+by fastforce
+
 
 lemma copy_preserves_bal_props:
 fixes 
@@ -619,53 +743,15 @@ assumes
 shows "\<forall>b \<in> q ` W. pr b" 
   using assms 
   by simp
-  
-lemma bal_voters_complete:
-fixes 
-  V :: "'v set" and 
-  p :: "('v, 'b) Profile"
-shows "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V" 
-by auto
 
-lemma bal_voters_disjoint:
-fixes 
-  V :: "'v set" and 
-  p :: "('v, 'b) Profile" and
-  b b' :: 'b
-assumes "b \<noteq> b'"
-shows "bal_voters b p V \<inter> bal_voters b' p V = {}" 
-using assms 
-by auto
-
-lemma bal_voters_witness:
-fixes 
-  V :: "'v set" and 
-  p :: "('v, 'b) Profile" and
-  b :: 'b
-assumes "b \<in> p ` V"
-shows "bal_voters b p V \<noteq> {}" 
-using assms 
-by auto
-
-lemma ballots_partitions_voters:
-fixes 
-  V :: "'v set" and 
-  p :: "('v, 'b) Profile"
-shows "partition_on V {bal_voters b p V| b. b \<in> p ` V}"
-proof (unfold partition_on_def, standard)
-  show "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V" by auto
-next
-  show "disjoint {bal_voters b p V |b. b \<in> p ` V} \<and> {} \<notin> {bal_voters b p V |b. b \<in> p ` V}"
-    using bal_voters_witness bal_voters_disjoint disjoint_def 
-    by fastforce
-qed
 
 lemma bal_voters_sum:
-fixes 
-  V :: "'v set" and 
+fixes
+  V :: "'v set" and
   p :: "('v, 'b) Profile" and
-  f :: "'b \<Rightarrow> erat"
-assumes fin: "finite V"
+  n :: nat
+assumes 
+  fin: "finite V"
 shows "\<forall>b \<in> p ` V. (\<Sum>v \<in> bal_voters b p V. f (p v)) = erat_of (card (bal_voters b p V)) * f b"
 proof
 fix b :: 'b
@@ -688,41 +774,13 @@ ultimately show "(\<Sum>v\<in>bal_voters b p V. f (p v)) = erat_of (card (bal_vo
 qed
 
 
-lemma n_copy_per_ballot:
-fixes 
-  V W :: "'v set" and 
-  p q :: "('v, 'b) Profile" and
-  n :: nat and
-  b :: 'b
-assumes 
-  copy: "n_copy n V W p q" and
-  ex_bal: "b \<in> p ` V"
-shows "card (bal_voters b q W) = n * card (bal_voters b p V)" 
-using assms 
-by fastforce
-
-
-lemma fin_bal_voters:
-fixes 
-  V :: "'v set" and 
-  p :: "('v, 'b) Profile" and
-  b :: 'b
-assumes 
-  fin: "finite V" and
-  ex_bal: "b \<in> p ` V"
-shows "finite (bal_voters b p V)" 
-using assms 
-by auto
-
-
 lemma disjoint_prof_sum:
 fixes 
   V :: "'v set" and
   p :: "('v, 'b) Profile" and
   f :: "'b \<Rightarrow> erat"
-assumes 
-  fin: "finite V"
-  shows "sum (f \<circ> p) V = sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}"
+assumes fin: "finite V"
+shows "sum (f \<circ> p) V = sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}"
 proof -
 have "\<forall>b \<in> p ` V. finite (bal_voters b p V)"
   using fin fin_bal_voters 
@@ -731,60 +789,74 @@ moreover have "finite {bal_voters b p V |b. b \<in> p ` V}"
 using fin by simp
 moreover have "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V" by auto
 moreover have "disjoint {bal_voters b p V |b. b \<in> p ` V}"
-  using ballots_partitions_voters partition_on_def 
+  using ballots_partition_voters partition_on_def 
   by blast
 ultimately show ?thesis 
   using disjoint_erat_sum  
   by fastforce
-qed
+  qed
 
 
-lemma disjoint_prof_sum_v2:
+lemma disjoint_prof_helper:
 fixes 
   V :: "'v set" and
   p :: "('v, 'b) Profile" and
   f :: "'b \<Rightarrow> erat"
-assumes 
-  fin: "finite V"
-shows "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V))"
-proof -
-have "(\<Sum>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V)) = (\<Sum>B \<in> {bal_voters b p V | b. b \<in> p ` V}. sum (f \<circ> p) B)"
-using ballots_partitions_voters partition_on_def 
+assumes fin: "finite V"
+shows "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V.(\<Sum>v \<in> bal_voters b p V. f (p v)))"
 sorry
-moreover have "\<forall>b \<in> p ` V. finite (bal_voters b p V)"
-  using fin fin_bal_voters 
-  by simp
-moreover have "finite {bal_voters b p V |b. b \<in> p ` V}" 
-using fin by simp
-moreover have "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V" by auto
-moreover have "disjoint {bal_voters b p V |b. b \<in> p ` V}"
-  using ballots_partitions_voters partition_on_def 
-  by blast
-ultimately show ?thesis 
-  using disjoint_erat_sum fin
-  by sorry
-qed
+(*
+have "\<forall>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V) = (\<Sum>v \<in> bal_voters b p V. f (p v))" by simp
+hence "(\<Sum>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V)) = 
+  (\<Sum>b \<in> p ` V. \<Sum>v \<in> bal_voters b p V. f (p v))"
+by simp
+moreover have "\<forall>b \<in> p ` V. (\<Sum>v \<in> bal_voters b p V. f (p v)) = 
+  erat_of (card (bal_voters b p V)) * f b"
+using bal_voters_sum fin 
+by metis
+ultimately have "(\<Sum>b \<in> p ` V. \<Sum>v \<in> bal_voters b p V. f (p v)) = 
+  (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b)"
+  using sum.cong by meson
+*)
 
-
-lemma prof_sum_over_bal_voters:
+lemma disjoint_prof_sum_alt:
 fixes 
   V :: "'v set" and
   p :: "('v, 'b) Profile" and
   f :: "'b \<Rightarrow> erat"
-assumes 
-  fin: "finite V"
-shows "sum (f \<circ> p) (\<Union> {bal_voters b p V |b. b \<in> p ` V}) =
-  sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}"
+assumes fin: "finite V"
+shows "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b)"
 proof -
-  have "\<Union> {bal_voters b p V |b. b \<in> p ` V} = V"
-  by auto
-  thus ?thesis 
-  using disjoint_prof_sum fin 
-  by fastforce
+have "sum (f \<circ> p) V = sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}"
+using disjoint_prof_sum fin 
+by blast
+moreover have "\<forall>b \<in> p ` V. (\<Sum>v \<in> bal_voters b p V. f (p v)) = erat_of (card (bal_voters b p V)) * f b"
+using bal_voters_sum fin 
+by metis
+moreover have "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V.(\<Sum>v \<in> bal_voters b p V. f (p v)))"
+using disjoint_prof_helper fin
+by blast
+ultimately show ?thesis by (metis (mono_tags, lifting) sum.cong)
 qed
 
 
-lemma TODOs:
+lemma hope:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'b) Profile" and
+  b :: 'b and
+  n :: nat and
+  f :: "'b \<Rightarrow> erat"
+assumes 
+  fin_V: "finite V" and
+  fin_W: "finite W" and
+  copy: "n_copy n V W p q" and
+  bal: "b \<in> p ` V" and
+  f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)"
+shows "0 \<le> (erat_of (card (bal_voters b p V)) * f b)"
+sorry
+
+lemma copy_multiplies_sum:
 fixes 
   V W :: "'v set" and 
   p q :: "('v, 'b) Profile" and
@@ -797,94 +869,38 @@ assumes
   f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)"
 shows "sum (f \<circ> q) W = erat_of n * (sum (f \<circ> p) V)"
 proof -
-have n_not_inf: "\<bar>erat_of n\<bar> \<noteq> \<infinity>" by simp 
-have all_rat: "\<forall>B \<in> {bal_voters b p V |b. b \<in> p ` V}. \<bar>sum (f \<circ> p) B\<bar> \<noteq> \<infinity>"
-  using f_rat 
-  by auto
-have "\<forall>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V) = erat_of (card (bal_voters b p V)) * f b"
-  using erat_of.simps bal_voters_sum fin_V 
-  by fastforce
-moreover have "\<forall>b \<in> q ` W. sum (f \<circ> q) (bal_voters b q W) = erat_of (card (bal_voters b q W)) * f b"
-  using erat_of.simps bal_voters_sum fin_W
-  by fastforce
-moreover have "\<forall>b \<in> p ` V. card (bal_voters b q W) = n * card (bal_voters b p V)"
-  using copy 
-  by fastforce
-moreover have img_eq: "q ` W = p ` V"
-  using copy 
-  by simp
-ultimately have "\<forall>b \<in> q ` W. sum (f \<circ> q) (bal_voters b q W) = 
-  erat_of n * sum (f \<circ> p) (bal_voters b p V)"
-  using erat_of.simps Fract_of_nat_eq mult.assoc of_nat_mult times_erat.simps
-  by metis
-hence "(\<Sum>b \<in> q ` W. sum (f \<circ> q) (bal_voters b q W)) = (\<Sum>b \<in> q ` W.
-  erat_of n * sum (f \<circ> p) (bal_voters b p V))"
-  by (meson sum.cong)
-hence "(\<Sum>b \<in> q ` W. sum (f \<circ> q) (bal_voters b q W)) = (\<Sum>b \<in> p ` V.
-  erat_of n * sum (f \<circ> p) (bal_voters b p V))" 
-  using img_eq 
-  by simp
-moreover have w_eq: "sum (f \<circ> q) W = (\<Sum>b \<in> q ` W. sum (f \<circ> q) (bal_voters b q W))"
-using disjoint_prof_sum_v2 fin_W
-by blast
-moreover have v_eq: "(\<Sum>b \<in> p ` V. erat_of n * sum (f \<circ> p) (bal_voters b p V)) = 
-  erat_of n * sum (f \<circ> p) V"
-  sorry
 
-ultimately show ?thesis
-using img_eq 
-by argo
+have *: "\<forall>b \<in> p ` V. 0 \<le> (erat_of (card (bal_voters b p V)) * f b)"
+using hope assms
+by metis
+
+moreover 
+have "sum (f \<circ> q) W = (\<Sum>b \<in> q ` W. erat_of (card (bal_voters b q W)) * f b)"
+using disjoint_prof_sum_alt fin_W by blast
+
+moreover have "p ` V = q ` W"
+using copy n_copy.simps by simp
+
+moreover have "\<forall>b \<in> p ` V. card (bal_voters b q W) = n * card (bal_voters b p V)" 
+using copy by fastforce
+
+ultimately have "sum (f \<circ> q) W = (\<Sum>b \<in> p ` V. erat_of (n * card (bal_voters b p V)) * f b)"
+by (metis (mono_tags, lifting) sum.cong)
+
+moreover have "... = (\<Sum>b \<in> p ` V. erat_of n * erat_of (card (bal_voters b p V)) * f b)" by simp
+moreover have "... = (\<Sum>b \<in> p ` V. erat_of n * (erat_of (card (bal_voters b p V)) * f b))" 
+using  mult.assoc by meson
+
+moreover have "erat_of n * (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b) = ..."
+using sum_erat_right_distrib * assms
+by fast
+
+moreover have "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b)"
+using disjoint_prof_sum_alt fin_V by blast
+
+ultimately show ?thesis by argo
 qed
-  
-(*shows "sum (f \<circ> q) W = erat_of n * (sum (f \<circ> p) V)"
-have **: "sum (f \<circ> q) W = sum (sum (f \<circ> q)) {bal_voters b q W |b. b \<in> q ` W}"
-  using disjoint_prof_sum fin_W 
-  by blast  
-hence ww: "sum (f \<circ> q) W = (\<Sum>B \<in> {bal_voters b q W |b. b \<in> q ` W}. erat_of n * sum (f \<circ> q) B)"
-  by try
 
-have vv: "sum (f \<circ> p) V = sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}"
-  using disjoint_prof_sum fin_V
-  by blast
-
-have "erat_of n * sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V} =
-  (\<Sum>B \<in> {bal_voters b p V |b. b \<in> p ` V}. erat_of n * sum (f \<circ> p) B)"
-  using erat_sum_distrib_left n_not_inf all_rat
-  by induct
-hence ***: "(\<Sum>B \<in> {bal_voters b p V |b. b \<in> p ` V}. erat_of n * sum (f \<circ> p) B) =
-  erat_of n * sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}"
-  by simp
-
-have ****: "sum (f \<circ> p) (\<Union> {bal_voters b p V |b. b \<in> p ` V}) =
-  sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V}" 
-  using fin_V prof_sum_over_bal_voters 
-  by simp  
-hence xx:"sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V} =
-  sum (f \<circ> p) (\<Union> {bal_voters b p V |b. b \<in> p ` V})" by simp
-hence x:"sum (sum (f \<circ> p)) {bal_voters b p V |b. b \<in> p ` V} =
-  sum (f \<circ> p) V" using vv by simp  
-hence xxx: "(\<Sum>B \<in> {bal_voters b p V |b. b \<in> p ` V}. erat_of n * sum (f \<circ> p) B) =
-   erat_of n * (sum (f \<circ> p) V)"
-   using "***" by argo
-   
-have *****: "sum (f \<circ> q) (\<Union> {bal_voters b q W |b. b \<in> q ` W}) =
-  sum (sum (f \<circ> q)) {bal_voters b q W |b. b \<in> q ` W}"
-  using fin_W prof_sum_over_bal_voters 
-  by simp  
-  
-hence ******: "sum (f \<circ> q) W =
-  sum (sum (f \<circ> q)) {bal_voters b q W |b. b \<in> q ` W}"
-  using "**" by fastforce
- 
-(*  hence "erat_of n * sum (f \<circ> p) (\<Union> {bal_voters b p V |b. b \<in> p ` V}) =
-  sum (f \<circ> q) (\<Union> {bal_voters b q W |b. b \<in> q ` W})"
-  using ballots_partitions_voters partition_on_def disjoint_prof_sum img_eq
-  by try *)
-thus ?thesis 
-  using erat_of.simps bal_voters_complete xxx * **
-  by try
-qed
-*)
 
 fun (in ballot) joint_profile :: "'v set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
 "joint_profile V W p q v = (if v \<in> V then p v else (if v \<in> W then q v else empty_ballot))"
