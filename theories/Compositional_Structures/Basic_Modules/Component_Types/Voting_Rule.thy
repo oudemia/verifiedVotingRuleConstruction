@@ -101,7 +101,7 @@ definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  whe
 definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_continuity r \<equiv>
       (\<forall> A V V' W p q s. finite_profile V A p \<and> finite_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
-        (\<exists>n. n_copy n V W p s) \<longrightarrow> (r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p))"
+        (\<exists>n. n_copy n V W p s \<longrightarrow> (r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p)))"
 
 
 lemma vr_continuity_prereq:
@@ -109,16 +109,14 @@ fixes
   r :: "('a, 'v, 'b, 'r) Voting_Rule" and
   A :: "'a set" and
   V V' W :: "'v set" and
-  p q s :: "('v, 'b) Profile" and
-  n :: nat
+  p q s :: "('v, 'b) Profile"
 assumes 
   cont: "vr_continuity r" and
   fp: "finite_profile V A p" and
   fq: "finite_profile V' A q" and
   disj: "V \<inter> V' = {}" and
-  nonempty: "V \<noteq> {}" and
-  copy: "n_copy n V W p s"
-shows "r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p" 
+  nonempty: "V \<noteq> {}"
+shows "\<exists>n. n_copy n V W p s \<longrightarrow> r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p" 
 using vr_continuity_def assms 
 by blast
 

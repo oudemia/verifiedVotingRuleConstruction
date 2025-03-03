@@ -749,13 +749,13 @@ lemma bal_voters_sum:
 fixes
   V :: "'v set" and
   p :: "('v, 'b) Profile" and
+  b :: 'b and
   n :: nat
 assumes 
-  fin: "finite V"
-shows "\<forall>b \<in> p ` V. (\<Sum>v \<in> bal_voters b p V. f (p v)) = erat_of (card (bal_voters b p V)) * f b"
-proof
-fix b :: 'b
-assume "b \<in> p ` V"
+  fin: "finite V" and
+  bal: "b \<in> p ` V"
+shows "(\<Sum>v \<in> bal_voters b p V. f (p v)) = erat_of (card (bal_voters b p V)) * f b"
+proof -
 let ?B = "bal_voters b p V"
 have "erat_of 1 \<ge> 0"
   using erat_of.simps One_rat_def 
@@ -769,7 +769,7 @@ moreover have "(\<Sum>v \<in> ?B. erat_of 1) = erat_of (card ?B)"
 moreover have "erat_of 1 * f b = f b"
   using erat_of.simps
   by (simp add: rat_number_collapse(2))
-ultimately show "(\<Sum>v\<in>bal_voters b p V. f (p v)) = erat_of (card (bal_voters b p V)) * f b" 
+ultimately show ?thesis
   by auto
 qed
 
@@ -840,7 +840,7 @@ ultimately show ?thesis by (metis (mono_tags, lifting) sum.cong)
 qed
 
 
-lemma hope:
+lemma copy_multiplies_sum_helper:
 fixes 
   V :: "'v set" and 
   p :: "('v, 'b) Profile" and
@@ -880,7 +880,7 @@ assumes
 shows "sum (f \<circ> q) W = erat_of n * (sum (f \<circ> p) V)"
 proof -
 have *: "\<forall>b \<in> p ` V. 0 \<le> (erat_of (card (bal_voters b p V)) * f b)"
-  using hope f_pos fin_V
+  using copy_multiplies_sum_helper f_pos fin_V
   by metis
 have "sum (f \<circ> q) W = (\<Sum>b \<in> q ` W. erat_of (card (bal_voters b q W)) * f b)"
   using disjoint_prof_sum_alt fin_W 
@@ -906,11 +906,69 @@ moreover have "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V. erat_of (card (bal_vo
 ultimately show ?thesis by argo
 qed
 
+context ballot 
+begin
 
-fun (in ballot) joint_profile :: "'v set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
+fun joint_profile :: "'v set \<Rightarrow> 'v set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'b) Profile" where
 "joint_profile V W p q v = (if v \<in> V then p v else (if v \<in> W then q v else empty_ballot))"
 
 
+lemma ballots_unaffected_by_join_1:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'b) Profile" and
+  v :: 'v
+assumes "v \<in> V"
+shows "joint_profile V W p q v = p v " 
+using If_def assms 
+by simp
+
+
+lemma ballots_unaffected_by_join_2:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'b) Profile" and
+  w :: 'v
+assumes 
+  "w \<in> W" and
+  "V \<inter> W = {}"
+shows "joint_profile V W p q w = q w" 
+using If_def assms 
+by auto
+  
+lemma join_adds_sum:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'b) Profile"and
+  f :: "'b \<Rightarrow> erat"
+assumes 
+  disj: "V \<inter> W = {}" and
+  fin_V: "finite V" and
+  fin_W: "finite W" 
+shows "sum (f \<circ> joint_profile V W p q) (V \<union> W) = sum (f \<circ> p) V + sum (f \<circ> q) W"
+proof -
+let ?joint = "joint_profile V W p q"
+have "finite {V, W}" by simp
+moreover have "disjoint {V, W}" 
+using disj
+by (simp add: disjnt_commute disjnt_def pairwise_insert)
+ultimately have *: "sum (f \<circ> ?joint) (V \<union> W) = sum (f \<circ> ?joint) V + sum (f \<circ> ?joint) W"
+using disjoint_erat_sum fin_V fin_W
+by (simp add: disj sum.union_disjoint) 
+have "sum (f \<circ> ?joint) W = sum (f \<circ> q) W" 
+proof -
+  have "\<forall>w \<in> W. ?joint w = q w"
+    using ballots_unaffected_by_join_2 disj 
+    by auto
+  thus ?thesis by simp
+qed
+moreover have "sum (f \<circ> ?joint) V = sum (f \<circ> p) V" by simp 
+ultimately show ?thesis
+  using "*" 
+  by argo
+qed
+
+end
 
 subsection \<open>List Representation for Ordered Voters\<close>
 

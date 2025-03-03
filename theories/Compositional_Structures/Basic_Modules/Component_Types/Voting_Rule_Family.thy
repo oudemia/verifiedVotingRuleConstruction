@@ -12,10 +12,10 @@ text \<open>TODO\<close>
 
 subsection \<open>Definition\<close>
 
-type_synonym 'i Aggregate_Evaluation = "'i \<Rightarrow> erat"
+type_synonym 'i Aggregate_Score = "'i \<Rightarrow> erat"
 
 type_synonym ('a, 'v, 'b, 'r, 'i) Voting_Rule_Family = 
-  "'i Aggregate_Evaluation \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule"
+  "'i Aggregate_Score \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule"
 
 context aggregation
 begin
@@ -25,6 +25,7 @@ text \<open>
   aggregate ballots induce an electoral structure that corresponds to a single winner setting on
   the contenders as alternatives.
 \<close>
+
 sublocale agg_structure:
 electoral_structure 
   empty_ballot
@@ -36,8 +37,85 @@ electoral_structure
   well_formed_ballot (* well_formed_ballot *)
   id (* contenders *)
   limit_ballot (* limit_by_conts *)
-proof (unfold_locales, clarify, auto)
+proof (unfold_locales, clarify+)
+show "\<And>R. id (id R) = R" by simp
+next
+show "\<And>R. R \<noteq> {} \<and> id (id R) = {} \<longrightarrow> id R = {}" by simp
+next
+show "\<And>R R'. R \<subseteq> R' \<longrightarrow> id R \<subseteq> id R'" by simp
+next
+show "\<And>R R'. id (R \<inter> R') \<subseteq> R" by simp
+next
+show "\<And>R b. limit_ballot R b = limit_ballot (id R) b" by simp
 qed
+
+
+fun score_sum :: "'i Aggregate_Score \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> 'v set \<Rightarrow> ('r \<Rightarrow> erat)" where
+"score_sum score p V r = sum (\<lambda>v. score (p v r)) V"
+
+
+lemma helpr:
+fixes 
+  V :: "'v set" and 
+  p :: "('v, 'r, 'i) Aggregate_Profile" and
+  b :: "'r \<Rightarrow>'i" and
+  score :: "'i Aggregate_Score" and
+  R :: "'r set" and
+  r :: 'r
+assumes 
+  wf: "well_formed_profile V R p" and
+  nonempty: "V \<noteq> {}" and
+  fin: "finite V" and
+  bal: "b \<in> p ` V"
+shows "score_sum score p (bal_voters b p V) r = erat_of (card (bal_voters b p V)) * score (b r)"
+using bal_voters_sum fin bal
+by fastforce
+
+
+lemma n_copy_multiplies_score_sum:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  score :: "'i Aggregate_Score" and
+  n :: nat and
+  r :: 'r
+assumes 
+  copy: "n_copy n V W p q" and
+  fin_V: "finite V" and
+  fin_W: "finite W" and
+  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
+  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
+  shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
+proof -
+let ?f = "\<lambda>b. score (b r)"
+have "sum (?f \<circ> q) W = erat_of n * (sum (?f \<circ> p) V)" 
+  using copy_multiplies_sum assms
+  by metis
+thus ?thesis by simp
+qed
+
+
+lemma join_adds_score_sum:
+fixes 
+  V V' :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  score :: "'i Aggregate_Score" and
+  r :: 'r
+assumes 
+  disj: "V \<inter> V' = {}" and
+  fin_V: "finite V" and
+  fin_V': "finite V'"
+shows "score_sum score (joint_profile V V' p q) (V \<union> V') r = 
+  score_sum score p V r + score_sum score q V' r" 
+proof -
+let ?f = "\<lambda>b. score (b r)"
+let ?join = "joint_profile V V' p q"
+have "sum (?f \<circ> ?join) (V \<union> V') = sum (?f \<circ> p) V + sum (?f \<circ> q) V'" 
+using join_adds_sum assms 
+by blast
+thus ?thesis by simp
+qed
+
 
 end
 
@@ -52,12 +130,12 @@ locale family_structure =
   well_formed_base :: "'a set \<Rightarrow> 'b \<Rightarrow> bool" and
   empty_ballot :: "'b" + 
 fixes
-  family_evaluation :: "'i Aggregate_Evaluation \<Rightarrow> bool" and (*thiele_score :: Thiele_Score \<Rightarrow> bool*)
-  family_module :: "'i Aggregate_Evaluation \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"
+  family_score :: "'i Aggregate_Score \<Rightarrow> bool" and (*thiele_score :: Thiele_Score \<Rightarrow> bool*)
+  family_module :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"
 begin
 
 fun family_member :: "('a, 'v, 'b, 'r, 'i) Voting_Rule_Family" where
-"family_member eval V A p = elect (family_module eval) V (contenders A) (aggregate_profile A p)"
+"family_member score V A p = elect (family_module score) V (contenders A) (aggregate_profile A p)"
 
 
 subsection \<open>Properties Shared by Family Members\<close>
@@ -65,11 +143,11 @@ subsection \<open>Properties Shared by Family Members\<close>
 subsubsection \<open>Anonymity\<close>
 
 lemma family_anonymous:
-  fixes eval :: "'i Aggregate_Evaluation"
+  fixes score :: "'i Aggregate_Score"
   assumes 
-    wf_eval: "family_evaluation eval" and
-    mod_anon: "agg_structure.anonymity (family_module eval)"
-  shows "base_struct.vr_anonymity (family_member eval)"
+    wf_score: "family_score score" and
+    mod_anon: "agg_structure.anonymity (family_module score)"
+  shows "base_struct.vr_anonymity (family_member score)"
 proof (unfold base_struct.vr_anonymity_def Let_def, clarify)
   fix 
     A A' :: "'a set" and
@@ -107,13 +185,16 @@ proof (unfold base_struct.vr_anonymity_def Let_def, clarify)
   moreover have "finite_profile V' (id ?R') (aggregate_profile A' q)"
     using fin_V fin_R R_eq wf_q preserve_valid id_apply fp_res rename_finite rename_res bij
     by metis
-  ultimately have "(family_module eval) V ?R (aggregate_profile A p) =
-    (family_module eval) V' ?R' (aggregate_profile A' q)"
+  ultimately have "(family_module score) V ?R (aggregate_profile A p) =
+    (family_module score) V' ?R' (aggregate_profile A' q)"
     using bij agg_structure.anonymity_prereq mod_anon
     by metis
-  thus "family_member eval V A p =  family_member eval V' A' q" 
+  thus "family_member score V A p =  family_member score V' A' q" 
   by simp
 qed
+
+
+subsubsection \<open>Neutrality\<close>
 
 
 subsubsection \<open>Continuity\<close>
@@ -159,12 +240,12 @@ qed
 
 
 lemma family_continous:
-  fixes eval :: "'i Aggregate_Evaluation"
+  fixes score :: "'i Aggregate_Score"
   assumes 
-    wf_eval: "family_evaluation eval" and
-    mod_cont: "agg_structure.continuity (family_module eval)" and
-    vde: "voters_determine_election (family_module eval)"
-  shows "base_struct.vr_continuity (family_member eval)"
+    wf_score: "family_score score" and
+    mod_cont: "agg_structure.continuity (family_module score)" and
+    vde: "voters_determine_election (family_module score)"
+  shows "base_struct.vr_continuity (family_member score)"
 proof (unfold base_struct.vr_continuity_def Let_def, clarify)
 fix 
     A :: "'a set" and
@@ -180,8 +261,8 @@ assume
   fin_V: "finite V" and
   fin_V': "finite V'" and
   copy: "n_copy n V W p s" and
-  win: "c \<in> family_member eval (W \<union> V') A (base_struct.joint_profile V' W q s)"
-let ?m = "family_module eval"
+  win: "c \<in> family_member score (W \<union> V') A (base_struct.joint_profile V' W q s)"
+let ?m = "family_module score"
 let ?R = "contenders A"
 let ?p_agg = "aggregate_profile A p"
 let ?q_agg = "aggregate_profile A q"
@@ -216,9 +297,39 @@ moreover have "c \<in> elect ?m (W \<union> V') ?R (aggregate_profile A (base_st
   by simp
 ultimately have "c \<in> elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)" by simp
 hence "c \<in> elect ?m V ?R ?p_agg" using win * by auto
-thus "c \<in> family_member eval V A p" by simp
+thus "c \<in> family_member score V A p" by simp
 qed
+
+(*
+sublocale elim_family :
+fixes family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function"
+assumes "family_module score = elimination_module (family_eval score) t r"
+begin
+end
+*)
+
+lemma elim_module_continous:
+fixes family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function"
+assumes 
+  wf_score: "family_score score" and
+  elim_mod: "family_module = elimination_module (family_eval score)"
+shows "agg_structure.continuity (family_module score)"
+proof (unfold agg_structure.continuity_def, clarify)
+have "voters_determine_election (family_module score)" sorry
+
+oops
+
   
 end
+
+
+locale elim_family =
+fixes 
+  family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function" and
+  family_score :: "'i Aggregate_Score \<Rightarrow> bool" and (*thiele_score :: Thiele_Score \<Rightarrow> bool*)
+  family_module :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"
+begin
+end
+
 
 end
