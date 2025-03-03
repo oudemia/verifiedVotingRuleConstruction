@@ -166,6 +166,36 @@ case notin_V: False
   qed
 qed
 
+(*
+lemma n_copy_multiplies_score_sum:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  score :: "'i Aggregate_Score" and
+  n :: nat and
+  r :: 'r
+assumes 
+  copy: "n_copy n V W p q" and
+  fin_V: "finite V" and
+  fin_W: "finite W" and
+  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
+  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
+shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
+
+lemma join_adds_score_sum:
+fixes 
+  V V' :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  score :: "'i Aggregate_Score" and
+  r :: 'r
+assumes 
+  disj: "V \<inter> V' = {}" and
+  fin_V: "finite V" and
+  fin_V': "finite V'"
+shows "score_sum score (joint_profile V V' p q) (V \<union> V') r = 
+  score_sum score p V r + score_sum score q V' r" 
+*)
+
 
 lemma family_continous:
   fixes score :: "'i Aggregate_Score"
@@ -178,18 +208,14 @@ proof (unfold base_struct.vr_continuity_def Let_def, clarify)
 fix 
     A :: "'a set" and
     V V' W :: "'v set" and
-    p q s :: "('v, 'b) Profile" and
-    n :: nat and
-    c :: 'r
+    p q s :: "('v, 'b) Profile"
 assume 
-  wf_p: "base_struct.well_formed_profile V A p" and
-  wf_q: "base_struct.well_formed_profile V' A q" and
-  disj: "V \<inter> V' = {}" and
   fin_A: "finite A" and
   fin_V: "finite V" and
   fin_V': "finite V'" and
-  copy: "n_copy n V W p s" and
-  win: "c \<in> family_member score (W \<union> V') A (base_struct.joint_profile V' W q s)"
+  disj: "V \<inter> V' = {}" and
+  wf_p: "base_struct.well_formed_profile V A p" and
+  wf_q: "base_struct.well_formed_profile V' A q"
 let ?m = "family_module score"
 let ?R = "contenders A"
 let ?p_agg = "aggregate_profile A p"
@@ -197,67 +223,64 @@ let ?q_agg = "aggregate_profile A q"
 let ?s_agg = "aggregate_profile A s"
 have "finite_profile V ?R ?p_agg"
   using wf_p fin_V preserve_valid base_struct.well_formed_profile_def fin_A fin_preserve 
-        well_formed_profile_def
-        by (metis aggregate_profile.elims)
+      well_formed_profile_def
+  by (metis aggregate_profile.elims)
 moreover have "finite_profile V' ?R ?q_agg"
   using wf_q fin_V' preserve_valid base_struct.well_formed_profile_def fin_A fin_preserve 
-        well_formed_profile_def
+      well_formed_profile_def
   by (metis aggregate_profile.elims)
-moreover have "n_copy n V W ?p_agg ?s_agg" 
-  using copy_aggregate_commute copy base_struct.well_formed_profile_def well_formed_base_profile_def wf_p
-  by metis
-ultimately have "(defer ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> 
+ultimately have **: "\<exists>n. n_copy n V W ?p_agg ?s_agg \<longrightarrow> 
+  (defer ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq>
   defer ?m V ?R ?p_agg \<union> elect ?m V ?R ?p_agg) \<and>
   (elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> elect ?m V ?R ?p_agg)"
-  using mod_cont agg_structure.continuity_prereq disj id_apply 
+  using agg_structure.continuity_prereq mod_cont disj id_apply
   by metis
-hence *: "elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> elect ?m V ?R ?p_agg" by simp
-have "\<forall>v \<in> (W \<union> V'). (aggregate_profile A (base_struct.joint_profile V' W q s)) v = 
-  (joint_profile V' W ?q_agg ?s_agg) v" 
-  using aggregate_join_commute 
-  by auto
-hence "?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))
-  = ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)"
-  using vde
-  by simp
-moreover have "c \<in> elect ?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))"
-  using win 
-  by simp
-ultimately have "c \<in> elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)" by simp
-hence "c \<in> elect ?m V ?R ?p_agg" using win * by auto
-thus "c \<in> family_member score V A p" by simp
+then obtain n where *: "n_copy n V W ?p_agg ?s_agg \<longrightarrow> 
+  (defer ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> 
+  defer ?m V ?R ?p_agg \<union> elect ?m V ?R ?p_agg) \<and>
+  (elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> elect ?m V ?R ?p_agg)" by blast  
+show "\<exists>n. n_copy n V W p s \<longrightarrow>
+  family_member score (W \<union> V') A (base_struct.joint_profile V' W q s) \<subseteq> family_member score V A p"
+proof (standard, safe)
+  fix c :: 'r
+  assume 
+    copy: "n_copy n V W p s" and
+    win: "c \<in> family_member score (W \<union> V') A (base_struct.joint_profile V' W q s)"
+  have "\<forall>v \<in> (W \<union> V'). (aggregate_profile A (base_struct.joint_profile V' W q s)) v = 
+    (joint_profile V' W ?q_agg ?s_agg) v" 
+    using aggregate_join_commute 
+    by auto
+  hence "?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))
+    = ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)"
+    using vde
+    by simp
+  moreover have "c \<in> elect ?m (W \<union> V') ?R (aggregate_profile A (base_struct.joint_profile V' W q s))"
+    using win 
+    by simp
+  ultimately have "c \<in> elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg)" by simp
+  thus "c \<in> family_member score V A p"
+  by (metis (no_types, lifting) "*" base_struct.well_formed_profile_def copy copy_aggregate_commute 
+    family_member.elims subsetD well_formed_base_profile_def wf_p)
+  qed
 qed
 
-(*
-sublocale elim_family :
-fixes family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function"
-assumes "family_module score = elimination_module (family_eval score) t r"
-begin
-end
-*)
+
+fun real_score :: "'i Aggregate_Score \<Rightarrow> bool" where
+"real_score score = (\<forall>i. score i \<ge> 0 \<and> \<bar>score i \<bar> \<noteq> \<infinity>)"
 
 lemma elim_module_continous:
 fixes family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function"
 assumes 
   wf_score: "family_score score" and
+  r_score: "real_score score" and
   elim_mod: "family_module = elimination_module (family_eval score)"
 shows "agg_structure.continuity (family_module score)"
 proof (unfold agg_structure.continuity_def, clarify)
 have "voters_determine_election (family_module score)" sorry
 
-oops
+qed
 
   
 end
-
-
-locale elim_family =
-fixes 
-  family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function" and
-  family_score :: "'i Aggregate_Score \<Rightarrow> bool" and (*thiele_score :: Thiele_Score \<Rightarrow> bool*)
-  family_module :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"
-begin
-end
-
 
 end
