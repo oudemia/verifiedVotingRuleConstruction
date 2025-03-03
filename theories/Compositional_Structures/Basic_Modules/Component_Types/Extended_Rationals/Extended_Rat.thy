@@ -1,6 +1,10 @@
 theory Extended_Rat
 imports 
+    "HOL-Algebra.Congruence"
     "HOL-Library.Extended_Nat"
+    "HOL-Library.Disjoint_Sets"
+    "HOL.Finite_Set"
+
 begin
 
 
@@ -1058,5 +1062,130 @@ next
   then show ?thesis
     by (simp add: one_erat_def)
 qed
+
+
+subsubsection "Disjoint Sums"
+
+lemma erat_of_sum:
+  fixes
+    X :: "'a set" and
+    f :: "'a \<Rightarrow> nat"
+  shows "(\<Sum>x\<in>X. (erat_of (f x))) = erat_of (\<Sum>x\<in>X. (f x))"
+proof (unfold erat_of.simps, simp)
+  have "\<forall>x\<in>X. Fract (int (f x)) 1 = f x" by (simp add: of_rat_rat)
+  hence *: "(\<Sum>x\<in>X. Fract (int (f x)) 1) = (\<Sum>x\<in>X. f x)"
+    by (metis (mono_tags, lifting) Fract_of_nat_eq of_nat_sum of_rat_of_nat_eq sum.cong)
+  have "Fract (\<Sum>x\<in>X. int (f x)) 1 = (\<Sum>x\<in>X. f x)"
+    by (metis of_int_of_nat_eq of_int_rat of_nat_sum of_rat_of_int_eq)
+  thus "(\<Sum>x\<in>X. Fract (int (f x)) 1) = Fract (\<Sum>x\<in>X. int (f x)) 1" using *
+    by (metis of_rat_eq_iff)
+qed
+
+
+lemma erat_of_leq: "(x \<le> y) \<longleftrightarrow> (erat_of x \<le> erat_of y)"
+proof
+  assume "x \<le> y"
+  thus "erat_of x \<le> erat_of y" by simp
+next
+  assume "erat_of x \<le> erat_of y"
+  hence "Fract x 1 \<le> Fract y 1" using erat_of.simps by simp
+  thus "x \<le> y" by simp
+qed
+
+
+lemma rat_erat_simp: 
+fixes e :: erat
+assumes rational: "\<bar>e\<bar> \<noteq> \<infinity>"
+shows "e = erat (rat_of_erat e)"
+using assms 
+by auto
+
+lemma disjoint_erat_sum:
+fixes 
+  P :: "'x set set" and
+  f :: "'x \<Rightarrow> erat"
+assumes 
+  fin: "finite P" and
+  disj: "disjoint P" and
+  all_fin: "\<forall>p \<in> P. finite p"
+shows "sum f (\<Union> P) = sum (sum f) P"
+using assms
+proof (induct P arbitrary: f  rule: finite_induct)
+case empty
+then show ?case by simp
+next
+case (insert p X)
+fix
+  p :: "'x set" and
+  X :: "'x set set"
+assume 
+  fin: "finite X" and
+  new: "p \<notin> X" and
+  disj_ins: "disjoint (insert p X)" and
+  elems_fin: "Ball (insert p X) finite"
+show "sum f (\<Union> (insert p X)) = sum (sum f) (insert p X)"
+  proof -
+  have disj_u: "p \<inter> \<Union> X = {}" 
+    using disj_ins insert.hyps(2) insert_partition
+    by (metis disjoint_def new)
+  have fin_p: "finite p" 
+    using elems_fin insert.prems(2) 
+    by simp
+  have fin_u: "finite (\<Union> X)" 
+    using fin finite_Union elems_fin 
+    by simp
+  have sum_u: "sum f (\<Union> (insert p X)) = sum f (p \<union> \<Union> X)" by simp
+  moreover have "... = sum f p + sum f (\<Union> X)"
+    using disj_u fin_u fin_p sum.union_disjoint sum_Un 
+    by blast
+  moreover have "... = sum (sum f) (insert p X)"
+    using Sup_insert disjoint_def disjoint_sum disj_ins fin fin_p fin_u
+    by (metis calculation finite.insertI finite_UnI partitionI)
+  ultimately show ?thesis by simp
+  qed
+qed
+
+lemma erat_sum_distrib_left:
+fixes 
+  X :: "'x set" and
+  y :: erat and
+  f :: "'x \<Rightarrow> erat"
+assumes 
+  rational: "\<bar>y\<bar> \<noteq> \<infinity>" and 
+  set_rational: "\<forall>x \<in> X. (\<bar>f x\<bar> \<noteq> \<infinity>)"
+shows "y * sum f X = (\<Sum>x\<in>X. y * f x)"
+using assms
+proof (induct X rule: infinite_finite_induct)
+case (infinite A)
+then show ?case by simp
+next
+case empty
+then show ?case by simp
+next
+case (insert x S)
+fix 
+  S :: "'x set" and
+  x :: 'x
+assume 
+  fin: "finite S" and
+  new: "x \<notin> S" and
+  ih: " (\<bar>y\<bar> \<noteq> \<infinity> \<Longrightarrow> \<forall>s\<in>S. \<bar>f s\<bar> \<noteq> \<infinity> \<Longrightarrow> y * sum f S = (\<Sum>s\<in>S. y * f s))" and
+  set_rational': "\<forall>s\<in>insert x S. \<bar>f s\<bar> \<noteq> \<infinity>"
+have *: "\<bar>sum f S\<bar> \<noteq> \<infinity>" 
+  using set_rational' fin 
+  by (simp add: sum_Inf)
+have "y * sum f (insert x S) = y * (sum f S + f x)" 
+  using new
+  by (simp add: add.commute fin)
+moreover have "... = y * sum f S + y * f x" 
+  using rational set_rational' erat_distrib * abs_erat.simps(2) abs_erat.simps(3) mult.commute
+  by (metis (no_types, lifting))
+moreover have "(\<Sum>z \<in> (insert x S). y * f z) = ((\<Sum>z \<in> S. y * f z) + y * f x)" 
+  using new
+  by (simp add: add.commute fin)
+ultimately show "y * sum f (insert x S) = (\<Sum>x\<in>insert x S. y * f x)"
+  using * fin ih rational sum_Inf
+  by metis
+qed 
 
 end

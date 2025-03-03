@@ -8,23 +8,14 @@ imports
     "Social_Choice_Types/Aggregate_Profile"
 begin
 
-text \<open>TODO\<close>
-
-subsection \<open>Definition\<close>
-
-type_synonym 'i Aggregate_Score = "'i \<Rightarrow> erat"
-
-type_synonym ('a, 'v, 'b, 'r, 'i) Voting_Rule_Family = 
-  "'i Aggregate_Score \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule"
-
-context aggregation
-begin
-
 text \<open>
   Aggregate ballots are ballots w.r.t. contenders in the role of alternatives. Therefore,
   aggregate ballots induce an electoral structure that corresponds to a single winner setting on
   the contenders as alternatives.
 \<close>
+
+context aggregation
+begin
 
 sublocale agg_structure:
 electoral_structure 
@@ -49,75 +40,12 @@ next
 show "\<And>R b. limit_ballot R b = limit_ballot (id R) b" by simp
 qed
 
-
-fun score_sum :: "'i Aggregate_Score \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> 'v set \<Rightarrow> ('r \<Rightarrow> erat)" where
-"score_sum score p V r = sum (\<lambda>v. score (p v r)) V"
-
-
-lemma helpr:
-fixes 
-  V :: "'v set" and 
-  p :: "('v, 'r, 'i) Aggregate_Profile" and
-  b :: "'r \<Rightarrow>'i" and
-  score :: "'i Aggregate_Score" and
-  R :: "'r set" and
-  r :: 'r
-assumes 
-  wf: "well_formed_profile V R p" and
-  nonempty: "V \<noteq> {}" and
-  fin: "finite V" and
-  bal: "b \<in> p ` V"
-shows "score_sum score p (bal_voters b p V) r = erat_of (card (bal_voters b p V)) * score (b r)"
-using bal_voters_sum fin bal
-by fastforce
-
-
-lemma n_copy_multiplies_score_sum:
-fixes 
-  V W :: "'v set" and 
-  p q :: "('v, 'r, 'i) Aggregate_Profile" and
-  score :: "'i Aggregate_Score" and
-  n :: nat and
-  r :: 'r
-assumes 
-  copy: "n_copy n V W p q" and
-  fin_V: "finite V" and
-  fin_W: "finite W" and
-  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
-  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
-  shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
-proof -
-let ?f = "\<lambda>b. score (b r)"
-have "sum (?f \<circ> q) W = erat_of n * (sum (?f \<circ> p) V)" 
-  using copy_multiplies_sum assms
-  by metis
-thus ?thesis by simp
-qed
-
-
-lemma join_adds_score_sum:
-fixes 
-  V V' :: "'v set" and 
-  p q :: "('v, 'r, 'i) Aggregate_Profile" and
-  score :: "'i Aggregate_Score" and
-  r :: 'r
-assumes 
-  disj: "V \<inter> V' = {}" and
-  fin_V: "finite V" and
-  fin_V': "finite V'"
-shows "score_sum score (joint_profile V V' p q) (V \<union> V') r = 
-  score_sum score p V r + score_sum score q V' r" 
-proof -
-let ?f = "\<lambda>b. score (b r)"
-let ?join = "joint_profile V V' p q"
-have "sum (?f \<circ> ?join) (V \<union> V') = sum (?f \<circ> p) V + sum (?f \<circ> q) V'" 
-using join_adds_sum assms 
-by blast
-thus ?thesis by simp
-qed
-
-
 end
+
+subsection \<open>Definition\<close>
+
+type_synonym ('a, 'v, 'b, 'r, 'i) Voting_Rule_Family = 
+  "'i Aggregate_Score \<Rightarrow> ('a, 'v, 'b, 'r) Voting_Rule"
 
 locale family_structure =
   aggregation empty_agg pref_agg wins_agg limit_agg well_formed_agg well_formed_base

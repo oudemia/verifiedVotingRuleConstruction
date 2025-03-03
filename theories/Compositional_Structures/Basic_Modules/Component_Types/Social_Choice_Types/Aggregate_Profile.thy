@@ -21,6 +21,8 @@ text \<open>
 subsection \<open>Defintion\<close>
 
 type_synonym ('v, 'r, 'i) Aggregate_Profile = "('v, ('r \<Rightarrow>'i)) Profile"
+
+type_synonym 'i Aggregate_Score = "'i \<Rightarrow> erat"
   
 type_synonym ('a, 'v, 'b, 'r, 'i) Profile_Aggregation = "'a set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile"
 
@@ -128,7 +130,7 @@ fixes
   A :: "'a set" and
   p :: "('v, 'b) Profile" and 
   c :: "'a Committee"
-shows "V = \<Union>{bal_voters b (aggregate_profile A p) V| b. b \<in> range (aggregate_profile A p)}"
+shows "V = \<Union>{bal_voters b (aggregate_profile A p) V | b. b \<in> range (aggregate_profile A p)}"
 by auto
 
 
@@ -258,6 +260,56 @@ proof (clarify)
   qed
 qed
 
+
+
+
+fun score_sum :: "'i Aggregate_Score \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> 'v set \<Rightarrow> ('r \<Rightarrow> erat)" where
+"score_sum score p V r = sum (\<lambda>v. score (p v r)) V"
+
+
+lemma n_copy_multiplies_score_sum:
+fixes 
+  V W :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  score :: "'i Aggregate_Score" and
+  n :: nat and
+  r :: 'r
+assumes 
+  copy: "n_copy n V W p q" and
+  fin_V: "finite V" and
+  fin_W: "finite W" and
+  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
+  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
+  shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
+proof -
+let ?f = "\<lambda>b. score (b r)"
+have "sum (?f \<circ> q) W = erat_of n * (sum (?f \<circ> p) V)" 
+  using copy_multiplies_sum assms
+  by metis
+thus ?thesis by simp
+qed
+
+
+lemma join_adds_score_sum:
+fixes 
+  V V' :: "'v set" and 
+  p q :: "('v, 'r, 'i) Aggregate_Profile" and
+  score :: "'i Aggregate_Score" and
+  r :: 'r
+assumes 
+  disj: "V \<inter> V' = {}" and
+  fin_V: "finite V" and
+  fin_V': "finite V'"
+shows "score_sum score (joint_profile V V' p q) (V \<union> V') r = 
+  score_sum score p V r + score_sum score q V' r" 
+proof -
+let ?f = "\<lambda>b. score (b r)"
+let ?join = "joint_profile V V' p q"
+have "sum (?f \<circ> ?join) (V \<union> V') = sum (?f \<circ> p) V + sum (?f \<circ> q) V'" 
+using join_adds_sum assms 
+by blast
+thus ?thesis by simp
+qed
 
 end
 
