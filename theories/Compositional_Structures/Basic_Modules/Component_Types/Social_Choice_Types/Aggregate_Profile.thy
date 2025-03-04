@@ -347,20 +347,53 @@ fixes
   n :: nat
 assumes
   copy: "n_copy n V W p s" and
-  large_n: "n = card V'" and
+  large_n: "erat_of n * (score_sum score p V r) > (score_sum score q V' r)" and
   fin_V: "finite V" and
   fin_V': "finite V'" and
   fin_W: "finite W" and
   disj: "W \<inter> V' = {}" and
-  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
-  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
+  rat_score: "\<forall>b. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
+  nn_score: "\<forall>b. (score (b r) \<ge> 0)" and
+  non_zero_voter: "\<exists>v \<in> V. (score (p v r) > 0)"
 shows "score_sum score (joint_profile W V' s q) (W \<union> V') r > score_sum score q V' r"
 proof -
-have "score_sum score (joint_profile W V' s q) (W \<union> V') r =
-  erat_of n * (score_sum score p V r) + score_sum score q V' r"
-  using copy_join_score_sum assms 
+have "\<forall>v \<in> V'. score (q v r) \<ge> 0"
+  using nn_score
   by blast
-qed
+hence "(\<Sum>v \<in> V'. score (q v r)) \<ge> 0"
+  using nn_score sum_nonneg
+  by metis
+hence "score_sum score q V' r \<ge> 0" by simp
+moreover have "score_sum score (joint_profile W V' s q) (W \<union> V') r =
+  erat_of n * (score_sum score p V r) + score_sum score q V' r"
+  using copy_join_score_sum fin_V fin_V' fin_W copy disj rat_score
+  by metis
+ultimately show ?thesis 
+  using add_increasing2 large_n leD order_eq_refl order_less_le 
+  by metis
+  qed 
+
+(*
+moreover have "(score_sum score p V r) > 0"
+proof -
+  obtain v where live_voter: "v \<in> V \<and> (score (p v r) > 0)" using non_zero_voter by auto
+  hence "\<forall>v' \<in> V - {v} . score (p v r) \<ge> 0" 
+    using nn_score
+    by blast
+  hence "(\<Sum>v'\<in>V - {v}. score (p v' r)) \<ge> 0"
+    using nn_score sum_nonneg
+    by metis
+  hence "(score_sum score p (V - {v}) r) \<ge> 0" 
+    by simp
+  moreover have "(score_sum score p V r) = (score_sum score p (V - {v}) r) + score (p v r)"
+    using live_voter add.commute fin_V score_sum.simps sum.remove 
+    by metis
+  ultimately show ?thesis 
+    using live_voter add_nonneg_pos
+    by metis
+*)
+
+
 end
 
 text \<open>
