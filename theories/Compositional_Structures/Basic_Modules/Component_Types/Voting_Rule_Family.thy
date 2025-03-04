@@ -5,6 +5,7 @@ theory Voting_Rule_Family
 imports
     Voting_Rule
     Evaluation_Function
+    Elimination_Module
     "Social_Choice_Types/Aggregate_Profile"
 begin
 
@@ -264,19 +265,68 @@ proof (standard, safe)
   qed
 qed
 
+(*
+type_synonym ('r, 'v, 'b) Evaluation_Function =
+  "'v set \<Rightarrow> 'r \<Rightarrow> 'r set \<Rightarrow> ('v, 'b) Profile \<Rightarrow> erat"
+
+
+fun score_sum :: "'i Aggregate_Score \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> 'v set \<Rightarrow> ('r \<Rightarrow> erat)" where
+"score_sum score p V r = sum (\<lambda>v. score (p v r)) V"
+
+
+*)
+
+fun sum_eval_fun :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function" where
+"sum_eval_fun score V r R p = score_sum score p V r"
 
 fun real_score :: "'i Aggregate_Score \<Rightarrow> bool" where
 "real_score score = (\<forall>i. score i \<ge> 0 \<and> \<bar>score i \<bar> \<noteq> \<infinity>)"
 
-lemma elim_module_continous:
-fixes family_eval :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function"
+
+lemma max_elim_module_continous:
+fixes score :: "'i Aggregate_Score"
 assumes 
   wf_score: "family_score score" and
   r_score: "real_score score" and
-  elim_mod: "family_module = elimination_module (family_eval score)"
+  elim_mod: "family_module score = max_eliminator (sum_eval_fun score)"
 shows "agg_structure.continuity (family_module score)"
-proof (unfold agg_structure.continuity_def, clarify)
-have "voters_determine_election (family_module score)" sorry
+proof (unfold agg_structure.continuity_def id_apply, clarify)
+fix
+  V V' W :: "'v set" and
+  R :: "'r set" and
+  p q s :: "('v, 'r, 'i) Aggregate_Profile"
+assume
+  fin_R : "finite R" and
+  fin_V: "finite V" and
+  fin_V': "finite V'" and
+  disj: "V \<inter> V' = {}" and
+  wf_p: "well_formed_profile V R p" and
+  wf_q: "well_formed_profile V' R q"
+have det: "voters_determine_election (family_module score)" 
+  using elim_mod 
+  by simp
+let ?n = "4"
+show "\<exists>n. n_copy n V W p s \<longrightarrow>
+           defer (family_module score) (W \<union> V') R (joint_profile V' W q s)
+           \<subseteq> defer (family_module score) V R p \<union> elect (family_module score) V R p \<and>
+           elect (family_module score) (W \<union> V') R (joint_profile V' W q s)
+           \<subseteq> elect (family_module score) V R p"
+proof (standard, safe)
+  fix r :: 'r
+  assume 
+    copy: "n_copy ?n V W p s" and 
+    def_joint: "r \<in> defer (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
+    loose_V: "r \<notin> elect (family_module score) V R p"
+  thus "r \<in> defer (family_module score) V R p" sorry
+next
+  fix r :: 'r
+  assume 
+    copy: "n_copy ?n V W p s" and 
+    elect_joint: "r \<in> elect (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
+    loose_V: "r \<in> elect (family_module score) V R p"
+  thus "r \<in> elect (family_module score) V R p" sorry
+next
+qed
 
 qed
 

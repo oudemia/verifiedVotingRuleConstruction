@@ -130,8 +130,9 @@ fixes
   A :: "'a set" and
   p :: "('v, 'b) Profile" and 
   c :: "'a Committee"
-shows "V = \<Union>{bal_voters b (aggregate_profile A p) V | b. b \<in> range (aggregate_profile A p)}"
-by auto
+shows "V = \<Union>{bal_voters b (aggregate_profile A p) V | b. b \<in> (aggregate_profile A p) ` V}"
+using bal_voters_complete 
+by metis
 
 
 lemma agg_preserves_alt_rename:
@@ -221,7 +222,8 @@ fixes
   V W :: "'v set" and 
   A :: "'a set" and
   p q :: "('v, 'b) Profile" and 
-  p_agg q_agg:: "('v, 'r, 'i) Aggregate_Profile"
+  p_agg q_agg:: "('v, 'r, 'i) Aggregate_Profile" and
+  n :: nat
 assumes 
   wf_p: "well_formed_base_profile V A p" and
   copy: "n_copy n V W p q"
@@ -261,8 +263,6 @@ proof (clarify)
 qed
 
 
-
-
 fun score_sum :: "'i Aggregate_Score \<Rightarrow> ('v, 'r, 'i) Aggregate_Profile \<Rightarrow> 'v set \<Rightarrow> ('r \<Rightarrow> erat)" where
 "score_sum score p V r = sum (\<lambda>v. score (p v r)) V"
 
@@ -278,9 +278,8 @@ assumes
   copy: "n_copy n V W p q" and
   fin_V: "finite V" and
   fin_W: "finite W" and
-  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
-  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
-  shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
+  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)"
+shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
 proof -
 let ?f = "\<lambda>b. score (b r)"
 have "sum (?f \<circ> q) W = erat_of n * (sum (?f \<circ> p) V)" 
@@ -311,6 +310,57 @@ by blast
 thus ?thesis by simp
 qed
 
+lemma copy_join_score_sum:
+fixes
+  score :: "'i Aggregate_Score" and
+  V V' W :: "'v set" and
+  r :: 'r and
+  p q s :: "('v, 'r, 'i) Aggregate_Profile" and
+  n :: nat
+assumes
+  copy: "n_copy n V W p s" and
+  fin_V: "finite V" and
+  fin_V': "finite V'" and
+  fin_W: "finite W" and
+  disj: "W \<inter> V' = {}" and
+  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)"
+shows "score_sum score (joint_profile W V' s q) (W \<union> V') r =
+  erat_of n * (score_sum score p V r) + score_sum score q V' r"
+proof - 
+have "score_sum score s W r = erat_of n * (score_sum score p V r)" 
+using n_copy_multiplies_score_sum copy fin_V fin_W rat_score 
+by blast
+moreover have "score_sum score (joint_profile W V' s q) (W \<union> V') r = 
+  score_sum score s W r + score_sum score q V' r"
+  using join_adds_score_sum disj fin_W fin_V' 
+  by blast
+ultimately show ?thesis by simp
+qed
+
+
+lemma continuity_helper:
+fixes
+  score :: "'i Aggregate_Score" and
+  V V' W :: "'v set" and
+  r :: 'r and
+  p q s :: "('v, 'r, 'i) Aggregate_Profile" and
+  n :: nat
+assumes
+  copy: "n_copy n V W p s" and
+  large_n: "n = card V'" and
+  fin_V: "finite V" and
+  fin_V': "finite V'" and
+  fin_W: "finite W" and
+  disj: "W \<inter> V' = {}" and
+  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
+  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
+shows "score_sum score (joint_profile W V' s q) (W \<union> V') r > score_sum score q V' r"
+proof -
+have "score_sum score (joint_profile W V' s q) (W \<union> V') r =
+  erat_of n * (score_sum score p V r) + score_sum score q V' r"
+  using copy_join_score_sum assms 
+  by blast
+qed
 end
 
 text \<open>

@@ -875,13 +875,13 @@ assumes
   fin_V: "finite V" and
   fin_W: "finite W" and
   copy: "n_copy n V W p q" and
-  f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)" and
-  f_pos: "\<forall>b \<in> p ` V. f b > 0"
+  f_rat: "\<forall>b \<in> p ` V. (\<bar>f b\<bar> \<noteq> \<infinity>)"
 shows "sum (f \<circ> q) W = erat_of n * (sum (f \<circ> p) V)"
 proof -
-have *: "\<forall>b \<in> p ` V. 0 \<le> (erat_of (card (bal_voters b p V)) * f b)"
-  using copy_multiplies_sum_helper f_pos fin_V
-  by metis
+have n_rat: "\<bar>erat_of n\<bar> \<noteq> \<infinity>" by simp 
+have *: "\<forall>b \<in> p ` V.(\<bar>erat_of (card (bal_voters b p V)) * f b \<bar> \<noteq> \<infinity>)"
+  using copy_multiplies_sum_helper f_rat fin_V
+  by auto
 have "sum (f \<circ> q) W = (\<Sum>b \<in> q ` W. erat_of (card (bal_voters b q W)) * f b)"
   using disjoint_prof_sum_alt fin_W 
   by blast
@@ -897,9 +897,9 @@ moreover have "... = (\<Sum>b \<in> p ` V. erat_of n * erat_of (card (bal_voters
 moreover have "... = (\<Sum>b \<in> p ` V. erat_of n * (erat_of (card (bal_voters b p V)) * f b))" 
   using  mult.assoc 
   by meson
-moreover have "erat_of n * (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b) = ..."
-  using sum_erat_right_distrib * assms
-  by fast
+moreover have "erat_of n * sum (\<lambda>b. erat_of (card (bal_voters b p V)) * f b) (p ` V) = ..."
+  using erat_sum_distrib_left[where X = "(p ` V)" and y="erat_of n"] n_rat *
+  by simp
 moreover have "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b)"
   using disjoint_prof_sum_alt fin_V 
   by blast
