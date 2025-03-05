@@ -657,15 +657,6 @@ proof -
   qed
 qed
 
-(*
-fun voters_determine_evaluation :: "('r, 'v, 'b) Evaluation_Function \<Rightarrow> bool" where
-  "voters_determine_evaluation f =
-    (\<forall> A V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (\<forall> a \<in> A. f V a A p = f V a A p'))"
-
-fun voters_determine_election :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool" where
-  "voters_determine_election m =
-    (\<forall> R V p p'. (\<forall> v \<in> V. p v = p' v) \<longrightarrow> (m V R p = m V R p'))"
-*)
 
 lemma eval_determine_max_elim[simp]:
 fixes 
@@ -741,6 +732,88 @@ proof -
     using elect_eq defer_eq
     by (metis prod.expand)
 qed
+
+
+lemma defer_of_max_elim[simp]:
+fixes 
+  e :: "('r, 'v, 'b) Evaluation_Function" and
+  R :: "'r set" and
+  V :: "'v set" and
+  p :: "('v, 'b) Profile" and
+  r :: "'r"
+assumes 
+  fin: "finite R" and 
+  wf: "well_formed_profile V (affected_alts R) p" and 
+  elem: "r \<in> R"
+shows "r \<in> defer (max_eliminator e) V R p \<longleftrightarrow> e V r R p = Max {e V x R p | x. x \<in> R}"
+proof 
+let ?max = "Max {e V x R p | x. x \<in> R}"
+assume def: "r \<in> defer (max_eliminator e) V R p"
+moreover have fin_img: "finite  {e V x R p | x. x \<in> R}" 
+  using fin 
+  by simp
+ultimately have *: "\<forall>y \<in> R. e V y R p \<le> ?max"
+  using Max_ge 
+  by fastforce
+have "?max \<in> {e V x R p |x. x \<in> R}"
+  using fin_img Max_in elem 
+  by auto
+hence ex_max_arg: "\<exists>m \<in> R. e V m R p = ?max"
+  using * fin 
+  by auto
+show "e V r R p = ?max"
+proof (cases "(elimination_set e ?max (<) V R p) = R")
+  case all_elim: True
+  hence "\<forall>y \<in> R. e V y R p < ?max" by auto
+  hence "False" 
+    using ex_max_arg
+    by auto
+  thus ?thesis by simp
+next
+  case ex_def: False
+  hence "r \<notin> (elimination_set e ?max (<) V R p)" 
+    using def 
+    by simp
+  hence "\<not> (e V r R p < ?max)" 
+    using elimination_set.simps elem
+    by simp
+  thus ?thesis
+  using * elem nless_le 
+  by blast
+qed
+next
+let ?max = "Max {e V x R p | x. x \<in> R}"
+assume max_eval: "e V r R p = ?max"
+moreover have fin_img: "finite  {e V x R p | x. x \<in> R}" 
+  using fin 
+  by simp
+ultimately have *: "\<forall>y \<in> R. e V y R p \<le> ?max"
+  using Max_ge 
+  by fastforce
+have "?max \<in> {e V x R p |x. x \<in> R}"
+  using fin_img Max_in elem 
+  by auto
+hence ex_max_arg: "\<exists>m \<in> R. e V m R p = ?max"
+  using * fin 
+  by auto
+show "r \<in> defer (max_eliminator e) V R p"
+proof (cases "(elimination_set e ?max (<) V R p) = R")
+  case all_elim: True
+  hence "\<forall>y \<in> R. e V y R p < ?max" by auto
+  hence "False" 
+    using ex_max_arg
+    by auto
+  thus ?thesis by simp
+next
+case ex_def: False
+ have "\<not> (e V r R p < ?max)" 
+    using max_eval by simp
+  hence "r \<notin> (elimination_set e ?max (<) V R p)" 
+    by simp
+  thus ?thesis using elem by simp
+qed
+qed
+
 
 end
 

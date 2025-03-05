@@ -144,7 +144,15 @@ proof safe
   fix x :: erat
   show "x \<in> range uminus"
     by (intro image_eqI[of _ _ "-x"]) auto
-qed auto
+    qed auto
+
+
+function nat_of_erat :: "erat \<Rightarrow> nat" where
+  "nat_of_erat (erat r) = nat (ceiling r)"
+| "nat_of_erat \<infinity> = 0"
+| "nat_of_erat (-\<infinity>) = 0"
+  by (auto intro: erat_cases)
+termination by standard (rule wf_empty)
 
 instantiation erat :: abs
 begin
@@ -1188,4 +1196,44 @@ ultimately show "y * sum f (insert x S) = (\<Sum>x\<in>insert x S. y * f x)"
   by metis
 qed 
 
+
+lemma erat_sum_distrib_left:
+fixes 
+  X :: "'x set" and
+  f :: "'x \<Rightarrow> erat"
+assumes f_rat: "\<forall>x. (\<bar>f x\<bar> \<noteq> \<infinity>)"
+shows "\<exists>x \<in> X. f x = ?max_V" by try
+using assms
+proof (induct X rule: infinite_finite_induct)
+case (infinite A)
+then show ?case by simp
+next
+case empty
+then show ?case by simp
+next
+case (insert x S)
+fix 
+  S :: "'x set" and
+  x :: 'x
+assume 
+  fin: "finite S" and
+  new: "x \<notin> S" and
+  ih: " (\<bar>y\<bar> \<noteq> \<infinity> \<Longrightarrow> \<forall>s\<in>S. \<bar>f s\<bar> \<noteq> \<infinity> \<Longrightarrow> y * sum f S = (\<Sum>s\<in>S. y * f s))" and
+  set_rational': "\<forall>s\<in>insert x S. \<bar>f s\<bar> \<noteq> \<infinity>"
+have *: "\<bar>sum f S\<bar> \<noteq> \<infinity>" 
+  using set_rational' fin 
+  by (simp add: sum_Inf)
+have "y * sum f (insert x S) = y * (sum f S + f x)" 
+  using new
+  by (simp add: add.commute fin)
+moreover have "... = y * sum f S + y * f x" 
+  using rational set_rational' erat_distrib * abs_erat.simps(2) abs_erat.simps(3) mult.commute
+  by (metis (no_types, lifting))
+moreover have "(\<Sum>z \<in> (insert x S). y * f z) = ((\<Sum>z \<in> S. y * f z) + y * f x)" 
+  using new
+  by (simp add: add.commute fin)
+ultimately show "y * sum f (insert x S) = (\<Sum>x\<in>insert x S. y * f x)"
+  using * fin ih rational sum_Inf
+  by metis
+qed 
 end

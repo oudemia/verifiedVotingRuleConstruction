@@ -542,6 +542,7 @@ lemma cond_winner_unique_2:
   using cond_winner_unique_eq assms
   by metis
 
+  
 subsection \<open>Limited Profile\<close>
 
 text \<open>
@@ -550,7 +551,6 @@ text \<open>
   do not cast a vote.
   This keeps all of A's preferences.
 \<close>
-
 
 lemma limit_prof_trans:
   fixes
@@ -794,7 +794,7 @@ moreover have "disjoint {bal_voters b p V |b. b \<in> p ` V}"
 ultimately show ?thesis 
   using disjoint_erat_sum  
   by fastforce
-  qed
+qed
 
 
 lemma disjoint_prof_helper:

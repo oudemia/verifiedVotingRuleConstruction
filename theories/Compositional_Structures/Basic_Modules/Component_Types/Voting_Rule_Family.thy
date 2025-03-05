@@ -61,6 +61,9 @@ locale family_structure =
 fixes
   family_score :: "'i Aggregate_Score \<Rightarrow> bool" and (*thiele_score :: Thiele_Score \<Rightarrow> bool*)
   family_module :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Electoral_Module"
+assumes
+  agg_empty: "aggregate A empty_ballot = empty_agg" and
+  score_empty: "family_score score \<Longrightarrow> score (empty_agg r) = 0"
 begin
 
 fun family_member :: "('a, 'v, 'b, 'r, 'i) Voting_Rule_Family" where
@@ -167,36 +170,6 @@ case notin_V: False
   qed
 qed
 
-(*
-lemma n_copy_multiplies_score_sum:
-fixes 
-  V W :: "'v set" and 
-  p q :: "('v, 'r, 'i) Aggregate_Profile" and
-  score :: "'i Aggregate_Score" and
-  n :: nat and
-  r :: 'r
-assumes 
-  copy: "n_copy n V W p q" and
-  fin_V: "finite V" and
-  fin_W: "finite W" and
-  rat_score: "\<forall>b \<in> p ` V. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
-  pos_score: "\<forall>b \<in> p ` V. (score (b r) > 0)"
-shows "score_sum score q W r = erat_of n * (score_sum score p V r)" 
-
-lemma join_adds_score_sum:
-fixes 
-  V V' :: "'v set" and 
-  p q :: "('v, 'r, 'i) Aggregate_Profile" and
-  score :: "'i Aggregate_Score" and
-  r :: 'r
-assumes 
-  disj: "V \<inter> V' = {}" and
-  fin_V: "finite V" and
-  fin_V': "finite V'"
-shows "score_sum score (joint_profile V V' p q) (V \<union> V') r = 
-  score_sum score p V r + score_sum score q V' r" 
-*)
-
 
 lemma family_continous:
   fixes score :: "'i Aggregate_Score"
@@ -274,13 +247,125 @@ fun score_sum :: "'i Aggregate_Score \<Rightarrow> ('v, 'r, 'i) Aggregate_Profil
 "score_sum score p V r = sum (\<lambda>v. score (p v r)) V"
 
 
+lemma continuity_helper:
+fixes
+  score :: "'i Aggregate_Score" and
+  V V' W :: "'v set" and
+  r :: 'r and
+  p q s :: "('v, 'r, 'i) Aggregate_Profile" and
+  n :: nat
+assumes
+  copy: "n_copy n V W p s" and
+  large_n: "erat_of n * (score_sum score p V r) > (score_sum score q V' r)" and
+  fin_V: "finite V" and
+  fin_V': "finite V'" and
+  fin_W: "finite W" and
+  disj: "W \<inter> V' = {}" and
+  rat_score: "\<forall>b. (\<bar>score (b r)\<bar> \<noteq> \<infinity>)" and
+  nn_score: "\<forall>b. (score (b r) \<ge> 0)" and
+  non_zero_voter: "\<exists>v \<in> V. (score (p v r) > 0)"
+shows "score_sum score (joint_profile W V' s q) (W \<union> V') r > score_sum score q V' r"
+proof -
 *)
 
 fun sum_eval_fun :: "'i Aggregate_Score \<Rightarrow> ('r, 'v, ('r \<Rightarrow> 'i)) Evaluation_Function" where
 "sum_eval_fun score V r R p = score_sum score p V r"
 
 fun real_score :: "'i Aggregate_Score \<Rightarrow> bool" where
-"real_score score = (\<forall>i. score i \<ge> 0 \<and> \<bar>score i \<bar> \<noteq> \<infinity>)"
+"real_score score = (\<forall>i. score i \<ge> 0 \<and> \<bar>score i\<bar> \<noteq> \<infinity>)"
+
+
+
+lemma nn_score_sum:
+fixes
+  score :: "'i Aggregate_Score" and
+  V :: "'v set" and
+  r :: 'r and
+  p :: "('v, 'r, 'i) Aggregate_Profile"
+assumes r_score: "real_score score"
+shows  "score_sum score p V r \<ge> 0" 
+proof -
+have "\<forall>v \<in> V. score (p v r) \<ge> 0"
+  using r_score
+  by simp
+hence "(\<Sum>v \<in> V. score (p v r)) \<ge> 0"
+  using sum_nonneg
+  by metis
+thus ?thesis by simp
+qed
+
+
+lemma real_score_sum:
+fixes
+  score :: "'i Aggregate_Score" and
+  V :: "'v set" and
+  r :: 'r and
+  p :: "('v, 'r, 'i) Aggregate_Profile"
+assumes r_score: "real_score score"
+shows  "\<bar>score_sum score p V r\<bar> \<noteq> \<infinity>" 
+proof -
+have "\<forall>v \<in> V. \<bar>score (p v r)\<bar> \<noteq> \<infinity>"
+  using r_score real_score.simps
+  by meson
+hence "\<bar>(\<Sum>v \<in> V. score (p v r))\<bar> \<noteq> \<infinity>"
+  using sum_Inf 
+  by meson
+thus ?thesis by simp
+qed
+
+
+lemma we_dont_need_to_know_n:
+fixes e f :: erat
+assumes
+  e_rat: "\<bar>e\<bar> \<noteq> \<infinity>" and
+  f_rat: "\<bar>f\<bar> \<noteq> \<infinity>" and
+  e_pos: "e > 0" and
+  f_nn: "f \<ge> 0"
+shows "\<exists>n. erat_of n * e > f"
+proof (cases "e < f")
+case e_le_f: True
+have f_id: "erat (rat_of_erat f) = f"
+  using f_rat 
+  by auto
+moreover have e_id: "erat (rat_of_erat e) = e" 
+  using e_rat 
+  by auto
+ultimately have "rat_of_erat f / rat_of_erat e > 0"
+  using e_le_f e_pos erat_less(2) order_less_trans zero_less_divide_iff
+  by metis
+hence *: "\<lceil>rat_of_erat f / rat_of_erat e\<rceil> = int (nat \<lceil>rat_of_erat f / rat_of_erat e\<rceil>)"
+  by simp
+have "rat_of_erat f = (rat_of_erat f) / (rat_of_erat e) * rat_of_erat e"
+  using e_pos e_id
+  by force
+hence "f = (rat_of_erat f) / (rat_of_erat e) *  e"
+  using e_id f_id times_erat.simps(1)
+  by metis
+moreover have "... \<le> Fract \<lceil>(rat_of_erat f) / (rat_of_erat e)\<rceil> 1 * e"
+  using Fract_of_int_quotient e_pos erat_mult_right_mono 
+  by auto
+moreover have "... < (Fract (\<lceil>(rat_of_erat f) / (rat_of_erat e)\<rceil>) 1 + 1) * e"
+  using e_pos e_id erat_mult_strict_right_mono less_add_one less_erat.simps
+  by metis
+moreover have "... = Fract ((\<lceil>(rat_of_erat f) / (rat_of_erat e)\<rceil>) + 1) 1 * e"
+  by (simp add: Fract_add_one)
+moreover have "... = Fract (nat (\<lceil>(rat_of_erat f) / (rat_of_erat e)\<rceil>) + 1) 1 * e"
+  using * of_nat_1 of_nat_add
+  by metis
+moreover have "... = erat_of (nat (\<lceil>(rat_of_erat f) / (rat_of_erat e)\<rceil>) + 1) * e" by simp
+ultimately have "f < erat_of (nat (\<lceil>(rat_of_erat f) / (rat_of_erat e)\<rceil>) + 1) * e" by order
+thus  ?thesis by blast
+next
+case False
+hence "f \<le> e" by simp
+moreover have "e < 2 * e" 
+  using e_pos e_rat 
+  by fastforce
+moreover have "... = Fract 2 1 * e" by (simp add: rat_number_collapse(3))
+moreover have "... = erat_of 2 * e" by simp
+ultimately have "f < erat_of 2 * e" by order
+thus  ?thesis by blast
+qed
 
 
 lemma max_elim_module_continous:
@@ -299,14 +384,45 @@ assume
   fin_R : "finite R" and
   fin_V: "finite V" and
   fin_V': "finite V'" and
+  fin_W: "finite W" and
   disj: "V \<inter> V' = {}" and
+  disj_W: "W \<inter> V' = {}" and
   wf_p: "well_formed_profile V R p" and
-  wf_q: "well_formed_profile V' R q"
-have det: "voters_determine_election (family_module score)" 
+  wf_q: "well_formed_profile V' R q" and
+  nonempty_p: "\<exists>v \<in> V. \<exists>r \<in> R. score (p v r) > 0"
+
+have det: "voters_determine_election (family_module score)"
   using elim_mod 
   by simp
-let ?n = "4"
-show "\<exists>n. n_copy n V W p s \<longrightarrow>
+
+moreover have fin_img_V: "finite  {(sum_eval_fun score) V x R p | x. x \<in> R}" 
+  using fin_R
+  by simp
+
+let ?max_V = "Max {(sum_eval_fun score) V x R p | x. x \<in> R}"
+let ?max_V' = "Max {(sum_eval_fun score) V' x R q | x. x \<in> R}"
+let ?max_W = "Max {(sum_eval_fun score) W x R s | x. x \<in> R}"
+let ?max_joint = "Max {(sum_eval_fun score) (W \<union> V') x R (joint_profile V' W q s) | x. x \<in> R}"
+
+have *: "\<forall>r \<in> R. \<bar>score_sum score p V r\<bar> \<noteq> \<infinity>" 
+  using real_score_sum r_score 
+  by metis
+hence "\<forall>r \<in> R. \<bar>(sum_eval_fun score) V r R p\<bar> \<noteq> \<infinity>" by simp
+moreover have "?max_V \<in> {(sum_eval_fun score) V x R p | x. x \<in> R}"
+  using Max_in fin_img_V elem nonempty_p 
+  by blast
+ultimately have ex_max_arg: "\<exists>r \<in> R. (sum_eval_fun score) V r R p = ?max_V"
+  by auto
+hence real_max_V: "\<bar>?max_V\<bar> \<noteq> \<infinity>" using * by auto
+moreover have  real_max_V': "\<bar>?max_V'\<bar> \<noteq> \<infinity>" sorry
+moreover have "?max_V > 0" sorry
+moreover have "?max_V' \<ge> 0" sorry
+ultimately have "\<exists>n. erat_of n * ?max_V > ?max_V'" 
+  using we_dont_need_to_know_n 
+  by simp
+then obtain n where large_n: "erat_of n * ?max_V > ?max_V'" by auto
+
+have "\<exists>n. n_copy n V W p s \<longrightarrow>
            defer (family_module score) (W \<union> V') R (joint_profile V' W q s)
            \<subseteq> defer (family_module score) V R p \<union> elect (family_module score) V R p \<and>
            elect (family_module score) (W \<union> V') R (joint_profile V' W q s)
@@ -314,17 +430,31 @@ show "\<exists>n. n_copy n V W p s \<longrightarrow>
 proof (standard, safe)
   fix r :: 'r
   assume 
-    copy: "n_copy ?n V W p s" and 
+    copy: "n_copy n V W p s" and 
     def_joint: "r \<in> defer (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
-    loose_V: "r \<notin> elect (family_module score) V R p"
+    not_elect_V: "r \<notin> elect (family_module score) V R p"
+
+    have "defer (family_module score) (W \<union> V') R (joint_profile V' W q s) \<subseteq> R" 
+    using elim_mod agg_structure.max_elim_sound 
+    by simp
+    hence "r \<in> R"
+    using def_joint 
+    by auto
+
+    have "\<exists>v \<in> V. (score (p v r) > 0)" sorry
+    hence "score_sum score (joint_profile W V' s q) (W \<union> V') r > score_sum score q V' r"
+    using continuity_helper copy large_n fin_V fin_V' fin_W disj_W r_score sorry
+    have "(sum_eval_fun score) V r R p < ?max_joint" sorry
   thus "r \<in> defer (family_module score) V R p" sorry
 next
   fix r :: 'r
   assume 
-    copy: "n_copy ?n V W p s" and 
-    elect_joint: "r \<in> elect (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
-    loose_V: "r \<in> elect (family_module score) V R p"
-  thus "r \<in> elect (family_module score) V R p" sorry
+    copy: "n_copy n V W p s" and 
+    elect_joint: "r \<in> elect (family_module score) (W \<union> V') R (joint_profile V' W q s)"
+  have "elect (family_module score) (W \<union> V') R (joint_profile V' W q s) = {}" 
+    using elim_mod 
+    by simp
+  thus "r \<in> elect (family_module score) V R p" using elect_joint by simp
 next
 qed
 

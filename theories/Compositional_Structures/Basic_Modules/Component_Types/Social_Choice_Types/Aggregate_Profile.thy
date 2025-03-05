@@ -371,7 +371,7 @@ moreover have "score_sum score (joint_profile W V' s q) (W \<union> V') r =
 ultimately show ?thesis 
   using add_increasing2 large_n leD order_eq_refl order_less_le 
   by metis
-  qed 
+qed 
 
 (*
 moreover have "(score_sum score p V r) > 0"

@@ -341,9 +341,9 @@ text \<open>
 definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
   "continuity m \<equiv> (\<forall> R V V' W p q s. 
     finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R) q \<and> 
-      V \<inter> V' = {} \<longrightarrow> (\<exists>n. n_copy n V W p s) \<longrightarrow>  
+      V \<inter> V' = {} \<longrightarrow> (\<exists>n. n_copy n V W p s \<longrightarrow>  
         (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
-          (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p ))"
+          (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )))"
 
 lemma continuity_prereq:
 fixes 
@@ -355,10 +355,10 @@ assumes
   "continuity m" and
   "finite_profile V (affected_alts R) p" and
   "finite_profile V' (affected_alts R) q" and
-  "V \<inter> V' = {}" and
-  "n_copy n V W p s"
-shows "(defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
-       (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )"
+  "V \<inter> V' = {}"
+shows "\<exists>n. n_copy n V W p s \<longrightarrow> 
+  (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
+  (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )"
 using assms continuity_def 
 by blast
           
