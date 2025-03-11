@@ -70,10 +70,11 @@ locale result =
     conts_cover: "affected_alts (contenders A) = A \<or> affected_alts (contenders A) = {}" and
     no_conts: "A \<noteq> {} \<and> affected_alts (contenders A) = {} \<longrightarrow> contenders A = {}" and
     sub_coincide: "C \<subseteq> D \<longrightarrow> (affected_alts C) \<subseteq> (affected_alts D)" and
-    limit_is_superset: "affected_alts (limit_contenders A R) \<subseteq> A"
+    limit_is_superset: "affected_alts (limit_contenders A R) \<subseteq> A" and
+(* Does not hold for social welfare: *)
+    limit_conts_sound: "A \<subseteq> B \<longrightarrow> (contenders A) = limit_contenders A (contenders B)" 
 begin
 
-(*     limit_conts_sound: "A \<subseteq> B \<longrightarrow> (contenders A) = limit_contenders A (contenders B)" *)
 fun limit_res :: "'a set \<Rightarrow> 'r Result \<Rightarrow> 'r Result" where
   "limit_res A (e, r, d) = (limit_contenders A e, limit_contenders A r, limit_contenders A d)"
 

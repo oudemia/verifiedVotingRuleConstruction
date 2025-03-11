@@ -25,8 +25,10 @@ text \<open>
   \<^file>\<open>Social_Choice_Result.thy\<close> for details.
 \<close>
 global_interpretation \<S>\<C>\<F>_result:
-  result "\<lambda> A. A" "limit_alts" "affected_alts_\<S>\<C>\<F>"
-proof (unfold_locales, standard; simp)
+  result id limit_alts affected_alts_\<S>\<C>\<F>
+proof (unfold_locales, unfold limit_alts.simps affected_alts_\<S>\<C>\<F>.simps, standard; simp)
+fix A B :: "'a set"
+show "A \<subseteq> B \<longrightarrow> A = A \<inter> B" by auto
 qed
 
 text \<open>
@@ -35,7 +37,7 @@ text \<open>
   \<open>[[Not actually used yet.]]\<close>
 \<close>
 global_interpretation multi_winner_result:
-  result "\<lambda> A. Pow A" "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs"
+  result Pow "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" "\<lambda> rs. \<Union> rs"
 proof (unfold_locales, safe)
   fix
     A X :: "'a set" and
@@ -61,6 +63,12 @@ next
     a :: 'a
   assume "C \<subseteq> D" and "A \<in> C" and  "a \<in> A"
   thus "a \<in> \<Union> D" by blast
+next
+  fix A B S :: "'a set"
+  assume sub_A: "A \<subseteq> B" and sub_S: "S \<subseteq> A"
+  hence "S = S \<inter> A" by auto
+  moreover have "S \<in> Pow B" using sub_A sub_S by blast 
+  ultimately show "\<exists>r. S = r \<inter> A \<and> r \<in> Pow B" by blast 
 qed
 
 text \<open>
@@ -70,7 +78,7 @@ text \<open>
 \<close>
 
 global_interpretation \<S>\<W>\<F>_result:
-  result "\<lambda>A. limit_set_\<S>\<W>\<F> A UNIV" "limit_set_\<S>\<W>\<F>" "affected_alts_\<S>\<W>\<F>"
+  result "\<lambda>A. limit_set_\<S>\<W>\<F> A UNIV" limit_set_\<S>\<W>\<F> affected_alts_\<S>\<W>\<F>
 proof (unfold_locales, safe)
   fix
     A :: "'a set" and
@@ -119,7 +127,54 @@ next
     using sub 
     by auto
   thus "a \<in> affected_alts_\<S>\<W>\<F> S"
-    using elem by blast
+    using elem 
+    by blast
+next
+  fix
+    R :: "('a Preference_Relation) set" and
+    A :: "'a set" and
+    a :: "'a"
+  assume elem: "a \<in> affected_alts_\<S>\<W>\<F> (limit_set_\<S>\<W>\<F> A R)"
+  thus "a \<in> A" by auto
+  next
+next
+  fix
+    A B :: "'a set" and
+    r :: "'a Preference_Relation"
+  assume 
+    sub: "A \<subseteq> B" and
+    elem: "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
+  have "limit_set_\<S>\<W>\<F> A UNIV = { r. linear_order_on A r}"
+    using rel_extend_supset 
+    by fastforce
+  hence lin_ord: "linear_order_on A r" 
+    using elem 
+    by simp
+  hence "\<exists> rb. linear_order_on B rb \<and> r = (limit A rb)"
+    using rel_extend_supset sub 
+    by blast
+  then obtain rb where *: "linear_order_on B rb \<and> r = (limit A rb)" by auto
+  have "limit_set_\<S>\<W>\<F> B UNIV = { r. linear_order_on B r}"
+    using rel_extend_supset 
+    by fastforce
+  hence "rb \<in> limit_set_\<S>\<W>\<F> B UNIV" using * by simp
+  thus "r \<in> limit_set_\<S>\<W>\<F> A (limit_set_\<S>\<W>\<F> B UNIV)"
+    using lin_ord * 
+    by auto
+next
+  fix
+    A B :: "'a set" and
+    r :: "'a Preference_Relation"
+  assume 
+    sub: "A \<subseteq> B" and
+    elem: "r \<in> limit_set_\<S>\<W>\<F> A (limit_set_\<S>\<W>\<F> B UNIV)"
+  hence "linear_order_on A r" by auto
+  moreover have "limit_set_\<S>\<W>\<F> A UNIV = { r. linear_order_on A r}"
+    using rel_extend_supset 
+    by fastforce
+  ultimately show "r \<in> limit_set_\<S>\<W>\<F> A UNIV"
+    using elem 
+    by blast
 qed
 
 
@@ -131,7 +186,7 @@ text \<open>
 \<close>
    
 sublocale committee_result \<subseteq> 
-result "committees" "limit_committees" "affected_alts_committee"
+result committees limit_committees affected_alts_committee
 proof (unfold_locales, safe)
    fix
     A :: "'a set" and
@@ -155,9 +210,9 @@ next
       hence "committees A \<noteq> {}" by auto
       hence "\<exists>C. C \<subseteq> A \<and> card C = k" by simp
       hence large_A: "card A \<ge> k" using k_positive fin using card_mono by blast
-      hence "c \<in> A \<longrightarrow> (\<exists>C.  C \<in> committees A \<and> c \<in> C)" using committees_cover_A by auto
+      hence "\<forall>c. c \<in> A \<longrightarrow> (\<exists>C.  C \<in> committees A \<and> c \<in> C)" using committees_cover_A by auto
       hence "\<exists>C. C \<in> committees A \<and> a \<in> C" 
-        using large_A elem by (metis Union_iff committees_cover_A)
+        using large_A elem by metis
       thus "a \<in> affected_alts_committee (committees A)" by simp
     next
       assume inf: "infinite A"
@@ -193,6 +248,30 @@ next
     elem: "a \<in> affected_alts_committee C" and
     sub: "C \<subseteq> D"
     thus "a \<in> affected_alts_committee D" by auto
+next
+  fix
+    A :: "'a set" and
+    C :: "'a Committee set" and
+    a :: 'a
+  assume 
+    elem: "a \<in> affected_alts_committee (limit_committees A C)"
+    thus "a \<in> A" by auto    
+next
+  fix
+    A B :: "'a set" and
+    C :: "'a Committee"
+  assume 
+    sub : "A \<subseteq> B" and
+    elem: "C \<in> committees A"
+  thus "C \<in> limit_committees A (committees B)" by auto 
+next
+  fix
+    A B :: "'a set" and
+    C :: "'a Committee"
+  assume 
+    sub : "A \<subseteq> B" and
+    elem: "C \<in> limit_committees A (committees B)"
+  thus "C \<in> committees A" by auto 
 qed
 
 setup Locale_Code.close_block
