@@ -53,7 +53,7 @@ text \<open>
   If a Condorcet winner w exists, w has the maximum evaluation value.
 \<close>
 
-theorem cond_winner_imp_max_eval_val:
+theorem (in ballot) cond_winner_imp_max_eval_val:
   fixes
     e :: "('a, 'v, 'b) Evaluation_Function" and
     A :: "'a set" and
@@ -101,7 +101,7 @@ text \<open>
   evaluation value.
 \<close>
 
-theorem non_cond_winner_not_max_eval:
+theorem (in ballot) non_cond_winner_not_max_eval:
   fixes
     e :: "('a, 'v, 'b) Evaluation_Function" and
     A :: "'a set" and
