@@ -100,7 +100,7 @@ definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  whe
 
 definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
   "vr_continuity r \<equiv>
-      (\<forall> A V V' W p q s. finite_profile V A p \<and> finite_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
+      (\<forall> A V V' W p q s. finite_profile V A p \<and> finite_profile V' A q \<and> V \<inter> V' = {} \<and> W \<inter> V' = {} \<longrightarrow> 
         (\<exists>n. n_copy n V W p s \<longrightarrow> (r (W \<union> V') A (joint_profile V' W q s) \<subseteq> r V A p)))"
 
 
