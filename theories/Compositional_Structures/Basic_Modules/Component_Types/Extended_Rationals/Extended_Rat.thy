@@ -10,11 +10,6 @@ begin
 
 subsection \<open>General Extended Rationals\<close>
 
-(* Rational Numbers as a codatatype sounds... questionable
-
-erat as codatatype: codatatype erat = EZero | ESucc erat 
-*)
-
 subsection \<open>Type definition\<close>
 
 text \<open>
@@ -204,7 +199,7 @@ function plus_erat where
   "erat r + erat p = erat (r + p)"
 | "\<infinity> + a = (\<infinity>::erat)"
 | "a + \<infinity> = (\<infinity>::erat)"
-| "erat r + -\<infinity> = - \<infinity>"
+| "erat r + -\<infinity> = - (\<infinity>::erat)"
 | "-\<infinity> + erat p = -(\<infinity>::erat)"
 | "-\<infinity> + -\<infinity> = -(\<infinity>::erat)"
 proof goal_cases
@@ -297,8 +292,55 @@ lemma rat_of_erat_add:
     (if (\<bar>a\<bar> = \<infinity>) \<and> (\<bar>b\<bar> = \<infinity>) \<or> (\<bar>a\<bar> \<noteq> \<infinity>) \<and> (\<bar>b\<bar> \<noteq> \<infinity>) then rat_of_erat a + rat_of_erat b else 0)"
   by (cases rule: erat2_cases[of a b]) auto
 
+subsubsection \<open>Subtraction\<close>
 
-subsubsection "Linear order on \<^typ>\<open>erat\<close>"
+instantiation erat :: minus
+begin
+
+definition diff_erat_def:
+"a - b = ( case (a, b) of
+    (erat x, erat y) \<Rightarrow> erat (x - y)
+  | (erat x, PInfty) \<Rightarrow> -(\<infinity>::erat)
+  | (erat x, MInfty) \<Rightarrow> (\<infinity>::erat)
+  | (PInfty, erat y) \<Rightarrow> (\<infinity>::erat)
+  | (PInfty, MInfty) \<Rightarrow> (\<infinity>::erat)
+  | (MInfty, erat y) \<Rightarrow> -(\<infinity>::erat)
+  | (MInfty, PInfty) \<Rightarrow> -(\<infinity>::erat))"
+
+instance ..
+
+lemma idiff_erat_erat [simp, code]: "erat a - erat b = erat (a - b)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_erat_pinfty [simp, code]: "erat a - \<infinity> = -(\<infinity>::erat)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_erat_minfty [simp, code]: "erat a - -\<infinity> = (\<infinity>::erat)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_pinfty_erat [simp, code]: "\<infinity> - erat a = (\<infinity>::erat)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_pinfty_minfty [simp, code]: "\<infinity> - -\<infinity> = (\<infinity>::erat)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_minfty_erat [simp, code]: "-\<infinity> - erat a = -(\<infinity>::erat)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_minfty_minfty [simp, code]: "-\<infinity> - \<infinity> = -(\<infinity>::erat)"
+  by (simp add: diff_erat_def)
+
+lemma idiff_0_right [simp]: "(r::erat) - 0 = r"
+  by (cases r) (simp_all add: zero_erat_def)
+
+lemmas idiff_erat_0_right [simp] = idiff_0_right [unfolded zero_erat_def]
+
+lemma idiff_self [simp]: "\<bar>r\<bar> \<noteq> \<infinity> \<Longrightarrow> (r::erat) - r = 0"
+  by (auto simp: zero_erat_def)
+
+end
+
+subsection "Linear order on \<^typ>\<open>erat\<close>"
 
 instantiation erat :: linorder
 begin
