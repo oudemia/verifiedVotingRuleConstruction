@@ -1238,14 +1238,13 @@ ultimately show "y * sum f (insert x S) = (\<Sum>x\<in>insert x S. y * f x)"
   by metis
 qed 
 
-
+(*
 lemma erat_sum_distrib_left:
 fixes 
   X :: "'x set" and
   f :: "'x \<Rightarrow> erat"
 assumes f_rat: "\<forall>x. (\<bar>f x\<bar> \<noteq> \<infinity>)"
-shows "\<exists>x \<in> X. f x = ?max_V" by try
-using assms
+shows "\<exists>x \<in> X. f x = ?max_V"
 proof (induct X rule: infinite_finite_induct)
 case (infinite A)
 then show ?case by simp
@@ -1277,5 +1276,6 @@ moreover have "(\<Sum>z \<in> (insert x S). y * f z) = ((\<Sum>z \<in> S. y * f 
 ultimately show "y * sum f (insert x S) = (\<Sum>x\<in>insert x S. y * f x)"
   using * fin ih rational sum_Inf
   by metis
-qed 
+  qed 
+  *)
 end

@@ -355,7 +355,8 @@ assumes
   "continuity m" and
   "finite_profile V (affected_alts R) p" and
   "finite_profile V' (affected_alts R) q" and
-  "V \<inter> V' = {}"
+  "V \<inter> V' = {}" and
+  "W \<inter> V' = {}"
 shows "\<exists>n. n_copy n V W p s \<longrightarrow> 
   (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
   (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )"
@@ -1549,4 +1550,6 @@ definition (in electoral_structure) monotonicity :: "('r, 'v, 'b) Electoral_Modu
       (\<forall> A V p q a. a \<in> elect m V A p \<and> lifted V A p q a \<longrightarrow> a \<in> elect m V A q)"
 
 *)
-end end
+end 
+
+end

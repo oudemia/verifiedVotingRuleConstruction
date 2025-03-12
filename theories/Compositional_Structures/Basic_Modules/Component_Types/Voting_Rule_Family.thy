@@ -394,8 +394,7 @@ assume
 have det: "voters_determine_election (family_module score)"
   using elim_mod 
   by simp
-
-moreover have fin_img_V: "finite  {(sum_eval_fun score) V x R p | x. x \<in> R}" 
+have fin_img_V: "finite {(sum_eval_fun score) V x R p | x. x \<in> R}" 
   using fin_R
   by simp
 
@@ -414,26 +413,90 @@ moreover have "?max_V \<in> {(sum_eval_fun score) V x R p | x. x \<in> R}"
 ultimately have ex_max_arg: "\<exists>r \<in> R. (sum_eval_fun score) V r R p = ?max_V"
   by auto
 hence real_max_V: "\<bar>?max_V\<bar> \<noteq> \<infinity>" using * by auto
-moreover have  real_max_V': "\<bar>?max_V'\<bar> \<noteq> \<infinity>" sorry
-moreover have "?max_V > 0" sorry
-moreover have "?max_V' \<ge> 0" sorry
-ultimately have "\<exists>n. erat_of n * ?max_V > ?max_V'" 
-  using we_dont_need_to_know_n 
-  by simp
-then obtain n where large_n: "erat_of n * ?max_V > ?max_V'" by auto
-
 have "\<exists>n. n_copy n V W p s \<longrightarrow>
            defer (family_module score) (W \<union> V') R (joint_profile V' W q s)
            \<subseteq> defer (family_module score) V R p \<union> elect (family_module score) V R p \<and>
            elect (family_module score) (W \<union> V') R (joint_profile V' W q s)
            \<subseteq> elect (family_module score) V R p"
-proof (standard, safe)
-  fix r :: 'r
-  assume 
-    copy: "n_copy n V W p s" and 
-    def_joint: "r \<in> defer (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
-    not_elect_V: "r \<notin> elect (family_module score) V R p"
+proof (cases "defer (family_module score) V R p = R")
+  case trivial_p: True
+  have "defer (family_module score) (W \<union> V') R (joint_profile V' W q s) \<subseteq> R" 
+    using elim_mod agg_structure.max_elim_sound 
+    by simp
+  moreover have "elect (family_module score) V R p = {}" 
+    using elim_mod
+    by simp
+  moreover have "elect (family_module score) (W \<union> V') R (joint_profile V' W q s) = {}" 
+    using elim_mod
+    by simp
+  ultimately show ?thesis using trivial_p by try
+next
+  case nontrivial_p: False
+  then show ?thesis
+  proof (standard, safe)
+    fix r :: 'r
+    assume 
+      copy: "n_copy n V W p s" and 
+      def_joint: "r \<in> defer (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
+      not_elect_V: "r \<notin> elect (family_module score) V R p"
 
+    let ?min_diff = "Min {?max_V -((sum_eval_fun score) V x R p) | x. x \<in> R \<and> (sum_eval_fun score) V x R p \<noteq> ?max_V}"
+have real_min_diff: "\<bar>?min_diff\<bar> \<noteq> \<infinity>" sorry
+moreover have  real_max_V': "\<bar>?max_V'\<bar> \<noteq> \<infinity>" sorry
+moreover have "?min_diff > 0" sorry
+moreover have "?max_V' \<ge> 0" sorry
+then obtain nn where large_nn: "erat_of nn * ?min_diff > ?max_V'" by auto
+
+
+    have "defer (family_module score) (W \<union> V') R (joint_profile V' W q s) \<subseteq> R" 
+    using elim_mod agg_structure.max_elim_sound 
+    by simp
+    hence in_R: "r \<in> R"
+    using def_joint 
+    by auto
+    hence "(sum_eval_fun score) (W \<union> V') r R (joint_profile V' W q s) = ?max_joint" 
+      using elim_mod agg_structure.defer_of_max_elim[where e="sum_eval_fun score"] fin_R in_R wf_p 
+      sorry (*TODO well formed joint profile*)
+    hence "(sum_eval_fun score) (W \<union> V') r R (joint_profile V' W q s) = ?max_joint" 
+        using in_R Max.coboundedI fin_img_V order_neq_le_trans 
+        by auto
+    hence *: "erat_of n * ((sum_eval_fun score) V r R p) + (sum_eval_fun score) V' r R q = ?max_joint"
+    sorry
+    show "r \<in> defer (family_module score) V R p"
+    proof (rule ccontr)
+      assume "r \<notin> defer (family_module score) V R p"
+      hence "(sum_eval_fun score) V r R p \<noteq> ?max_V" 
+      using elim_mod agg_structure.defer_of_max_elim[where e="sum_eval_fun score"] fin_R in_R wf_p 
+      by simp
+      hence "(sum_eval_fun score) V r R p < ?max_V" 
+        using in_R Max.coboundedI fin_img_V order_neq_le_trans 
+        by auto
+      hence "erat_of n * ((sum_eval_fun score) V r R p) < erat_of n * ?max_V" sorry
+      hence "erat_of n * ((sum_eval_fun score) V r R p) + (sum_eval_fun score) V' r R q
+        < erat_of n * ?max_V + (sum_eval_fun score) V' r R q"
+        using add.commute erat_less_add r_score real_score_sum sum_eval_fun.simps
+        by (metis (no_types, lifting))
+      hence "?max_joint < erat_of n * ?max_V + (sum_eval_fun score) V' r R q" 
+        using * by simp
+
+
+      have "R \<noteq> {}" using in_R by auto
+      hence "defer (family_module score) V R p \<noteq> {}"
+      using elim_mod max_eliminator.simps agg_structure.max_elim_non_blocking by auto
+      hence "\<exists>w. w \<in> defer (family_module score) V R p" by auto
+      then obtain w where winner: "w \<in> defer (family_module score) V R p" by auto
+      moreover have "defer  (family_module score) V R p \<subseteq> R" 
+        using elim_mod agg_structure.max_elim_sound 
+          by simp
+      ultimately have w_in_R: "w \<in> R"
+      by auto
+      have "(sum_eval_fun score) V w R p = ?max_V" 
+      using elim_mod agg_structure.defer_of_max_elim[where e="sum_eval_fun score"] fin_R w_in_R wf_p winner 
+      by simp
+      
+      thus False sorry
+    qed
+    (*
     have "defer (family_module score) (W \<union> V') R (joint_profile V' W q s) \<subseteq> R" 
     using elim_mod agg_structure.max_elim_sound 
     by simp
@@ -446,6 +509,7 @@ proof (standard, safe)
     using continuity_helper copy large_n fin_V fin_V' fin_W disj_W r_score sorry
     have "(sum_eval_fun score) V r R p < ?max_joint" sorry
   thus "r \<in> defer (family_module score) V R p" sorry
+*)
 next
   fix r :: 'r
   assume 
@@ -457,8 +521,23 @@ next
   thus "r \<in> elect (family_module score) V R p" using elect_joint by simp
 next
 qed
+qed
+qed
+
 
 qed
+
+(* after real_max_V:
+
+moreover have  real_max_V': "\<bar>?max_V'\<bar> \<noteq> \<infinity>" sorry
+moreover have "?max_V > 0" sorry
+moreover have "?max_V' \<ge> 0" sorry
+ultimately have "\<exists>n. erat_of n * ?max_V > ?max_V'" 
+  using we_dont_need_to_know_n 
+  by simp
+then obtain n where large_n: "erat_of n * ?max_V > ?max_V'" by auto
+
+*)
 
   
 end
