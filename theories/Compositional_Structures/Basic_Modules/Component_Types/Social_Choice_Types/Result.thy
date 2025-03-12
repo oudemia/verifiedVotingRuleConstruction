@@ -139,35 +139,42 @@ fun well_formed_committee_result :: "'a set \<Rightarrow> ('a Committee) Result 
 fun limit_committees :: "'a set \<Rightarrow> ('a Committee) set \<Rightarrow> ('a Committee) set" where
   "limit_committees A res = {C. (\<exists>r \<in> res. C = A \<inter> r) \<and> card C = k}"
 
-lemma committees_cover_A: "k \<le> card A \<longrightarrow> \<Union>(committees A) = A "
-proof standard
-  fix A :: "'a set"
-  assume *: "k \<le> card A"
-  show "\<Union> (committees A) = A"
-  proof safe
-    fix
-      C :: "'a set" and
-      a :: 'a
-    assume 
-      elem:"a \<in> C" and
-      comm: "C \<in> committees A"
-    have "C \<subseteq> A" using comm by simp
-    thus "a \<in> A" using elem by auto
-  next
-    fix
-      a :: 'a
-    assume 
-      elem:"a \<in> A"
-    have "card (A - {a}) \<ge> k-1" using elem * by force
-    hence "\<exists>C \<subseteq> (A - {a}). card C = k-1" using * by (meson obtain_subset_with_card_n)
-    then obtain C where comm: "C \<subseteq> (A - {a}) \<and> card C = k-1" by blast
-    hence "a \<notin> C" by blast
-    hence "card (C \<union> {a}) = k" using comm * k_positive
-      by (metis One_nat_def Suc_pred Un_insert_right card.infinite card_insert_disjoint finite_Diff finite_subset less_eq_Suc_le not_one_le_zero sup_bot_right)
-    hence "C \<union> {a} \<in> committees A" using elem comm * by auto
-    thus "a \<in> \<Union>(committees A)" by blast
-  qed
+lemma committees_cover_A:
+fixes A :: "'a set"
+assumes geq_k: "k \<le> card A"
+shows "\<Union>(committees A) = A "
+proof (safe)
+fix
+  C :: "'a set" and
+  a :: 'a
+assume 
+  elem:"a \<in> C" and
+  comm: "C \<in> committees A"
+have "C \<subseteq> A" using comm by simp
+thus "a \<in> A" using elem by auto
+next
+fix a :: 'a
+assume elem:"a \<in> A"
+have "card (A - {a}) \<ge> k-1"
+  using elem geq_k
+  by force
+hence "\<exists>C \<subseteq> (A - {a}). card C = k-1" 
+  using geq_k obtain_subset_with_card_n 
+  by metis
+then obtain C where comm: "C \<subseteq> (A - {a}) \<and> card C = k-1" by blast
+hence "a \<notin> C" by blast
+moreover have "finite C" 
+  using comm One_nat_def card.infinite finite_Diff finite_subset geq_k k_positive not_less_eq_eq
+  by metis
+ultimately have "card (insert a C) = k" 
+  using comm geq_k k_positive
+  by simp
+hence "insert a C \<in> committees A" 
+  using elem comm geq_k 
+  by auto
+thus "a \<in> \<Union>(committees A)" by blast
 qed
+
   
 lemma no_committees_possible:
 fixes A :: "'a set"

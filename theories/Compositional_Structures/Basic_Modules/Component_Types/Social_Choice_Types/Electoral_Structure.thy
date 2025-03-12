@@ -63,27 +63,15 @@ fun limit_pref_to_alts :: "'a set \<Rightarrow> 'a Preference_Relation \<Rightar
 "limit_pref_to_alts A b = (A \<times> A) \<inter> b"
 
 global_interpretation \<P>\<V>_\<S>\<C>\<F>:
-  electoral_structure "default_ballot_\<P>\<V>" "prefers_\<P>\<V>" "wins_\<P>\<V>" "limit_\<P>\<V>_ballot"
-     "limit_alts" "affected_alts_\<S>\<C>\<F>" "ballot_\<P>\<V>" id "limit_pref_to_alts"
-proof (unfold_locales, standard)
-  fix A :: "'a set" 
-  show "affected_alts_\<S>\<C>\<F> (id A) = A" by simp 
-next
-  fix
-    A B:: "'a set"
-  show " A \<subseteq> B \<longrightarrow> affected_alts_\<S>\<C>\<F> A \<subseteq> affected_alts_\<S>\<C>\<F> B" by simp
-next
+  electoral_structure default_ballot_\<P>\<V> prefers_\<P>\<V> wins_\<P>\<V> limit_\<P>\<V>_ballot
+     limit_alts affected_alts_\<S>\<C>\<F> ballot_\<P>\<V> id limit_pref_to_alts
+proof (unfold_locales, clarsimp)
   fix
     R :: "'a set" and
     b :: "'a Preference_Relation"
-  have "limit_pref_to_alts R b = (R \<times> R) \<inter> b" by simp
-  moreover have "affected_alts_\<S>\<C>\<F> R = R" by simp
-  moreover have "limit_\<P>\<V>_ballot (affected_alts_\<S>\<C>\<F> R) b = (R \<times> R) \<inter> b" by auto
-  ultimately show "limit_pref_to_alts R b = limit_\<P>\<V>_ballot (affected_alts_\<S>\<C>\<F> R) b" by simp
-next
-  fix A :: "'a set"
-  show "A \<noteq> {} \<and> affected_alts_\<S>\<C>\<F> (id A) = {} \<longrightarrow> id A = {}" by simp
+  show "R \<times> R \<inter> b = {(a1, a2). (a1, a2) \<in> b \<and> a1 \<in> R \<and> a2 \<in> R}" by auto
 qed
+
 
 fun limit_app_to_alts :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> 'a Approval_Set" where
 "limit_app_to_alts A b = A \<inter> b"
@@ -92,29 +80,14 @@ fun limit_app_to_comm :: "('a Committee) set \<Rightarrow> 'a Approval_Set \<Rig
 "limit_app_to_comm C b = \<Union>C \<inter> b"
 
 global_interpretation \<A>\<V>_\<S>\<C>\<F>:
-  electoral_structure "default_ballot_\<A>\<V>" "prefers_\<A>\<V>" "wins_\<A>\<V>" limit_\<A>\<V>_ballot
+  electoral_structure default_ballot_\<A>\<V> prefers_\<A>\<V> wins_\<A>\<V> limit_\<A>\<V>_ballot
      limit_alts affected_alts_\<S>\<C>\<F> ballot_\<A>\<V> id limit_app_to_alts
-  by unfold_locales auto
+by unfold_locales auto
+
 
 sublocale committee_result \<subseteq> \<A>\<V>_committee:
   electoral_structure default_ballot_\<A>\<V> prefers_\<A>\<V> wins_\<A>\<V> limit_\<A>\<V>_ballot
-  "\<lambda> A rs. {r \<inter> A | r. r \<in> rs}" affected_alts_committee ballot_\<A>\<V> committees limit_app_to_comm
-proof (unfold_locales, unfold affected_alts_committee.simps, safe)
-    fix  
-      A :: "'a set" and
-      R :: "('a Committee) set" and
-      a :: 'a and
-      b :: "'a Approval_Set"
-    assume "a \<in> limit_app_to_comm R b"
-    thus "a \<in> limit_\<A>\<V>_ballot (\<Union> R) b" by fastforce
-  next
-    fix  
-      A :: "'a set" and
-      R :: "('a Committee) set" and
-      a :: 'a and
-      b :: "'a Approval_Set"
-    assume "a \<in> limit_\<A>\<V>_ballot (\<Union> R) b"
-    thus "a \<in> limit_app_to_comm R b"  by fastforce
-qed   
+  limit_committees affected_alts_committee ballot_\<A>\<V> committees limit_app_to_comm
+by (simp add: \<A>\<V>_profile.ballot_axioms electoral_structure_axioms.intro electoral_structure_def result_axioms)
 
 end
