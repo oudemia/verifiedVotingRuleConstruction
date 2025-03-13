@@ -804,20 +804,59 @@ fixes
   f :: "'b \<Rightarrow> erat"
 assumes fin: "finite V"
 shows "sum (f \<circ> p) V = (\<Sum>b \<in> p ` V.(\<Sum>v \<in> bal_voters b p V. f (p v)))"
-sorry
-(*
-have "\<forall>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V) = (\<Sum>v \<in> bal_voters b p V. f (p v))" by simp
-hence "(\<Sum>b \<in> p ` V. sum (f \<circ> p) (bal_voters b p V)) = 
-  (\<Sum>b \<in> p ` V. \<Sum>v \<in> bal_voters b p V. f (p v))"
+using assms
+proof (unfold bal_voters.simps, induct "p ` V" arbitrary: V rule: infinite_finite_induct)
+case infinite
+thus ?case using fin by simp
+next
+case empty
+thus ?case by simp
+next
+case (insert b B)
+assume 
+  fin_B: "finite B" and 
+  fin_V: "finite V" and
+  notin: "b \<notin> B" and 
+  step: "insert b B = p ` V" 
+let ?V_sans_b = "(V - (bal_voters b p V))"
+have fin_V_sans_b: "finite ?V_sans_b" 
+using fin_V
 by simp
-moreover have "\<forall>b \<in> p ` V. (\<Sum>v \<in> bal_voters b p V. f (p v)) = 
-  erat_of (card (bal_voters b p V)) * f b"
-using bal_voters_sum fin 
+have "\<forall> b' \<in> B. (bal_voters b' p V) \<inter> (bal_voters b p V) = {}" 
+  using notin
+  by fastforce
+hence disj: "\<Union> {bal_voters b' p V |b'. b' \<in> B} \<inter> (bal_voters b p V) = {}" by auto
+moreover have V_join: "\<Union> {bal_voters b' p V |b'. b' \<in> B} \<union> (bal_voters b p V) = V" 
+  using step
+  by auto
+ultimately have B_union: "\<Union> {bal_voters b' p V |b'. b' \<in> B} =  V - (bal_voters b p V)" 
+  using step notin 
+  by blast
+hence *: "sum (f \<circ> p) V = sum (f \<circ> p) (V - (bal_voters b p V)) + sum (f \<circ> p) (bal_voters b p V)"
+  using disj V_join assms sum_Un_eq insert.prems(1)
+  by (metis (no_types, lifting))
+have "\<forall>b' \<in> B. (bal_voters b' p V) \<noteq> {}" 
+  using step 
+  by force
+hence "\<forall>b' \<in> B. {b'} = p ` (bal_voters b' p V)" by auto
+hence "B = (\<Union> {p ` bal_voters b' p V |b'. b' \<in> B})" by auto
+hence "B = p ` (\<Union> {bal_voters b' p V |b'. b' \<in> B})" by blast
+hence "B = p ` ?V_sans_b"
+  using B_union 
+  by argo
+hence "sum (f \<circ> p) ?V_sans_b = (\<Sum>b' \<in> B. \<Sum>v \<in> ?V_sans_b \<inter> p -` {b'}. f (p v))"
+  using insert.hyps(3)[where ?V = ?V_sans_b] fin_V_sans_b 
+  by simp
+moreover have "\<forall>b' \<in> B. ?V_sans_b \<inter> p -` {b'} = V \<inter> p -` {b'}"
+using notin 
+by auto
+ultimately have "sum (f \<circ> p) ?V_sans_b = (\<Sum>b' \<in> B. \<Sum>v \<in> V \<inter> p -` {b'}. f (p v))" by simp
+moreover have "sum (f \<circ> p) (bal_voters b p V) = (\<Sum>v\<in> V \<inter> p -` {b}. f (p v))" by simp
+ultimately show "sum (f \<circ> p) V = (\<Sum>b\<in>p ` V. \<Sum>v\<in>V \<inter> p -` {b}. f (p v))" 
+using * step notin add.commute fin_V fin_B sum.insert
 by metis
-ultimately have "(\<Sum>b \<in> p ` V. \<Sum>v \<in> bal_voters b p V. f (p v)) = 
-  (\<Sum>b \<in> p ` V. erat_of (card (bal_voters b p V)) * f b)"
-  using sum.cong by meson
-*)
+qed
+
 
 lemma disjoint_prof_sum_alt:
 fixes 
@@ -864,6 +903,7 @@ thus ?thesis
   using f_pos bal erat_zero_le_0_iff order_le_less 
   by blast
 qed
+
 
 lemma copy_multiplies_sum:
 fixes 

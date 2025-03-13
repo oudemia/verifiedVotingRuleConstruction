@@ -39,6 +39,8 @@ next
 show "\<And>R R'. id (R \<inter> R') \<subseteq> R" by simp
 next
 show "\<And>R b. limit_ballot R b = limit_ballot (id R) b" by simp
+next
+show "\<And>A B. A \<subseteq> B \<longrightarrow> id A = A \<inter> id B" using id_apply by auto
 qed
 
 end
@@ -188,6 +190,7 @@ assume
   fin_V: "finite V" and
   fin_V': "finite V'" and
   disj: "V \<inter> V' = {}" and
+  disj_W: "W \<inter> V' = {}" and
   wf_p: "base_struct.well_formed_profile V A p" and
   wf_q: "base_struct.well_formed_profile V' A q"
 let ?m = "family_module score"
@@ -207,7 +210,7 @@ ultimately have **: "\<exists>n. n_copy n V W ?p_agg ?s_agg \<longrightarrow>
   (defer ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq>
   defer ?m V ?R ?p_agg \<union> elect ?m V ?R ?p_agg) \<and>
   (elect ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> elect ?m V ?R ?p_agg)"
-  using agg_structure.continuity_prereq mod_cont disj id_apply
+  using agg_structure.continuity_prereq mod_cont disj disj_W id_apply
   by metis
 then obtain n where *: "n_copy n V W ?p_agg ?s_agg \<longrightarrow> 
   (defer ?m (W \<union> V') ?R (joint_profile V' W ?q_agg ?s_agg) \<subseteq> 
@@ -382,14 +385,14 @@ fix
   p q s :: "('v, 'r, 'i) Aggregate_Profile"
 assume
   fin_R : "finite R" and
+  disj_V: "V \<inter> V' = {}" and
+  disj_W: "W \<inter> V' = {}" and
   fin_V: "finite V" and
   fin_V': "finite V'" and
   fin_W: "finite W" and
-  disj: "V \<inter> V' = {}" and
-  disj_W: "W \<inter> V' = {}" and
   wf_p: "well_formed_profile V R p" and
   wf_q: "well_formed_profile V' R q" and
-  nonempty_p: "\<exists>v \<in> V. \<exists>r \<in> R. score (p v r) > 0"
+  wf_s: "well_formed_profile W R s"
 
 have det: "voters_determine_election (family_module score)"
   using elim_mod 
@@ -398,27 +401,19 @@ have fin_img_V: "finite {(sum_eval_fun score) V x R p | x. x \<in> R}"
   using fin_R
   by simp
 
+let ?elect_joint = "elect (family_module score) (W \<union> V') R (joint_profile V' W q s)"
+let ?elect_V = "elect (family_module score) V R p"
+let ?defer_joint = "defer (family_module score) (W \<union> V') R (joint_profile V' W q s)"
+let ?defer_V = "defer (family_module score) V R p"
+
 let ?max_V = "Max {(sum_eval_fun score) V x R p | x. x \<in> R}"
 let ?max_V' = "Max {(sum_eval_fun score) V' x R q | x. x \<in> R}"
 let ?max_W = "Max {(sum_eval_fun score) W x R s | x. x \<in> R}"
 let ?max_joint = "Max {(sum_eval_fun score) (W \<union> V') x R (joint_profile V' W q s) | x. x \<in> R}"
 
-have *: "\<forall>r \<in> R. \<bar>score_sum score p V r\<bar> \<noteq> \<infinity>" 
-  using real_score_sum r_score 
-  by metis
-hence "\<forall>r \<in> R. \<bar>(sum_eval_fun score) V r R p\<bar> \<noteq> \<infinity>" by simp
-moreover have "?max_V \<in> {(sum_eval_fun score) V x R p | x. x \<in> R}"
-  using Max_in fin_img_V elem nonempty_p 
-  by blast
-ultimately have ex_max_arg: "\<exists>r \<in> R. (sum_eval_fun score) V r R p = ?max_V"
-  by auto
-hence real_max_V: "\<bar>?max_V\<bar> \<noteq> \<infinity>" using * by auto
-have "\<exists>n. n_copy n V W p s \<longrightarrow>
-           defer (family_module score) (W \<union> V') R (joint_profile V' W q s)
-           \<subseteq> defer (family_module score) V R p \<union> elect (family_module score) V R p \<and>
-           elect (family_module score) (W \<union> V') R (joint_profile V' W q s)
-           \<subseteq> elect (family_module score) V R p"
-proof (cases "defer (family_module score) V R p = R")
+
+show "\<exists>n. n_copy n V W p s \<longrightarrow> ?defer_joint \<subseteq> ?defer_V \<union> ?elect_V \<and> ?elect_joint \<subseteq> ?elect_V"
+proof (cases "defer (family_module score) V R p = R"; standard; standard)
   case trivial_p: True
   have "defer (family_module score) (W \<union> V') R (joint_profile V' W q s) \<subseteq> R" 
     using elim_mod agg_structure.max_elim_sound 
@@ -429,24 +424,44 @@ proof (cases "defer (family_module score) V R p = R")
   moreover have "elect (family_module score) (W \<union> V') R (joint_profile V' W q s) = {}" 
     using elim_mod
     by simp
-  ultimately show ?thesis using trivial_p by try
+  ultimately show "?defer_joint \<subseteq> ?defer_V \<union> ?elect_V \<and> ?elect_joint \<subseteq> ?elect_V" 
+    using trivial_p 
+    by simp
 next
   case nontrivial_p: False
-  then show ?thesis
-  proof (standard, safe)
+  let ?min_diff = "Min {?max_V -((sum_eval_fun score) V x R p) | x. x \<in> R \<and> (sum_eval_fun score) V x R p \<noteq> ?max_V}"
+  have real_min_diff: "\<bar>?min_diff\<bar> \<noteq> \<infinity>" sorry
+  moreover have  real_max_V': "\<bar>?max_V'\<bar> \<noteq> \<infinity>" sorry
+  moreover have "?min_diff > 0" sorry
+  moreover have "?max_V' \<ge> 0" sorry
+  then obtain n where large_n: "erat_of n * ?min_diff > ?max_V'" sorry
+  thus "?defer_joint \<subseteq> ?defer_V \<union> ?elect_V \<and> ?elect_joint \<subseteq> ?elect_V"
+  proof -
+  have "?elect_joint = {}" using elim_mod by simp
+  moreover have "?elect_V = {}" using elim_mod by simp
+  ultimately have "?elect_joint \<subseteq> ?elect_V" by simp
+  moreover have "?defer_joint \<subseteq> ?defer_V \<union> ?elect_V"
+  proof
     fix r :: 'r
     assume 
-      copy: "n_copy n V W p s" and 
-      def_joint: "r \<in> defer (family_module score) (W \<union> V') R (joint_profile V' W q s)" and
-      not_elect_V: "r \<notin> elect (family_module score) V R p"
-
-    let ?min_diff = "Min {?max_V -((sum_eval_fun score) V x R p) | x. x \<in> R \<and> (sum_eval_fun score) V x R p \<noteq> ?max_V}"
-have real_min_diff: "\<bar>?min_diff\<bar> \<noteq> \<infinity>" sorry
-moreover have  real_max_V': "\<bar>?max_V'\<bar> \<noteq> \<infinity>" sorry
-moreover have "?min_diff > 0" sorry
-moreover have "?max_V' \<ge> 0" sorry
-then obtain nn where large_nn: "erat_of nn * ?min_diff > ?max_V'" by auto
-
+      def_joint: "r \<in> ?defer_joint"      
+    thus "r \<in> ?defer_V \<union> ?elect_V" sorry 
+  qed
+  ultimately show ?thesis by blast
+qed
+  (*
+      
+have *: "\<forall>r \<in> R. \<bar>score_sum score p V r\<bar> \<noteq> \<infinity>" 
+  using real_score_sum r_score 
+  by metis
+hence "\<forall>r \<in> R. \<bar>(sum_eval_fun score) V r R p\<bar> \<noteq> \<infinity>" by simp
+moreover have "?max_V \<in> {(sum_eval_fun score) V x R p | x. x \<in> R}"
+  using Max_in fin_img_V elem 
+  by blast
+ultimately have ex_max_arg: "\<exists>r \<in> R. (sum_eval_fun score) V r R p = ?max_V"
+  by auto
+  hence real_max_V: "\<bar>?max_V\<bar> \<noteq> \<infinity>" using * by auto
+  
 
     have "defer (family_module score) (W \<union> V') R (joint_profile V' W q s) \<subseteq> R" 
     using elim_mod agg_structure.max_elim_sound 
@@ -510,22 +525,10 @@ then obtain nn where large_nn: "erat_of nn * ?min_diff > ?max_V'" by auto
     have "(sum_eval_fun score) V r R p < ?max_joint" sorry
   thus "r \<in> defer (family_module score) V R p" sorry
 *)
-next
-  fix r :: 'r
-  assume 
-    copy: "n_copy n V W p s" and 
-    elect_joint: "r \<in> elect (family_module score) (W \<union> V') R (joint_profile V' W q s)"
-  have "elect (family_module score) (W \<union> V') R (joint_profile V' W q s) = {}" 
-    using elim_mod 
-    by simp
-  thus "r \<in> elect (family_module score) V R p" using elect_joint by simp
-next
-qed
-qed
-qed
-
 
 qed
+qed
+*)
 
 (* after real_max_V:
 
