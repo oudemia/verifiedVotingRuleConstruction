@@ -1,8 +1,8 @@
 section \<open>Thiele Module\<close>
 
 theory Thiele_Module
-imports HOL.Finite_Set
-      "Component_Types/Voting_Rule"      
+imports
+      "Component_Types/Voting_Rule_Family"      
       "Component_Types/Elimination_Module"
       "Component_Types/Social_Choice_Types/Aggregate_Profile"
       "Component_Types/Social_Choice_Types/Electoral_Structure"
@@ -14,13 +14,24 @@ subsubsection \<open>Aggregated Profiles for Thiele Methods\<close>
 
 type_synonym 'a Thiele_Ballot = "'a Committee \<Rightarrow> nat"
 
-type_synonym Thiele_Score = "nat Aggregate_Evaluation"
+type_synonym Thiele_Score = "nat Aggregate_Score"
 
 fun thiele_ballot :: "('a Committee) set \<Rightarrow> 'a Thiele_Ballot \<Rightarrow> bool" where
-"thiele_ballot R b = (\<forall> r. r \<notin> R \<longrightarrow> b r = 0)"
+"thiele_ballot R b = (\<forall>r \<in> R. finite r \<longrightarrow> b r \<le> card r)"
+(* "thiele_ballot R b = (\<forall> r. r \<notin> R \<longrightarrow> b r = 0)" *)
+
+fun default_thiele_ballot :: "'a Thiele_Ballot" where
+"default_thiele_ballot C = 0"
 
 fun limit_thiele_ballot :: "('a Committee) set \<Rightarrow> 'a Thiele_Ballot \<Rightarrow> 'a Thiele_Ballot" where
-"limit_thiele_ballot C b c = (if c \<in> C then b c else 0)"
+"limit_thiele_ballot C b = b"
+(* "limit_thiele_ballot C b c = (if c \<in> C then b c else 0)" *)
+
+fun thiele_prefers :: " 'a Thiele_Ballot \<Rightarrow> 'a Committee \<Rightarrow> 'a Committee \<Rightarrow> bool" where
+"thiele_prefers b C D = (b C > b D)"
+
+fun thiele_wins :: "'a Thiele_Ballot \<Rightarrow> 'a Committee \<Rightarrow> bool" where
+"thiele_wins b C = (\<forall> D. b C \<ge> b D)"
 
 fun thiele_score :: "Thiele_Score \<Rightarrow> bool" where
 "thiele_score w = (w 0 = 0 \<and> mono w \<and> (\<forall>n. \<bar>w n\<bar> \<noteq> \<infinity>))"
@@ -45,85 +56,131 @@ moreover have "\<forall>S \<subseteq> V. \<forall> v \<in> V - S. \<bar>\<Sum>s\
 ultimately show "\<bar>\<Sum>v\<in>V. w (p v c)\<bar> \<noteq> \<infinity>" by (meson sum_Inf)
 qed
 
-
 context committee_result
 begin
 
-fun thiele_aggregate ::
-  "('a, 'a Approval_Set, 'a Committee, nat) Ballot_Aggregation" where
-"thiele_aggregate A b C = (if C \<in> committees A then (card (C \<inter> b)) else 0)"
+fun thiele_aggregate :: "('a, 'a Approval_Set, 'a Committee, nat) Ballot_Aggregation" where
+"thiele_aggregate A b C = card (C \<inter> b)"
+(* "thiele_aggregate A b C = (if C \<in> committees A then (card (C \<inter> b)) else 0)" *)
 
 fun thiele_agg_profile :: 
   "('a, 'v, 'a Approval_Set, 'a Committee, nat) Profile_Aggregation" where
 "thiele_agg_profile A p v C = thiele_aggregate A (p v) C"
 
-sublocale thiele_aggregation:
-aggregation
-  "\<lambda> C. 0" (*empty ballot*) 
-  "\<lambda> b C D. (b C > b D)" (*prefers*)
-  "\<lambda> b C. (\<forall> D. b C \<ge> b D)" (*wins*)
-  "\<lambda> C b c. if c \<in> C then b c else 0" (* limit_ballot"\<lambda> C b. b" *)
-  thiele_ballot (*well formed ballot*)
-  ballot_\<A>\<V> (*base ballot*)
-  committees
-  thiele_aggregate (*agg*)
-proof (unfold_locales)
-  fix 
-    c1 c2 :: "'a Committee" and 
-    b :: "'a Committee \<Rightarrow> nat"
-  assume *: "c1 \<noteq> c2 \<and> b c2 < b c1"
-  thus "\<not> (\<forall>D. b D \<le> b c2)" using leD by blast
-next
-  fix 
-    R :: "('a Committee) set" and
-    b :: "'a Committee \<Rightarrow> nat"
-  assume bal: "thiele_ballot R b"
-  hence *: "\<forall>r. r \<notin> R \<longrightarrow> b r = 0" using thiele_ballot.simps by simp
-  moreover have "\<forall>r. if r \<in> R then b r = b r else b r = 0"
-  proof (simp split: if_splits, standard)
-    fix r :: "'a Committee"
-    show "r \<notin> R \<longrightarrow> b r = 0 " using * by blast
-  qed
-  ultimately show "(\<lambda>c. if c \<in> R then b c else 0) = b" by auto
-next
-  fix 
-    R S :: "('a Committee) set" and
-    b :: "'a Committee \<Rightarrow> nat"
-  assume sub: "R \<subseteq> S"
-  thus "(\<lambda>c. if c \<in> R then b c else 0) = (\<lambda>c. if c \<in> R then if c \<in> S then b c else 0 else 0)"
-  by fastforce
-next
-  fix 
-    R S :: "('a Committee) set" and
-    b :: "'a Committee \<Rightarrow> nat"
-  assume *: "thiele_ballot S b \<and> R \<subseteq> S"
-  thus "thiele_ballot R (\<lambda>c. if c \<in> R then b c else 0)" by simp
-next
-  fix 
-    A :: "'a set" and
-    b :: "'a Approval_Set"
-  assume bal: "ballot_\<A>\<V> A b"
-  thus "thiele_ballot (committees A) (thiele_aggregate A b)"
-  proof (unfold thiele_aggregate.simps thiele_ballot.simps, safe)
-    fix r :: "'a Committee" 
-    assume nocom: "r \<notin> committees A" 
-    thus "(if r \<in> committees A then card (r \<inter> b) else 0) = 0" by presburger
-  qed
-qed
+
+subsubsection \<open>Electoral Module for Thiele Methods\<close>
+
+fun thiele_module :: "Thiele_Score \<Rightarrow> ('a Committee, 'v, 'a Thiele_Ballot) Electoral_Module" where
+"thiele_module s V C p = (max_eliminator (\<lambda> V r R p. score_sum s V r p)) V C p"
+
+(*
+fun thiele_family :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where
+"thiele_family w V A p =
+	thiele_structure.elector\<^sub>d (thiele_module w) V (committees A) (thiele_agg_profile A p)"
+*)
+
+fun thiele_method :: "Thiele_Score \<Rightarrow> ('a, 'v, 'a Approval_Set, 'a Committee) Voting_Rule \<Rightarrow> bool" where
+"thiele_method w r = thiele_score w"
 
 sublocale thiele_structure:
-electoral_structure 
-  "\<lambda>C. 0" (* empty_ballot *)
-  "\<lambda> b C D. (b C > b D)" (* prefers *)
-  "\<lambda> b C. (\<forall> D. b C \<ge> b D)" (* wins *)
-  limit_thiele_ballot (* limit_ballot *)
-  "\<lambda> R S. R \<inter> S" (* limit_contenders *)
-  id (*  affected_alts *)
-  thiele_ballot (* well_formed_ballot *)
-  id (* contenders *)
-  limit_thiele_ballot (* limit_by_conts *)
-proof (unfold_locales, clarify)
-  fix 
+family_structure
+  committees (* contenders *)
+  thiele_aggregate
+  (* base ballot information *)
+  prefers_\<A>\<V>
+  wins_\<A>\<V> 
+  limit_\<A>\<V>_ballot
+  limit_committees (* limit_contenders *)
+  affected_alts_committee 
+  (* agg ballot information *)
+  default_thiele_ballot (* empty agg ballot *)
+  thiele_prefers 
+  thiele_wins
+  limit_thiele_ballot
+  thiele_ballot (* well formed agg *)
+  (* mixed *)
+  ballot_\<A>\<V>
+  default_ballot_\<A>\<V> (* empty base ballot *)
+  thiele_score (* family score *)
+  thiele_module (* family_module *)
+proof (unfold_locales, clarsimp)
+fix 
+  a :: 'a and
+  C1 C2 :: "'a Committee" and 
+  b :: "'a Committee \<Rightarrow> nat"
+assume 
+  neq: "C1 \<noteq> C2" and
+  c1_wins: "b C2 < b C1"
+thus "\<exists>d. \<not> b d \<le> b C2" using leD by blast
+next
+show "\<And>A b. thiele_ballot A b \<Longrightarrow> limit_thiele_ballot A b = b" by simp
+next
+fix 
+  R S :: "('a Committee) set" and
+  b :: "'a Committee \<Rightarrow> nat"
+assume "R \<subseteq> S"
+thus " limit_thiele_ballot R b =limit_thiele_ballot R (limit_thiele_ballot S b)" by fastforce
+next
+fix 
+  R S :: "('a Committee) set" and
+  b :: "'a Committee \<Rightarrow> nat"
+assume "thiele_ballot S b \<and> R \<subseteq> S"
+thus "thiele_ballot R (limit_thiele_ballot R b)" by auto
+next
+fix 
+  A :: "'a set" and
+  b :: "'a Approval_Set"
+assume bal: "ballot_\<A>\<V> A b"
+have "\<forall>C \<in> committees A. card C > 0"
+using k_positive 
+by simp
+hence "\<forall> C \<in> committees A. card (C \<inter> b) \<le> card C" 
+using  Int_lower1 card_ge_0_finite card_mono 
+by meson
+thus "thiele_ballot (committees A) (thiele_aggregate A b)" by simp
+next
+fix 
+  A :: "'a set" and
+  b b' :: "'a Approval_Set"
+assume 
+  bal: "ballot_\<A>\<V> A b" and 
+  bal' :"ballot_\<A>\<V> A b'" and
+  neq : "b \<noteq> b'"
+have "b \<union> b' \<subseteq> A" 
+  using bal bal' 
+  by simp
+moreover have "b \<union> b' \<noteq> {}" 
+  using neq 
+  by fastforce
+moreover have "b \<inter> b' \<noteq> A" 
+  using neq calculation(1) 
+  by blast
+ultimately have "\<exists>a \<in> A. a \<in> b \<union> b' \<and> a \<notin> b \<inter> b'"
+  using neq 
+  by blast
+then obtain a where "a \<in> b \<union> b' \<and> a \<notin> b \<inter> b'" by blast
+hence "card ({a} \<inter> b) \<noteq> card ({a} \<inter> b')" by auto
+thus "\<exists>C. thiele_aggregate A b C \<noteq> thiele_aggregate A b' C"
+  unfolding thiele_aggregate.simps 
+  by blast
+next
+fix 
+  A :: "'a set" and
+  b :: "'a Approval_Set"
+show "limit_thiele_ballot (committees A) (thiele_aggregate A b) = thiele_aggregate A b" by auto
+next
+show "\<And>A. finite A \<Longrightarrow> finite (committees A)" by simp
+next
+show "\<And>score r. thiele_score score \<Longrightarrow> score (default_thiele_ballot r) = 0" by simp
+next
+fix 
+  A :: "'a set" 
+  have "\<forall>C. C \<inter> default_ballot_\<A>\<V> = {}" using default_ballot_\<A>\<V>_def by auto
+  hence "\<forall>C. card (C \<inter> default_ballot_\<A>\<V>) = 0" using card.empty by metis
+  thus "thiele_aggregate A default_ballot_\<A>\<V> = default_thiele_ballot" by fastforce
+qed
+
+(*  fix
     b :: "'a Thiele_Ballot" and
     C D :: "'a Committee"
   assume  
@@ -133,53 +190,7 @@ proof (unfold_locales, clarify)
   show "False"
     using * ** linorder_not_less 
     by blast
-next
-  fix 
-    C :: "('a Committee) set" and
-    b :: "'a Thiele_Ballot"
-  show "thiele_ballot C b \<Longrightarrow> limit_thiele_ballot C b = b" by auto
-next
-  fix 
-    C D :: "('a Committee) set" and
-    b :: "'a Thiele_Ballot"
-  assume "C \<subseteq> D"
-  thus "limit_thiele_ballot C b = limit_thiele_ballot C (limit_thiele_ballot D b)" by fastforce
-next
-  fix 
-    C D :: "('a Committee) set" and
-    b :: "'a Thiele_Ballot"
-  assume "thiele_ballot D b \<and> C \<subseteq> D"
-  thus "thiele_ballot C (limit_thiele_ballot C b)" by simp
-next
-  fix C :: "('a Committee) set"
-  show "id (id C) = C \<or> id (id C) = {}" by simp
-next
-  fix 
-    C D :: "('a Committee) set"
-  show "C \<subseteq> D \<longrightarrow> id C \<subseteq> id D" by simp
-next
-  fix 
-    C :: "('a Committee) set" and
-    b :: "'a Thiele_Ballot"
-  show "limit_thiele_ballot C b = limit_thiele_ballot (id C) b " by simp
-next
-  fix C :: "('a Committee) set"
-  show "C \<noteq> {} \<and> id (id C) = {} \<longrightarrow> id C = {}" by simp
-qed
-
-
-subsubsection \<open>Electoral Module for Thiele Methods\<close>
-
-fun thiele_module :: "Thiele_Score \<Rightarrow> ('a Committee, 'v, 'a Thiele_Ballot) Electoral_Module" where
-"thiele_module s V C p = (max_eliminator (\<lambda> V r R p. score_sum s V r p)) V C p"
-
-fun thiele_family :: "('a, 'v, 'a Approval_Set, 'a Committee, nat) Voting_Rule_Family" where
-"thiele_family w V A p =
-	thiele_structure.elector\<^sub>d (thiele_module w) V (committees A) (thiele_agg_profile A p)"
-
-fun thiele_method :: "Thiele_Score \<Rightarrow> ('a, 'v, 'a Approval_Set, 'a Committee) Voting_Rule \<Rightarrow> bool" where
-"thiele_method w r = thiele_score w"
-
+*)
 
 subsection \<open>Properties\<close>
 
@@ -187,7 +198,7 @@ lemma thiele_mod_sound[simp]:
   fixes w :: "nat Aggregate_Evaluation"
   assumes "thiele_score w"
   shows "thiele_structure.electoral_module (thiele_module w)"
-by auto
+  by auto
 
 lemma thiele_family_simp [simp]:
 fixes 
@@ -589,139 +600,10 @@ proof (unfold \<A>\<V>_committee.vr_neutrality_def, clarify)
     using thiele_family_simp p_agg_eq q_agg_eq rename_result.simps w_valid
     by (metis image_Un split_pairs)
 qed
-    
-subsubsection \<open>Consistency\<close>
+
 
 subsubsection \<open>Continuity\<close>
 
-(*
-definition continuity :: "('r, 'v, 'b) Electoral_Module \<Rightarrow> bool"  where
-  "continuity m \<equiv> (\<forall> R V V' p q. 
-    finite_profile V (affected_alts R) p \<and> finite_profile V' (affected_alts R) q \<and> 
-      V \<inter> V' = {} \<longrightarrow> (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  
-        (defer m (W \<union> V') R (joint_profile V' W q s) \<subseteq> defer m V R p \<union> elect m V R p ) \<and>
-          (elect m (W \<union> V') R (joint_profile V' W q s) \<subseteq> elect m V R p )))"
-
-
-definition vr_continuity :: "('a, 'v, 'b, 'r) Voting_Rule \<Rightarrow> bool"  where
-  "vr_continuity r \<equiv>
-      (\<forall> A V V' p q. well_formed_profile V A p \<and> well_formed_profile V' A q \<and> V \<inter> V' = {} \<longrightarrow> 
-        (\<exists>n.\<forall>W s. (n_copy n V W p q) \<longrightarrow>  (r (W \<union> V') A (joint_profile V W q s) \<subseteq> r V A p)))"
-*)
-
-(* Idee:
-  Für Thiele: Zeige Aufteilung von scores
-  show continuity of aggregation (which is the score / profile separaion)
-  show continuity of score
-  choose lambda accordingly
-*)
-
-
-lemma erat_of_sum:
-  fixes
-    X :: "'a set" and
-    f :: "'a \<Rightarrow> nat"
-  shows "(\<Sum>x\<in>X. (erat_of (f x))) = erat_of (\<Sum>x\<in>X. (f x))"
-proof (unfold erat_of.simps, simp)
-  have "\<forall>x\<in>X. Fract (int (f x)) 1 = f x" by (simp add: of_rat_rat)
-  hence *: "(\<Sum>x\<in>X. Fract (int (f x)) 1) = (\<Sum>x\<in>X. f x)"
-    by (metis (mono_tags, lifting) Fract_of_nat_eq of_nat_sum of_rat_of_nat_eq sum.cong)
-  have "Fract (\<Sum>x\<in>X. int (f x)) 1 = (\<Sum>x\<in>X. f x)"
-    by (metis of_int_of_nat_eq of_int_rat of_nat_sum of_rat_of_int_eq)
-  thus "(\<Sum>x\<in>X. Fract (int (f x)) 1) = Fract (\<Sum>x\<in>X. int (f x)) 1" using *
-    by (metis of_rat_eq_iff)
-qed
-
-lemma erat_of_leq: "(x \<le> y) \<longleftrightarrow> (erat_of x \<le> erat_of y)"
-proof
-  assume "x \<le> y"
-  thus "erat_of x \<le> erat_of y" by simp
-next
-  assume "erat_of x \<le> erat_of y"
-  hence "Fract x 1 \<le> Fract y 1" using erat_of.simps by simp
-  thus "x \<le> y" by simp
-  qed
-
-(*
-next
-  case (Cons a l)
-  fix
-    a :: "'a set" and
-    l :: "'a set list"
-  assume "\<forall> i::nat < length (a#l). finite ((a#l)!i)"
-  hence
-    "finite a" and
-    "\<forall> i < length l. finite (l!i)"
-    by auto
-  moreover assume
-    "\<forall> i::nat < length l. finite (l!i) \<Longrightarrow> finite (listset l)"
-  ultimately have
-    "finite (listset l)" and
-    "finite {a'#l' | a' l'. a' \<in> a \<and> l' \<in> (listset l)}"
-    using list_cons_presv_finiteness
-    by (blast, blast)
-  thus "finite (listset (a#l))"
-    by (simp add: set_Cons_def)
-qed
-*)
-
-lemma rat_erat_simp: 
-fixes e :: erat
-assumes rational: "\<bar>e\<bar> \<noteq> \<infinity>"
-shows "e = erat (rat_of_erat e)"
-using assms 
-by auto
-
-lemma disjoint_erat_sum:
-fixes 
-  P :: "'x set set" and
-  f :: "'x \<Rightarrow> erat"
-shows "finite P \<Longrightarrow> disjoint P \<Longrightarrow> (\<forall>p \<in> P. finite p) \<Longrightarrow> sum f (\<Union> P) = sum (sum f) P"
-proof (induct P arbitrary: f  rule: finite_induct)
-case empty
-then show ?case by simp
-next
-case (insert p X)
-fix
-  p :: "'x set" and
-  X :: "'x set set"
-assume 
-  fin: "finite X" and
-  new: "p \<notin> X" and
-  disj_ins: "disjoint (insert p X)" and
-  elems_fin: "Ball (insert p X) finite"
-show "sum f (\<Union> (insert p X)) = sum (sum f) (insert p X)"
-  proof -
-  have disj_u: "p \<inter> \<Union> X = {}" 
-    using disj_ins insert.hyps(2) insert_partition
-    by (metis disjoint_def new)
-  have fin_p: "finite p" 
-    using elems_fin insert.prems(2) 
-    by simp
-  have fin_u: "finite (\<Union> X)" 
-    using fin finite_Union elems_fin 
-    by simp
-  have sum_u: "sum f (\<Union> (insert p X)) = sum f (p \<union> \<Union> X)" by simp
-  also have "... = sum f p + sum f (\<Union> X)"
-    using disj_u fin_u fin_p sum.union_disjoint sum_Un 
-    by blast
-  also have "... = sum (sum f) (insert p X)"
-    using Sup_insert disjoint_def disjoint_sum disj_ins fin fin_p fin_u
-    by (metis calculation finite.insertI finite_UnI partitionI)
-  finally show ?thesis by simp
-  qed
-qed
-
-
-(*proof -
-have "\<forall>p \<in> P. \<forall>p' \<in> P.  p \<noteq> p' \<longrightarrow> p \<inter> p' = {}"
-  using disj 
-  by (simp add: disjointD)
-hence "\<forall>x \<in> \<Union>P. \<exists>p \<in> P. x \<in> p \<and> (\<forall>p' \<in> P. p \<noteq> p' \<longrightarrow> (x \<notin> p'))"
-  using disj 
-  by auto
-thus ?thesis by try
-oops *)
 
 lemma score_sum_by_bal:
 fixes 
@@ -729,15 +611,50 @@ fixes
   V :: "'v set" and 
   p :: "('v, 'a Thiele_Ballot) Profile" and 
   c :: "'a Committee"
-assumes valid_w: "thiele_score w"
-shows "score_sum w V c p = (\<Sum>b\<in>range p. ((erat_of (card (bal_votes b p V)) * (w (b c)))))"
+assumes 
+  valid_w: "thiele_score w" and
+  fin_V: "finite V"
+shows "score_sum w V c p = (\<Sum>b\<in>range p. ((erat_of (card (bal_voters b p V)) * (w (b c)))))"
 proof (unfold score_sum.simps)
-have "V = \<Union>{bal_voters b p V| b. b \<in> p ` V}"
+let ?f = "\<lambda>v. w (p v c)"
+let ?part = "{bal_voters b p V| b. b \<in> p ` V}"
+have "finite ?part" 
+  using fin_V 
+  by simp
+  moreover have "disjoint ?part"
+  using ballots_partitions_voters partition_on_def 
+  by blast
+moreover have "\<forall>B \<in> ?part. finite B"
+  using fin_V
+  by auto
+ultimately have "sum ?f (\<Union> ?part) = sum (sum ?f) ?part" 
+  using disjoint_erat_sum
+  by blast
+moreover have *: "score_sum w V c p = sum ?f (\<Union> ?part)"
+  using bal_voters_complete score_sum.elims
+  by metis
+
+have "\<forall>b \<in> p ` V. (\<Sum>v\<in>bal_voters b p V. w (p v c)) = erat_of (card (bal_voters b p V)) * w (b c)"
+  using fin_V bal_voters_sum 
+  by fast
+hence "\<forall>b \<in> p ` V. (sum ?f (bal_voters b p V)) = erat_of (card (bal_voters b p V)) * (w (b c))" 
+  by simp
+moreover have "V = \<Union> ?part"
   using ballots_partitions_voters 
   by auto
-hence "score_sum w V c p = (\<Sum>v \<in> (\<Union>{bal_voters b p V| b. b \<in> p ` V}). w (p v c))"
+hence "sum (sum ?f) ?part = (\<Sum>b\<in>range p. erat_of (card (bal_voters b p V)) * (w (b c)))"
+sorry
+hence ?thesis 
+using * calculation by argo
+  
+  
+hence "score_sum w V c p = (\<Sum>v \<in> (\<Union> ?part). w (p v c))"
   using ballots_partitions_voters 
-  by fastforce
+  by fastforce 
+ 
+thus "(\<Sum>v\<in>V. w (p v c)) = (\<Sum>b\<in>range p. erat_of (card (bal_votes b p V)) * w (b c))" 
+sorry
+(*
   let ?f = "\<lambda>v. w (p v c)"
   have "\<forall>b \<in> {bal_voters b p V| b. b \<in> p ` V}. finite b" 
   using ballots_partitions_voters partition_on_def disjoint_erat_sum by try
@@ -752,7 +669,7 @@ moreover have "(\<Sum>v \<in> (\<Union>{bal_voters b p V| b. b \<in> p ` V}). w 
     by simp
     moreover have "\<forall>b \<in> p` V. \<Sum>v \<in> bal_voters b p V. w (p v c)"
     hence ?thesis sorry
-  oops
+  oops *)
   oops
 
 lemma score_sum_by_bal:
