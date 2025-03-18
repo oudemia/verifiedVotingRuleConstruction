@@ -69,9 +69,9 @@ locale aggregation =
   assumes
     preserve_valid: "well_formed_base A b 
         \<Longrightarrow> well_formed_ballot (contenders A) (aggregate A b)" and
-    unique: "well_formed_base A b \<Longrightarrow> well_formed_base A b' 
-        \<Longrightarrow> b \<noteq> b' \<Longrightarrow> aggregate A b \<noteq> aggregate A b'" and
-    limit_valid: "limit_agg (contenders A) (aggregate A b) = aggregate A b" and
+    unique: "well_formed_base A b \<Longrightarrow> well_formed_base A b' \<Longrightarrow> b \<noteq> b'
+        \<Longrightarrow> \<exists>c. aggregate A b c \<noteq> aggregate A b' c" and
+    limit_valid: "limit_ballot (contenders A) (aggregate A b) = aggregate A b" and
     fin_preserve: "finite A \<Longrightarrow> finite (contenders A)"
 begin
 
@@ -208,7 +208,7 @@ have "\<forall>b \<in> p ` V. well_formed_base A b"
   by blast
 hence "\<forall>b \<in> p ` V. b \<noteq> p v \<longrightarrow> aggregate A b \<noteq> aggregate A (p v)" 
   using unique elem
-  by simp
+  by fastforce
 moreover have "\<forall>b \<in> p ` V. b \<noteq> p v \<longrightarrow> bal_voters b p V \<inter> bal_voters (p v) p V = {}"
   using bal_voters_disjoint 
   by auto
@@ -229,12 +229,12 @@ assumes
   copy: "n_copy n V W p q"
 shows "n_copy n V W (aggregate_profile A p) (aggregate_profile A q)"
 proof (unfold n_copy.simps, standard)
-let ?p_agg = "aggregate_profile A p" (* p_agg = aggregate before copy *)
-let ?q_agg = "aggregate_profile A q" (* q_agg = aggregate after copy *)
+let ?p_agg = "aggregate_profile A p"
+let ?q_agg = "aggregate_profile A q"
 show "?p_agg ` V = ?q_agg ` W" using assms by force
 next 
-let ?p_agg = "aggregate_profile A p" (* p_agg = aggregate before copy *)
-let ?q_agg = "aggregate_profile A q" (* q_agg = aggregate after copy *)
+let ?p_agg = "aggregate_profile A p"
+let ?q_agg = "aggregate_profile A q"
 show "\<forall>b \<in> ?p_agg ` V. card (bal_voters b ?q_agg W) = n * card (bal_voters b ?p_agg V)"
 proof (clarify)
   fix v :: 'v

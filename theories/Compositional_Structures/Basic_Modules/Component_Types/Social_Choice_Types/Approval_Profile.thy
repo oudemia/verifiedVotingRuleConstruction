@@ -13,7 +13,7 @@ type_synonym 'a Approval_Set = "'a set"
 type_synonym ('v, 'a) Approval_Profile = "('v, 'a Approval_Set) Profile"
 
 fun ballot_\<A>\<V> :: "'a set \<Rightarrow> 'a Approval_Set \<Rightarrow> bool" where
-"ballot_\<A>\<V> A b = (b  \<subseteq> A)"
+"ballot_\<A>\<V> A b = (b \<subseteq> A)"
 
 definition default_ballot_\<A>\<V> :: "'a Approval_Set" where
 "default_ballot_\<A>\<V> = {}"

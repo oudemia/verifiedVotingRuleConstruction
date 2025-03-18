@@ -28,7 +28,6 @@ electoral_structure
   id (*  affected_alts *)
   well_formed_ballot (* well_formed_ballot *)
   id (* contenders *)
-  limit_ballot (* limit_by_conts *)
 proof (unfold_locales, clarify+)
 show "\<And>R. id (id R) = R" by simp
 next
@@ -37,8 +36,6 @@ next
 show "\<And>R R'. R \<subseteq> R' \<longrightarrow> id R \<subseteq> id R'" by simp
 next
 show "\<And>R R'. id (R \<inter> R') \<subseteq> R" by simp
-next
-show "\<And>R b. limit_ballot R b = limit_ballot (id R) b" by simp
 next
 show "\<And>A B. A \<subseteq> B \<longrightarrow> id A = A \<inter> id B" using id_apply by auto
 qed
@@ -448,7 +445,9 @@ next
     thus "r \<in> ?defer_V \<union> ?elect_V" sorry 
   qed
   ultimately show ?thesis by blast
-qed
+  qed
+  qed
+  qed
   (*
       
 have *: "\<forall>r \<in> R. \<bar>score_sum score p V r\<bar> \<noteq> \<infinity>" 
